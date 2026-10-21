@@ -13,7 +13,7 @@ from scripts.check_doc_dates import check, is_dated_document, main
 ADR_A = "docs/decisions/0001-a.md"
 
 
-def _git(repo: Path, *args: str, day: str = "2026-10-22") -> None:
+def _git(repo: Path, *args: str, day: str = "2026-10-22", check: bool = True) -> None:
     env = {
         **os.environ,
         "GIT_AUTHOR_DATE": f"{day}T12:00:00+09:00",
@@ -21,7 +21,7 @@ def _git(repo: Path, *args: str, day: str = "2026-10-22") -> None:
     }
     subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
-        cwd=repo, env=env, check=True, capture_output=True,
+        cwd=repo, env=env, check=check, capture_output=True,
     )
 
 
@@ -109,7 +109,8 @@ def test_merge_that_drops_the_date_fails(repo: Path) -> None:
     _commit(repo, ADR_A, _doc("2026-10-22") + "側\n")
     _git(repo, "checkout", "-q", "-")
     _commit(repo, ADR_A, _doc("2026-10-22") + "本線\n")
-    subprocess.run(["git", "merge", "-q", "side"], cwd=repo, capture_output=True, check=False)
+    # 衝突させるので失敗してよい。CI には git の利用者の設定が無いので _git で名前を渡す
+    _git(repo, "merge", "-q", "side", check=False)
     (repo / ADR_A).write_text("# 題\n\n解消\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "--no-edit", day="2026-10-23")
@@ -123,7 +124,8 @@ def test_merge_that_fixes_the_date_passes(repo: Path) -> None:
     _commit(repo, ADR_A, _doc("2026-10-21") + "側\n")
     _git(repo, "checkout", "-q", "-")
     _commit(repo, ADR_A, _doc("2026-10-21") + "本線\n")
-    subprocess.run(["git", "merge", "-q", "side"], cwd=repo, capture_output=True, check=False)
+    # 衝突させるので失敗してよい。CI には git の利用者の設定が無いので _git で名前を渡す
+    _git(repo, "merge", "-q", "side", check=False)
     (repo / ADR_A).write_text(_doc("2026-10-23") + "解消\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "--no-edit", day="2026-10-23")
