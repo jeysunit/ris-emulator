@@ -1,8 +1,5 @@
 # 構成
 
-- 作成日：2026-10-21
-- 最終更新日：2026-10-22
-
 ris-emulator は1つの Python パッケージ（`app/`）で構成する。Web 画面・CLI・MWL の
 SCP の3つが、同じ SQLite のファイルに予約を読み書きする。
 
@@ -57,6 +54,6 @@ MWL (app/mwl/) ─┘
 | `app/web/` | Web 画面（テンプレート・CSS・htmx を含む） |
 | `config/` | 設定の例（`app_config.yaml`） |
 | `data/` | 名簿の例（架空の患者） |
-| `scripts/` | 同梱する htmx の取得スクリプト、ドキュメントの最終更新日の検証スクリプト |
+| `scripts/` | 同梱する htmx の取得スクリプト、ADR の最終更新日の検証スクリプト |
 | `tests/` | テスト。`app/` と同じ構成に分ける |
 | `docs/` | ドキュメント（[README](README.md) が索引） |
