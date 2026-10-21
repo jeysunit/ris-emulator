@@ -31,7 +31,7 @@ npx markdownlint-cli2 "**/*.md" "#.venv" "#.pytest_cache"
 ルールは `.markdownlint-cli2.yaml` にある（本文は 80 文字で折り返す）。
 
 ドキュメントを更新したら、冒頭の「最終更新日」をその日付に更新する
-（[README.md](README.md) の「冒頭の日付」）。記入漏れは、コミットの範囲を指定して検出する。
+（[README.md の「書き方」](README.md#書き方)）。記入漏れは、コミットの範囲を指定して検出する。
 
 ```bash
 python scripts/check_doc_dates.py origin/main..HEAD
@@ -53,8 +53,7 @@ ADR を除く）ごとに、範囲の中で最後にそのドキュメントを�
 3. コードとテストを更新する
 4. 使い方が変わるなら、ルートの README を更新する
 
-規格に従う箇所は、spec に規格の節番号を書く
-（[project_charter.md](project_charter.md) の 3 章）。
+ドキュメントの書き方は [README.md の「書き方」](README.md#書き方) に従う。
 
 ## 5. 同梱する htmx のバージョンを上げる
 

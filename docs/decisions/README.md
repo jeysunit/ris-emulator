@@ -19,6 +19,9 @@ ADR（Architecture Decision Record）は、設計判断とその理由を1件ず
 
 ## 書き方
 
+ドキュメントに共通の規則は [docs/README.md の「書き方」](../README.md#書き方) に従います。
+ここには ADR に固有の規則だけを書きます。
+
 - 新しい ADR は [template.md](template.md) をコピーして書きます。ファイル名は
   `NNNN-英語の-kebab-case.md` で、番号は連番にします
 - 冒頭は「状態」「日付」「作成日」の3行だけにします。状態は 提案・採用・廃止・
