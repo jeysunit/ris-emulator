@@ -1,7 +1,7 @@
 """Specific Character Set で書けない字の確かめ（docs/spec/02_mwl_scp.md 5 章）.
 
 pydicom は書けない字を黙って `?` に置き換えるので、予約を保存する前に確かめる。
-判定は dicom-test-generator の app/core/worklist_charset.py と同じ。Pure な処理。
+Pure な処理。
 """
 
 from __future__ import annotations

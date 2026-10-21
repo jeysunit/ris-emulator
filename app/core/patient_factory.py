@@ -11,7 +11,7 @@ from datetime import date
 
 from .models import Patient, PersonName
 
-# (英字, 漢字, カナ)。英字はヘボン式で長音を書かない（dicom-test-generator の名簿と同じ書き方）
+# (英字, 漢字, カナ)。英字はヘボン式で長音を書かない
 FAMILY_NAMES: tuple[tuple[str, str, str], ...] = (
     ("SATO", "佐藤", "サトウ"),
     ("SUZUKI", "鈴木", "スズキ"),

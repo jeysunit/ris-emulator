@@ -89,9 +89,11 @@ MWL だけを起動するときは `python -m app.cli mwl serve` を使います
 | ポート | `11112` |
 
 予約の予定の AE タイトルは、モダリティごとに `config/app_config.yaml` の
-`orders.modalities.<モダリティ>.station_ae_titles` で決まります。モダリティが
-自分の AE タイトルで絞って問い合わせるなら、この値をモダリティの AE タイトルと
-そろえてください。
+`orders.modalities.<モダリティ>.station_ae_titles` で決まります。既定は
+`CT01`・`MR01`・`CR01`・`DX01`・`US01`・`MG01` です。モダリティが自分の
+AE タイトルで絞って問い合わせるなら、この値をモダリティの AE タイトルに
+書き替えてください（16 字まで。複数書くと予約ごとに順に使います）。
+予約を作るときに、CLI の `--station-ae` や Web 画面で指定することもできます。
 
 ### 設定
 

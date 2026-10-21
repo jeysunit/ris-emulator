@@ -49,7 +49,7 @@ def _find(server: MwlServer, identifier: Dataset, called: str = "RIS_EMU") -> tu
 
 
 def _query(**sps_values: str) -> Dataset:
-    """dicom-test-generator の問い合わせに近い形（Return Key を空で並べる）."""
+    """モダリティの問い合わせによくある形（Return Key を空で並べる）."""
     ds = Dataset()
     for keyword in (
         "PatientName",
@@ -100,7 +100,7 @@ def test_filter_by_station_and_date_range(server: MwlServer, service: OrderServi
     orders = _seed(service)
     found, final = _find(
         server,
-        _query(ScheduledStationAETitle="DTG_CT01", ScheduledProcedureStepStartDate="20261021-20261021"),
+        _query(ScheduledStationAETitle="CT01", ScheduledProcedureStepStartDate="20261021-20261021"),
     )
     assert final == 0x0000
     assert sorted(r.AccessionNumber for r in found) == sorted(o.accession_number for o in orders[:3])
@@ -115,7 +115,7 @@ def test_filter_by_station_and_date_range(server: MwlServer, service: OrderServi
     assert response.RequestedProcedureCodeSequence[0].CodeValue == order.procedure.code
     sps = response.ScheduledProcedureStepSequence[0]
     assert sps.Modality == "CT"
-    assert sps.ScheduledStationAETitle == "DTG_CT01"
+    assert sps.ScheduledStationAETitle == "CT01"
     assert sps.ScheduledProcedureStepID == order.scheduled_procedure_step_id
     assert sps.ScheduledProtocolCodeSequence[0].CodeValue == order.procedure.code
     # 要求に無い属性は返さない
@@ -180,7 +180,7 @@ def test_jis_character_sets_over_the_network(server: MwlServer, service: OrderSe
 def test_unsupported_keys_make_pending_warning(
     config: AppConfig, store: OrderStore, service: OrderService
 ) -> None:
-    """DTG の形の要求は FF00、この SCP が持たない属性があれば FF01（PS3.4 Table K.4-1）."""
+    """持っている属性だけの要求は FF00、この SCP が持たない属性があれば FF01（PS3.4 Table K.4-1）."""
     _seed(service)
     status, responses = find_worklist(_query(Modality="MR"), store, config.mwl)
     assert status == 0x0000 and [pending for pending, _ in responses] == [0xFF00]

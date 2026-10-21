@@ -1,4 +1,4 @@
-# 名簿の例（架空の患者 5 人）。形は dicom-test-generator の data/patients_master.yaml と同じ。
+# 名簿の例（架空の患者 5 人）。形は docs/spec/01_orders.md の 3.2。
 # size は cm、weight は kg。本物の患者のデータを入れない。
 patients:
   - patient_id: "P000001"
