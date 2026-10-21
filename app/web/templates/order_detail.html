@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ order.accession_number }}{% endblock %}
+{% block content %}
+<h1>予約 {{ order.accession_number }}</h1>
+<dl class="detail">
+  <dt>状態</dt><dd>{{ status_labels[order.status] }}</dd>
+  <dt>予定日時</dt><dd>{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</dd>
+  <dt>モダリティ</dt><dd>{{ order.modality }}</dd>
+  <dt>予定の AE タイトル</dt><dd class="mono">{{ order.scheduled_station_ae_title }}</dd>
+  <dt>検査名</dt><dd>{{ order.procedure.name }}（{{ order.procedure.code }}）</dd>
+  <dt>依頼科</dt><dd>{{ order.requesting_service }}</dd>
+  <dt>患者 ID</dt><dd class="mono">{{ order.patient.patient_id }}</dd>
+  <dt>患者氏名</dt><dd class="mono">{{ order.patient.name.to_dicom() }}</dd>
+  <dt>Requested Procedure ID</dt><dd class="mono">{{ order.requested_procedure_id }}</dd>
+  <dt>Scheduled Procedure Step ID</dt><dd class="mono">{{ order.scheduled_procedure_step_id }}</dd>
+  <dt>Study Instance UID</dt><dd class="mono">{{ order.study_instance_uid }}</dd>
+  <dt>文字コード</dt><dd class="mono">{{ character_set_labels[order.character_set] }}</dd>
+</dl>
+<form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+  <label>状態
+    <select name="status">
+      {% for s in statuses %}
+      <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="btn">状態を変える</button>
+</form>
+<h2>MWL の属性</h2>
+<pre class="dataset">{{ dataset }}</pre>
+<p><a href="/orders?date={{ order.scheduled_date | date_param }}">予約の一覧へ</a></p>
+{% endblock %}

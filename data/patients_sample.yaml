@@ -1,0 +1,52 @@
+# 名簿の例（架空の患者 5 人）。形は dicom-test-generator の data/patients_master.yaml と同じ。
+# size は cm、weight は kg。本物の患者のデータを入れない。
+patients:
+  - patient_id: "P000001"
+    patient_name:
+      alphabetic: "TANAKA^HIROSHI"
+      ideographic: "田中^博"
+      phonetic: "タナカ^ヒロシ"
+    birth_date: "19980312"
+    sex: "M"
+    weight: 58.5
+    size: 172.0
+
+  - patient_id: "P000002"
+    patient_name:
+      alphabetic: "SATO^YUKI"
+      ideographic: "佐藤^由紀"
+      phonetic: "サトウ^ユキ"
+    birth_date: "19920825"
+    sex: "F"
+    weight: 48.2
+    size: 158.0
+
+  - patient_id: "P000003"
+    patient_name:
+      alphabetic: "YAMADA^KENJI"
+      ideographic: "山田^健二"
+      phonetic: "ヤマダ^ケンジ"
+    birth_date: "19750614"
+    sex: "M"
+    weight: 82.5
+    size: 168.0
+
+  - patient_id: "P000004"
+    patient_name:
+      alphabetic: "SUZUKI^AKIKO"
+      ideographic: "鈴木^明子"
+      phonetic: "スズキ^アキコ"
+    birth_date: "19560423"
+    sex: "F"
+    weight: 52.0
+    size: 152.0
+
+  - patient_id: "P000005"
+    patient_name:
+      alphabetic: "WATANABE^TAKESHI"
+      ideographic: "渡辺^武"
+      phonetic: "ワタナベ^タケシ"
+    birth_date: "19631108"
+    sex: "M"
+    weight: 75.3
+    size: 170.0

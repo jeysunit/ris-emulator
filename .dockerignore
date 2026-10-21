@@ -1,0 +1,9 @@
+# build context に入れるのは、Dockerfile の COPY の行のものだけ（allowlist の形）。
+# それ以外（.git・試験・手元の予約のデータベース・パスワードのファイル）は送らない
+*
+!requirements.txt
+!app/
+!config/
+!data/
+**/__pycache__
+**/*.py[cod]

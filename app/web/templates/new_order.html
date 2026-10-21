@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}予約を作る{% endblock %}
+{% block content %}
+<h1>予約を作る</h1>
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% endif %}
+<form method="post" action="/orders" class="form">
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+  <fieldset>
+    <legend>モダリティごとの件数（合わせて {{ max_orders }} 件まで）</legend>
+    <div class="counts">
+      {% for modality, entry in catalog.items() %}
+      <label>{{ modality }}
+        <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric">
+        <span class="muted">{{ entry.station_ae_titles | join(', ') }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>予定</legend>
+    <label>予定日 <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required></label>
+    <label>開始時刻 <input type="time" name="start" value="{{ values.get('start', '09:00') }}" required></label>
+    <label>間隔（分） <input type="number" name="interval" min="0" max="{{ max_interval }}" value="{{ values.get('interval', '15') }}"></label>
+    <label>予定の AE タイトル <input type="text" name="station_ae" maxlength="16" value="{{ values.get('station_ae', '') }}" placeholder="空なら設定の値"></label>
+  </fieldset>
+  <fieldset>
+    <legend>患者と依頼</legend>
+    <label><input type="radio" name="patients" value="random"{% if values.get('patients', 'random') == 'random' %} checked{% endif %}> 乱数で作る</label>
+    <label><input type="radio" name="patients" value="roster"{% if values.get('patients') == 'roster' %} checked{% endif %}> 名簿から選ぶ</label>
+    <label>依頼科
+      <select name="department">
+        <option value="">乱数で選ぶ</option>
+        {% for d in departments %}
+        <option value="{{ d }}"{% if values.get('department') == d %} selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>文字コード（Specific Character Set）
+      <select name="charset">
+        {% for c in character_sets %}
+        <option value="{{ c.value }}"{% if values.get('charset', default_character_set.value) == c.value %} selected{% endif %}>{{ character_set_labels[c] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>シード <input type="number" name="seed" value="{{ values.get('seed', '') }}" placeholder="空なら毎回変わる"></label>
+  </fieldset>
+  <button type="submit" class="btn btn-primary">予約を作る</button>
+</form>
+{% endblock %}

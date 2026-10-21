@@ -1,0 +1,65 @@
+# ris-emulator の設定（spec/03_web_cli.md の 4 章）。
+# 相対のパスは、プロセスの作業ディレクトリから辿る。
+# 開発・試験の環境だけで使う。本物の患者のデータを入れない。
+
+database: "state/ris.sqlite3"     # 予約の保存先（SQLite）
+
+mwl:
+  ae_title: "RIS_EMU"
+  bind_address: "127.0.0.1"       # Docker では "0.0.0.0"
+  port: 11112
+  statuses: ["scheduled", "in_progress"]  # MWL で返す予約の状態
+  max_results: 1000               # 一致がこれを超えたら A700 で断る
+  require_called_ae_title: true   # 相手の Called AE Title が ae_title と違えば断る
+
+orders:
+  institution_name: "TEST HOSPITAL"
+  accession_prefix: "RE"          # 受付番号 = 接頭辞 + 作った日 + 4 桁の連番
+  patient_id_prefix: "RE"         # 乱数の患者 ID = 接頭辞 + 7 桁
+  default_character_set: "utf8"   # utf8, jis, jis_kana
+  roster_path: "data/patients_sample.yaml"
+  departments: ["内科", "外科", "整形外科", "脳神経外科", "呼吸器内科", "消化器内科", "救急科"]
+  modalities:
+    CT:
+      station_ae_titles: ["DTG_CT01"]
+      station_name: "CT01"
+      procedures:
+        - {code: "CT0001", name: "頭部 CT 単純"}
+        - {code: "CT0002", name: "胸部 CT 単純"}
+        - {code: "CT0003", name: "腹部 CT 造影"}
+        - {code: "CT0004", name: "胸腹部 CT 造影"}
+    MR:
+      station_ae_titles: ["DTG_MR01"]
+      station_name: "MR01"
+      procedures:
+        - {code: "MR0001", name: "頭部 MRI 単純"}
+        - {code: "MR0002", name: "腰椎 MRI 単純"}
+        - {code: "MR0003", name: "膝関節 MRI 単純"}
+    CR:
+      station_ae_titles: ["DTG_CR01"]
+      station_name: "CR01"
+      procedures:
+        - {code: "CR0001", name: "胸部 X 線 正面"}
+        - {code: "CR0002", name: "腹部 X 線 臥位"}
+    DX:
+      station_ae_titles: ["DTG_DX01"]
+      station_name: "DX01"
+      procedures:
+        - {code: "DX0001", name: "胸部 X 線 正面・側面"}
+        - {code: "DX0002", name: "腰椎 X 線 2 方向"}
+    US:
+      station_ae_titles: ["DTG_US01"]
+      station_name: "US01"
+      procedures:
+        - {code: "US0001", name: "腹部 超音波"}
+        - {code: "US0002", name: "心臓 超音波"}
+    MG:
+      station_ae_titles: ["DTG_MG01"]
+      station_name: "MG01"
+      procedures:
+        - {code: "MG0001", name: "マンモグラフィ 両側"}
+
+web:
+  bind_address: "127.0.0.1"       # Docker では "0.0.0.0"（パスワードのファイルが要る）
+  port: 8081
+  start_mwl: true                 # 画面のプロセスで MWL の SCP も立てる

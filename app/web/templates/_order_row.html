@@ -1,0 +1,20 @@
+<tr id="order-{{ order.accession_number }}" class="status-{{ order.status.value }}">
+  <td class="nowrap">{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</td>
+  <td class="mono"><a href="/orders/{{ order.accession_number }}">{{ order.accession_number }}</a></td>
+  <td class="mono">{{ order.patient.patient_id }}</td>
+  <td>{{ order.patient.name.ideographic | pn }}<br><span class="muted">{{ order.patient.name.phonetic | pn }} / {{ order.patient.name.alphabetic | pn }}</span></td>
+  <td class="nowrap">{{ order.patient.birth_date | ymd }} {{ order.patient.sex }}</td>
+  <td>{{ order.modality }}</td>
+  <td>{{ order.procedure.name }}</td>
+  <td>{{ order.requesting_service }}</td>
+  <td class="mono">{{ order.scheduled_station_ae_title }}</td>
+  <td>
+    <select name="status" aria-label="{{ order.accession_number }} の状態"
+            hx-post="/orders/{{ order.accession_number }}/status"
+            hx-target="#order-{{ order.accession_number }}" hx-swap="outerHTML">
+      {% for s in statuses %}
+      <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
+      {% endfor %}
+    </select>
+  </td>
+</tr>

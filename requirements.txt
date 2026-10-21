@@ -1,0 +1,23 @@
+# ris-emulator - Dependencies
+
+# DICOM library (tested with pydicom 3.0.2)
+pydicom>=3.0
+
+# DICOM network communication: MWL SCP (C-FIND, C-ECHO) (tested with pynetdicom 3.0.4)
+pynetdicom>=3.0
+
+# Configuration file parsing
+PyYAML>=6.0
+
+# Data models
+pydantic>=2.0
+
+# Web UI
+fastapi>=0.110
+uvicorn>=0.29
+jinja2>=3.1
+python-multipart>=0.0.9
+
+# Testing
+pytest>=7.0
+httpx>=0.27  # FastAPI の TestClient

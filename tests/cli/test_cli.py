@@ -1,0 +1,66 @@
+"""CLI の試験."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+import yaml
+
+from app.cli.main import main
+from tests.conftest import ROOT
+
+
+@pytest.fixture
+def config_file(tmp_path: Path) -> Path:
+    raw = yaml.safe_load((ROOT / "config" / "app_config.yaml").read_text(encoding="utf-8"))
+    raw["database"] = str(tmp_path / "ris.sqlite3")
+    raw["orders"]["roster_path"] = str(ROOT / "data" / "patients_sample.yaml")
+    path = tmp_path / "app_config.yaml"
+    path.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
+    return path
+
+
+def _run(capsys: pytest.CaptureFixture[str], *argv: str) -> tuple[int, str, str]:
+    code = main(list(argv))
+    captured = capsys.readouterr()
+    return code, captured.out, captured.err
+
+
+def test_create_list_status_show(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code, out, _ = _run(
+        capsys, "create", "CT=3", "MR", "--date", "20261021", "--seed", "1", "--json", "--config", str(config_file)
+    )
+    assert code == 0
+    orders = json.loads(out)
+    assert [o["modality"] for o in orders] == ["CT", "CT", "CT", "MR"]
+    accession = orders[0]["accession_number"]
+
+    code, out, _ = _run(capsys, "list", "--date", "20261021", "--config", str(config_file))
+    assert code == 0 and out.count("\n") == 4 and accession in out
+
+    code, out, _ = _run(capsys, "status", accession, "completed", "--config", str(config_file))
+    assert code == 0 and "完了" in out
+
+    code, out, _ = _run(capsys, "list", "--status", "scheduled", "--json", "--config", str(config_file))
+    assert len(json.loads(out)) == 3
+
+    code, out, _ = _run(capsys, "show", accession, "--config", str(config_file))
+    assert code == 0 and "Scheduled Procedure Step Sequence" in out and accession in out
+
+
+def test_errors_and_exit_codes(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code, _, err = _run(capsys, "create", "XA=1", "--config", str(config_file))
+    assert code == 2 and "設定に無いモダリティ" in err
+    code, _, err = _run(capsys, "create", "CT=1", "--interval", "-5", "--config", str(config_file))
+    assert code == 2
+    code, _, err = _run(capsys, "status", "NOPE", "completed", "--config", str(config_file))
+    assert code == 3
+    code, _, err = _run(capsys, "list", "--config", str(config_file.parent / "missing.yaml"))
+    assert code == 2 and "not found" in err
+
+
+def test_version(capsys: pytest.CaptureFixture[str]) -> None:
+    code, out, _ = _run(capsys, "version")
+    assert code == 0 and out.startswith("ris-emulator ")

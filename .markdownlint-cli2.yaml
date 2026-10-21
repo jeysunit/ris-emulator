@@ -1,0 +1,10 @@
+config:
+  # 仕様書では同名の見出し（目的、インターフェース等）を意図的に使用
+  MD024: false
+  # テーブルのパイプスペースは既存フォーマットを維持
+  MD060: false
+  # 行長: コードブロック・テーブルは除外、本文は80文字
+  MD013:
+    line_length: 80
+    code_blocks: false
+    tables: false
