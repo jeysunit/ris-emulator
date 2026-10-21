@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -22,6 +23,7 @@ DEFAULT_MAX_RESULTS = 1000
 MAX_RESULTS_LIMIT = 100_000
 ACCESSION_PREFIX_MAX_LENGTH = 4
 PATIENT_ID_PREFIX_MAX_LENGTH = 8
+ISSUER_PATTERN = re.compile(r"[A-Za-z0-9_]{1,16}")
 WEB_BIND_ENV = "RIS_WEB_BIND_ADDRESS"
 MWL_BIND_ENV = "RIS_MWL_BIND_ADDRESS"
 
@@ -68,6 +70,9 @@ class OrdersConfig(BaseModel):
     institution_name: str = Field("TEST HOSPITAL", max_length=64)
     accession_prefix: str = Field("RE", max_length=ACCESSION_PREFIX_MAX_LENGTH)
     patient_id_prefix: str = Field("RE", max_length=PATIENT_ID_PREFIX_MAX_LENGTH)
+    # Issuer of Patient ID と Issuer of Accession Number Sequence の Local Namespace Entity ID。
+    # 空なら返さない（spec/04_identifiers.md の 3 章）
+    issuer_namespace: str = "RIS_EMU"
     default_character_set: CharacterSet = CharacterSet.UTF8
     roster_path: str = "data/patients_sample.yaml"
     departments: list[str] = Field(default_factory=lambda: ["内科"], min_length=1)
@@ -78,6 +83,13 @@ class OrdersConfig(BaseModel):
     def _check_prefix(cls, value: str) -> str:
         if not value.isascii() or not value.isalnum():
             raise ValueError("prefix must be ASCII letters or digits")
+        return value
+
+    @field_validator("issuer_namespace")
+    @classmethod
+    def _check_issuer(cls, value: str) -> str:
+        if value and not ISSUER_PATTERN.fullmatch(value):
+            raise ValueError("issuer_namespace must be ASCII letters, digits or '_', 16 characters or fewer")
         return value
 
     @field_validator("modalities")

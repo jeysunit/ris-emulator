@@ -11,6 +11,8 @@ AE_TITLE_MAX_LENGTH = 16
 SH_MAX_LENGTH = 16
 LO_MAX_LENGTH = 64
 PN_GROUP_MAX_LENGTH = 64
+UI_MAX_LENGTH = 64
+HL7_V2_DELIMITERS = frozenset("^~&|")
 _DATE = re.compile(r"^\d{8}$")
 _TIME = re.compile(r"^\d{6}$")
 _PRINTABLE_ASCII_MIN = 0x20
@@ -57,6 +59,16 @@ CHARACTER_SET_TERMS: dict[CharacterSet, list[str]] = {
     CharacterSet.JIS: ["", "ISO 2022 IR 87"],
     CharacterSet.JIS_KANA: ["ISO 2022 IR 13", "ISO 2022 IR 87"],
 }
+
+
+IDENTIFIER_PATTERN = re.compile(r"[A-Za-z0-9]{1,16}")
+# PS3.5 9.1：数の成分を `.` で区切る。成分は 0 か、0 で始まらない数。64 字まで
+_UID_PATTERN = re.compile(r"(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))+")
+
+
+def is_valid_uid(value: str) -> bool:
+    """DICOM の UID の形か（PS3.5 9.1）."""
+    return len(value) <= UI_MAX_LENGTH and _UID_PATTERN.fullmatch(value) is not None
 
 
 def has_control_chars(value: str) -> bool:
@@ -118,6 +130,20 @@ class Patient(BaseModel):
     weight_kg: float | None = None
     size_m: float | None = None
 
+    @field_validator("patient_id")
+    @classmethod
+    def _check_patient_id(cls, value: str) -> str:
+        """Patient ID：LO（64 字、`\\` と制御文字なし。PS3.5 6.2）。HL7 v2 の区切りの字
+        （`^~&|`）と前後の空白も断る（HL7 v2 の PID-3 と FHIR の Identifier.value に
+        エスケープなしで入れるため。spec/04_identifiers.md）."""
+        if "\\" in value or has_control_chars(value):
+            raise ValueError("patient_id must not contain backslash or control characters")
+        if any(char in HL7_V2_DELIMITERS for char in value):
+            raise ValueError("patient_id must not contain HL7 v2 delimiters (^ ~ & |)")
+        if value != value.strip():
+            raise ValueError("patient_id must not have leading or trailing spaces")
+        return value
+
     @field_validator("birth_date")
     @classmethod
     def _check_birth_date(cls, value: str) -> str:
@@ -149,7 +175,10 @@ class Order(BaseModel):
     accession_number: str = Field(..., min_length=1, max_length=SH_MAX_LENGTH)
     requested_procedure_id: str = Field(..., min_length=1, max_length=SH_MAX_LENGTH)
     scheduled_procedure_step_id: str = Field(..., min_length=1, max_length=SH_MAX_LENGTH)
-    study_instance_uid: str = Field(..., min_length=1, max_length=64)
+    study_instance_uid: str = Field(..., min_length=1, max_length=UI_MAX_LENGTH)
+    # Issuer of Patient ID と Issuer of Accession Number Sequence の Local Namespace
+    # Entity ID（HL7 v2 の Assigning Authority の namespace ID）。空なら返さない
+    issuer_namespace: str = ""
     patient: Patient
     modality: str = Field(..., min_length=1, max_length=SH_MAX_LENGTH)
     scheduled_station_ae_title: str
@@ -172,6 +201,21 @@ class Order(BaseModel):
     @classmethod
     def _check_ae_title(cls, value: str) -> str:
         return validate_ae_title(value)
+
+    @field_validator("accession_number", "requested_procedure_id", "scheduled_procedure_step_id")
+    @classmethod
+    def _check_sh_identifier(cls, value: str) -> str:
+        """発番する SH の識別子は英数字だけ（spec/04_identifiers.md の 2 章）."""
+        if not IDENTIFIER_PATTERN.fullmatch(value):
+            raise ValueError("identifier must be ASCII letters and digits, 16 characters or fewer")
+        return value
+
+    @field_validator("study_instance_uid")
+    @classmethod
+    def _check_uid(cls, value: str) -> str:
+        if not is_valid_uid(value):
+            raise ValueError("study_instance_uid must follow PS3.5 9.1")
+        return value
 
     @field_validator("scheduled_date")
     @classmethod

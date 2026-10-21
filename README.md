@@ -212,3 +212,14 @@ pytest
 
 MWL の属性と照合の決まりは DICOM PS3.4（Annex K・C.2.2.2）に従います。
 出典の一覧は [ADR-0001](adr/0001-mwl-scp-with-pynetdicom.md) にあります。
+発番する識別子（受付番号・Study Instance UID など）が DICOM・HL7 v2・
+HL7 FHIR R5 の決まりに合うことは [spec/04_identifiers.md](spec/04_identifiers.md)
+にまとめています。
+
+---
+
+## ライセンス
+
+[MIT License](LICENSE)（Copyright (c) 2026 jeysunit）。
+
+`app/web/static/htmx.min.js` は htmx 2.0.9（Zero-Clause BSD）をそのまま同梱しています。

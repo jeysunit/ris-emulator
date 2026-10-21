@@ -68,6 +68,7 @@
 | `orders.institution_name` | `TEST HOSPITAL` | 施設名 |
 | `orders.accession_prefix` | `RE` | 受付番号の接頭辞（英数字 4 字まで） |
 | `orders.patient_id_prefix` | `RE` | 乱数の患者 ID の接頭辞（英数字 8 字まで） |
+| `orders.issuer_namespace` | `RIS_EMU` | Issuer of Patient ID・Issuer of Accession Number Sequence（英数字と `_` で 16 字まで。空なら返さない。spec/04） |
 | `orders.default_character_set` | `utf8` | 文字コードの既定 |
 | `orders.roster_path` | `data/patients_sample.yaml` | 名簿 |
 | `orders.departments` | 内科など | 依頼科 |

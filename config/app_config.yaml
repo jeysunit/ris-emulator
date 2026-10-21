@@ -16,6 +16,7 @@ orders:
   institution_name: "TEST HOSPITAL"
   accession_prefix: "RE"          # 受付番号 = 接頭辞 + 作った日 + 4 桁の連番
   patient_id_prefix: "RE"         # 乱数の患者 ID = 接頭辞 + 7 桁
+  issuer_namespace: "RIS_EMU"     # Issuer of Patient ID・Issuer of Accession Number Sequence。空なら返さない
   default_character_set: "utf8"   # utf8, jis, jis_kana
   roster_path: "data/patients_sample.yaml"
   departments: ["内科", "外科", "整形外科", "脳神経外科", "呼吸器内科", "消化器内科", "救急科"]

@@ -27,7 +27,7 @@ def order_to_dataset(order: Order) -> Dataset:
     patient = order.patient
     ds.PatientName = patient.name.to_dicom()
     ds.PatientID = patient.patient_id
-    ds.IssuerOfPatientID = ""
+    ds.IssuerOfPatientID = order.issuer_namespace
     ds.PatientBirthDate = patient.birth_date
     ds.PatientSex = patient.sex
     ds.PatientWeight = _decimal(patient.weight_kg)
@@ -35,7 +35,7 @@ def order_to_dataset(order: Order) -> Dataset:
 
     # Imaging Service Request
     ds.AccessionNumber = order.accession_number
-    ds.IssuerOfAccessionNumberSequence = Sequence()
+    ds.IssuerOfAccessionNumberSequence = Sequence(_issuer_items(order.issuer_namespace))
     ds.RequestingPhysician = order.requesting_physician.to_dicom()
     ds.ReferringPhysicianName = order.referring_physician.to_dicom()
     ds.RequestingService = order.requesting_service
@@ -155,6 +155,15 @@ def _copy(item: Dataset) -> Dataset:
         else:
             out.add(DataElement(element.tag, element.VR, element.value))
     return out
+
+
+def _issuer_items(namespace: str) -> list[Dataset]:
+    """Issuer of Accession Number Sequence の項目（HL7v2 Hierarchic Designator Macro。PS3.3 Table 10-17）."""
+    if not namespace:
+        return []
+    item = Dataset()
+    item.LocalNamespaceEntityID = namespace
+    return [item]
 
 
 def _code_item(order: Order) -> Dataset:

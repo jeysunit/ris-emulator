@@ -35,3 +35,4 @@ MWL (app/mwl/) ─┘
 | [01_orders.md](01_orders.md) | 予約の項目、番号の付け方、患者の作り方、状態 |
 | [02_mwl_scp.md](02_mwl_scp.md) | MWL の SCP：照合、返す属性、文字コード、状態の値 |
 | [03_web_cli.md](03_web_cli.md) | Web 画面・CLI・設定・Docker |
+| [04_identifiers.md](04_identifiers.md) | 発番する識別子と DICOM・HL7 v2・FHIR R5 の決まり、Study Instance UID を RIS が発番する根拠 |

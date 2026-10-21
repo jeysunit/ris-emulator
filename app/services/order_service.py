@@ -221,6 +221,7 @@ class OrderService:
                         requested_procedure_id=f"RP{number}",
                         scheduled_procedure_step_id=f"SPS{number}",
                         study_instance_uid=f"{UID_ROOT}.{uuid.uuid4().int}",
+                        issuer_namespace=self.config.orders.issuer_namespace,
                         patient=patient,
                         modality=modality,
                         scheduled_station_ae_title=request.station_ae_title
