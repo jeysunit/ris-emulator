@@ -3,11 +3,11 @@
 - 作成日：2026-10-21
 - 最終更新日：2026-10-22
 
-開発・試験用の RIS エミュレーターです。架空の患者と検査の予約を作り、
+開発・テスト用の RIS エミュレーターです。架空の患者と検査の予約を作成し、
 MWL（Modality Worklist、C-FIND の SCP）で返します。
 
-モダリティがワークリストを取得し、予約の内容で撮影して PACS へ送る流れのうち、
-予約を作ってワークリストを返すところを受け持ちます。
+モダリティがワークリストを取得し、予約の内容で撮影して PACS へ送信する流れのうち、
+予約の作成とワークリストの応答を担当します。
 
 ```mermaid
 flowchart LR
@@ -18,29 +18,29 @@ flowchart LR
   MOD -- "C-STORE" --> PACS
 ```
 
-> **注意**：開発・試験専用です。本物の患者のデータを入れないでください。
-> 施設の RIS・PACS・モダリティにつながないでください。
+> **注意**：開発・テスト専用です。実在の患者のデータを入れないでください。
+> 医療機関の RIS・PACS・モダリティに接続しないでください。
 
-## できること
+## 機能
 
-- 予約を作る（CLI と Web 画面）。「CT を 3 件、MR を 1 件」のように指定する
-- 患者は乱数で作るか、名簿（YAML）から選ぶ。氏名は英字・漢字・カナの
-  3つのコンポーネントグループで持つ
+- 予約を作成する（CLI と Web 画面）。「CT を 3 件、MR を 1 件」のように指定する
+- 患者は乱数で生成するか、名簿（YAML）から選ぶ。氏名は英字・漢字・カナの
+  3つのコンポーネントグループで保持する
 - 受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
-  Study Instance UID・予定の日時・予定の AE タイトル・検査名・依頼科を埋める
+  Study Instance UID・予定日時・予定の AE タイトル・検査名・依頼科を設定する
 - MWL の C-FIND に、予定の AE タイトル・日付の範囲・モダリティ・患者 ID・
-  氏名・受付番号などで絞って答える
+  氏名・受付番号などで絞り込んで応答する
 - 応答の文字コードを `ISO_IR 192`・`\ISO 2022 IR 87`・
   `ISO 2022 IR 13\ISO 2022 IR 87` から予約ごとに選ぶ
-- 予約の一覧と状態（予定・実施中・完了・取消）を Web 画面で見て、手で変える。
+- 予約の一覧と状態（予定・実施中・完了・取消）を Web 画面で確認し、手動で変更する。
   完了・取消の予約は MWL で返さない
 
-MPPS（N-CREATE・N-SET を受けて状態を進める）はまだありません
+MPPS（N-CREATE・N-SET を受けて状態を進める）は未実装です
 （[ロードマップ](docs/roadmap.md)）。
 
 ## インストール
 
-Python 3.10 以上が要ります。
+Python 3.10 以上が必要です。
 
 ```bash
 python -m venv .venv
@@ -50,7 +50,7 @@ pip install -r requirements.txt
 
 ## 使い方
 
-### 予約を作る（CLI）
+### 予約を作成する（CLI）
 
 ```bash
 # 今日の CT を 3 件、MR を 1 件（09:00 から 15 分おき）
@@ -65,7 +65,7 @@ python -m app.cli show RE202610210001
 python -m app.cli status RE202610210001 in_progress
 ```
 
-`python -m app.cli --help` と各サブコマンドの `--help` に、すべての引数があります。
+引数の一覧は、`python -m app.cli --help` と各サブコマンドの `--help` で確認できます。
 
 ### Web 画面と MWL を起動する
 
@@ -80,44 +80,44 @@ MWL だけを起動するときは `python -m app.cli mwl serve` を使います
 
 ### モダリティからワークリストを取得する
 
-モダリティの MWL の設定（SCU）で、相手を次のようにします。
+モダリティの MWL の設定（SCU）で、接続先を次のように設定します。
 
 | 項目 | 値 |
 |------|----|
 | Called AE Title | `RIS_EMU` |
-| ホスト | ris-emulator を動かしているホスト（手元なら `127.0.0.1`） |
+| ホスト | ris-emulator を実行しているホスト（ローカルなら `127.0.0.1`） |
 | ポート | `11112` |
 
 予約の予定の AE タイトルは、モダリティごとに `config/app_config.yaml` の
-`orders.modalities.<モダリティ>.station_ae_titles` で決まります。既定は
+`orders.modalities.<モダリティ>.station_ae_titles` で決まります。既定値は
 `CT01`・`MR01`・`CR01`・`DX01`・`US01`・`MG01` です。モダリティが自分の
-AE タイトルで絞って問い合わせるなら、この値をモダリティの AE タイトルに
-書き替えてください（16 字まで。複数書くと予約ごとに順に使います）。
-予約を作るときに、CLI の `--station-ae` や Web 画面で指定することもできます。
+AE タイトルで絞り込んで問い合わせる場合は、この値をモダリティの AE タイトルに
+変更してください（16 文字まで。複数指定すると予約ごとに順に使います）。
+予約の作成時に、CLI の `--station-ae` や Web 画面で指定することもできます。
 
 ### 設定
 
-設定は `config/app_config.yaml` です。モダリティごとの予定の AE タイトルと
-検査の種類、依頼科、受付番号の接頭辞、MWL の AE タイトルとポートなどを変えられます。
+設定ファイルは `config/app_config.yaml` です。モダリティごとの予定の AE タイトルと
+検査の種類、依頼科、受付番号の接頭辞、MWL の AE タイトルとポートなどを変更できます。
 キーの一覧は [spec/03_web_cli.md](docs/spec/03_web_cli.md) の 4 章にあります。
 
 ### 文字コードの注意
 
-- `jis`・`jis_kana` は JIS X 0208 の字だけを書けます。`髙`・`𠮷` のような
-  JIS X 0208 に無い字を含む予約は、作るときに断ります（`ISO_IR 192` を使ってください）
+- `jis`・`jis_kana` で書けるのは JIS X 0208 の文字だけです。`髙`・`𠮷` のような
+  JIS X 0208 に無い文字を含む予約は、作成時にエラーにします（`ISO_IR 192` を使ってください）
 - `jis_kana`（`ISO 2022 IR 13\ISO 2022 IR 87`）でも、カナは全角のまま書きます。
-  英字のコンポーネントグループを半角カナにする形（PS3.5 H.3.2 の例）は出しません
+  英字のコンポーネントグループを半角カナにする形（PS3.5 H.3.2 の例）は出力しません
 
-## Docker で動かす
+## Docker で実行する
 
-イメージは Web 画面と MWL を1つのコンテナで動かします。待ち受けのアドレスは
+イメージは Web 画面と MWL を1つのコンテナで実行します。待ち受けのアドレスは
 環境変数 `RIS_WEB_BIND_ADDRESS`・`RIS_MWL_BIND_ADDRESS` で `0.0.0.0` に
-してあり、設定ファイルの `bind_address` より先に効きます。`0.0.0.0` で
-待ち受けるため、HTTP Basic のパスワードのファイルが要ります
+設定してあり、設定ファイルの `bind_address` より優先されます。`0.0.0.0` で
+待ち受けるため、HTTP Basic のパスワードのファイルが必要です
 （無ければ起動しません）。ユーザー名は `ris` です。
 
-コンテナは uid 10001 で動きます。パスワードのファイルは、その uid が
-読める権限にしてください（例 `chmod 0444`）。読めないと起動しません。
+コンテナは uid 10001 で実行します。パスワードのファイルは、その uid が
+読み取れる権限にしてください（例 `chmod 0444`）。読み取れないと起動しません。
 
 ### docker run
 
@@ -136,9 +136,9 @@ docker run -d --name ris-emulator \
   ris-emulator
 ```
 
-設定を変えるときは、設定の例をリポジトリの外にコピーして直し、
+設定を変更するときは、設定の例をリポジトリの外にコピーして編集し、
 `-v "$HOME/ris-emulator/app_config.yaml:/app/config/app_config.yaml:ro"` で
-渡します。
+マウントします。
 
 ### Docker Compose
 
@@ -165,29 +165,29 @@ volumes:
   ris-state:
 ```
 
-Compose の `secrets` の `file:` は、手元のファイルをそのままの権限で
-コンテナに見せます。こちらも uid 10001 が読める権限にしてください。
+Compose の `secrets` の `file:` は、ローカルのファイルを元の権限のまま
+コンテナにマウントします。こちらも uid 10001 が読み取れる権限にしてください。
 
 ### Docker の注意
 
-- 予約は `/app/state` の SQLite に残ります。名前付きのボリュームに置きます
-- 予定の日（`today`）と時刻は、コンテナのローカル時刻（`TZ`）で決まります。
-  `TZ` をモダリティの側とそろえてください
-- 予約を作るときは、Web 画面か `docker exec ris-emulator python -m app.cli create CT=3` を使います
+- 予約は `/app/state` の SQLite に保存されます。名前付きボリュームに置いてください
+- 予定日（`today`）と時刻は、コンテナのローカル時刻（`TZ`）で決まります。
+  `TZ` をモダリティ側と合わせてください
+- 予約を作成するときは、Web 画面か `docker exec ris-emulator python -m app.cli create CT=3` を使います
 
-## 文書
+## ドキュメント
 
-作りと仕様は [docs/](docs/README.md) にあります。
+設計と仕様は [docs/](docs/README.md) にあります。
 
 - [目的と範囲](docs/project_charter.md)
 - [構成](docs/architecture.md)
 - [仕様（spec）](docs/README.md#spec)：予約、MWL の SCP、Web 画面・CLI・設定、
   発番する識別子
-- [設計の判断（ADR）](docs/decisions/README.md)
-- [開発](docs/development.md)：試験の流し方、変更の進め方
+- [設計判断（ADR）](docs/decisions/README.md)
+- [開発](docs/development.md)：テストの実行方法、変更の手順
 
-MWL の属性と照合の決まりは DICOM PS3.4（Annex K・C.2.2.2）に従います。
-発番する識別子は DICOM・HL7 v2・HL7 FHIR R5 の決まりに合わせています
+MWL の属性と照合の規則は DICOM PS3.4（Annex K・C.2.2.2）に従います。
+発番する識別子は DICOM・HL7 v2・HL7 FHIR R5 の規則に合わせています
 （[spec/04_identifiers.md](docs/spec/04_identifiers.md)）。
 
 ## ライセンス
