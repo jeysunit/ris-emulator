@@ -180,7 +180,7 @@ def test_jis_character_sets_over_the_network(server: MwlServer, service: OrderSe
 def test_unsupported_keys_make_pending_warning(
     config: AppConfig, store: OrderStore, service: OrderService
 ) -> None:
-    """TDG の形の要求は FF00、この SCP が持たない属性があれば FF01（PS3.4 Table K.4-1）."""
+    """DTG の形の要求は FF00、この SCP が持たない属性があれば FF01（PS3.4 Table K.4-1）."""
     _seed(service)
     status, responses = find_worklist(_query(Modality="MR"), store, config.mwl)
     assert status == 0x0000 and [pending for pending, _ in responses] == [0xFF00]

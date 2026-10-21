@@ -55,7 +55,7 @@
 ### 4.1 持っている属性
 
 PS3.4 Table K.6-1 の Return Key Type 1・2 の属性と、dicom-test-generator が求める
-属性（TDG の spec/12 5.2）を持つ。
+属性（DTG の spec/12 5.2）を持つ。
 
 | モジュール | 属性 |
 |------------|------|
@@ -80,7 +80,7 @@ Table K.6-1（2026d）の Return Key Type 2 の属性はすべて持つ。
 ## 5. 文字コード
 
 予約ごとに3つから選ぶ（既定は設定の `orders.default_character_set`）。
-dicom-test-generator の画像の文字コードの選択（TDG の spec/12 7.1）と同じ組。
+dicom-test-generator の画像の文字コードの選択（DTG の spec/12 7.1）と同じ組。
 
 | 選択 | Specific Character Set |
 |------|------------------------|

@@ -80,7 +80,7 @@
 - 環境変数 `RIS_WEB_BIND_ADDRESS`・`RIS_MWL_BIND_ADDRESS` があれば、
   `web.bind_address`・`mwl.bind_address` より先に効く
 - 既定の予定の AE タイトルは dicom-test-generator の既定（`DTG_CT01`）に合わせ、
-  設定を変えずに TDG がワークリストを取得できるようにしている
+  設定を変えずに DTG がワークリストを取得できるようにしている
 
 ## 5. Docker
 
