@@ -1,4 +1,4 @@
-"""C-FIND の要求の照合（spec/02_mwl_scp.md 3 章）.
+"""C-FIND の要求の照合（docs/spec/02_mwl_scp.md 3 章）.
 
 出典は DICOM PS3.4 C.2.2.2（Attribute Matching）と K.6-1（Remark / Matching Type）。
 Pure な処理。値は pydicom が Specific Character Set で戻した Python の文字列で比べる。

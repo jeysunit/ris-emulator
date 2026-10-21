@@ -1,4 +1,4 @@
-"""予約を作る・一覧する・状態を変える（spec/01_orders.md）."""
+"""予約を作る・一覧する・状態を変える（docs/spec/01_orders.md）."""
 
 from __future__ import annotations
 

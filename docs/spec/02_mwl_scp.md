@@ -1,6 +1,7 @@
 # 02. MWL の SCP
 
-出典は ADR-0001 の「出典」の節（DICOM PS3.4 K.4・K.6・C.2.2.2）。
+出典は [ADR-0001](../decisions/0001-mwl-scp-with-pynetdicom.md) の「出典」の節
+（DICOM PS3.4 K.4・K.6・C.2.2.2）。
 
 ## 1. 受けるもの
 
@@ -54,14 +55,14 @@
 
 ### 4.1 持っている属性
 
-PS3.4 Table K.6-1 の Return Key Type 1・2 の属性と、dicom-test-generator が求める
-属性（DTG の spec/12 5.2）を持つ。
+PS3.4 Table K.6-1 の Return Key Type 1・2 の属性と、モダリティが画像に写すために
+求めることのある属性を持つ。
 
 | モジュール | 属性 |
 |------------|------|
 | Scheduled Procedure Step Sequence の中 | Scheduled Station AE Title・Scheduled Station Name・Start Date・Start Time・Modality・Scheduled Performing Physician's Name・Scheduled Procedure Step Description・Scheduled Protocol Code Sequence・Scheduled Procedure Step ID・Scheduled Procedure Step Location・Pre-Medication・Requested Contrast Agent・Scheduled Procedure Step Status |
 | Requested Procedure | Requested Procedure ID・Description・Code Sequence・Study Instance UID・Referenced Study Sequence（空）・Requested Procedure Priority・Patient Transport Arrangements（空）・Reason for the Requested Procedure（空） |
-| Imaging Service Request | Accession Number・Issuer of Accession Number Sequence（設定の `issuer_namespace`。spec/04 の 3 章）・Requesting Physician・Referring Physician's Name・Requesting Service・Institution Name |
+| Imaging Service Request | Accession Number・Issuer of Accession Number Sequence（設定の `issuer_namespace`。ADR-0005）・Requesting Physician・Referring Physician's Name・Requesting Service・Institution Name |
 | Visit | Admission ID（空）・Current Patient Location（空）・Referenced Patient Sequence（空） |
 | Patient | Patient's Name・Patient ID・Issuer of Patient ID（設定の `issuer_namespace`）・Birth Date・Sex・Weight・Size・Confidentiality Constraint on Patient Data Description（空） |
 | Patient Medical | Patient State・Pregnancy Status・Medical Alerts・Allergies・Special Needs（どれも空） |
@@ -80,7 +81,6 @@ Table K.6-1（2026d）の Return Key Type 2 の属性はすべて持つ。
 ## 5. 文字コード
 
 予約ごとに3つから選ぶ（既定は設定の `orders.default_character_set`）。
-dicom-test-generator の画像の文字コードの選択（DTG の spec/12 7.1）と同じ組。
 
 | 選択 | Specific Character Set |
 |------|------------------------|
@@ -92,7 +92,7 @@ dicom-test-generator の画像の文字コードの選択（DTG の spec/12 7.1�
   そのまま書く（カナは全角。JIS X 0208 で書ける）
 - `jis_kana` でも半角カナは出さない。英字のコンポーネントグループを半角カナに
   する形（PS3.5 H.3.2 の例 `ﾔﾏﾀﾞ^ﾀﾛｳ=山田^太郎=やまだ^たろう`）は作らない
-- 選んだ文字コードで書けない字がある予約は、作るときに断る（spec/01 の 3.3）
+- 選んだ文字コードで書けない字がある予約は、作るときに断る（[01_orders.md](01_orders.md) の 3.3）
 - 要求の文字コードと応答の文字コードは別でよい（PS3.4 K.4.1.1.3.2）
 
 ## 6. Conformance の要点（PS3.4 K.6.1.3.2）

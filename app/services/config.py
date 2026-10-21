@@ -1,4 +1,4 @@
-"""設定ファイル（config/app_config.yaml）の読み込み（spec/03_web_cli.md 4 章）.
+"""設定ファイル（config/app_config.yaml）の読み込み（docs/spec/03_web_cli.md 4 章）.
 
 相対のパスは、プロセスの作業ディレクトリから辿る。
 環境変数 `RIS_WEB_BIND_ADDRESS`・`RIS_MWL_BIND_ADDRESS` があれば、待ち受けのアドレスを上書きする。
@@ -71,7 +71,7 @@ class OrdersConfig(BaseModel):
     accession_prefix: str = Field("RE", max_length=ACCESSION_PREFIX_MAX_LENGTH)
     patient_id_prefix: str = Field("RE", max_length=PATIENT_ID_PREFIX_MAX_LENGTH)
     # Issuer of Patient ID と Issuer of Accession Number Sequence の Local Namespace Entity ID。
-    # 空なら返さない（spec/04_identifiers.md の 3 章）
+    # 空なら返さない（docs/spec/04_identifiers.md の 2 章、ADR-0005）
     issuer_namespace: str = "RIS_EMU"
     default_character_set: CharacterSet = CharacterSet.UTF8
     roster_path: str = "data/patients_sample.yaml"

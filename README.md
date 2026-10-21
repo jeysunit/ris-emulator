@@ -1,33 +1,24 @@
 # ris-emulator
 
-開発・試験用の RIS エミュレーター
+開発・試験用の RIS エミュレーターです。架空の患者と検査の予約を作り、
+MWL（Modality Worklist、C-FIND の SCP）で返します。
 
-A small RIS emulator for development and testing: it creates orders for
-made-up patients and serves them as a DICOM Modality Worklist (C-FIND SCP).
-Do not put real patient data into it.
-
----
-
-## 概要
-
-**ris-emulator** は、医療画像システムの開発・試験の環境で RIS の役を務める
-ツールです。架空の患者と検査の予約を作り、MWL（Modality Worklist、
-C-FIND の SCP）で返します。
-
-モダリティ（[dicom-test-generator](https://github.com/jeysunit/dicom-test-generator)
-など）がワークリストを取得し、予約の内容で撮影して PACS へ送る流れの、前段を
-受け持ちます。
+モダリティがワークリストを取得し、予約の内容で撮影して PACS へ送る流れの、
+前段を受け持ちます。
 
 ```mermaid
 flowchart LR
   RIS["ris-emulator<br/>予約の作成・MWL の SCP"]
-  MOD["モダリティ<br/>dicom-test-generator など"]
+  MOD["モダリティ"]
   PACS[("PACS")]
   MOD -- "C-FIND（MWL）" --> RIS
   MOD -- "C-STORE" --> PACS
 ```
 
-主な機能は次のとおりです。
+> **注意**：開発・試験専用です。本物の患者のデータを入れないでください。
+> 施設の RIS・PACS・モダリティにつながないでください。
+
+## できること
 
 * 予約を作る（CLI と Web 画面）。「CT を 3 件、MR を 1 件」のように指定する
 * 患者は乱数で作るか、名簿（YAML）から選ぶ。氏名は英字・漢字・カナの
@@ -41,32 +32,20 @@ flowchart LR
 * 予約の一覧と状態（予定・実施中・完了・取消）を Web 画面で見て、手で変える。
   完了・取消の予約は MWL で返さない
 
-MPPS（N-CREATE・N-SET を受けて状態を進める）はまだありません。次の段で足します
-（[ADR-0001](adr/0001-mwl-scp-with-pynetdicom.md)）。
+MPPS（N-CREATE・N-SET を受けて状態を進める）はまだありません
+（[ロードマップ](docs/roadmap.md)）。
 
-> **注意**：開発・試験専用です。本物の患者のデータを入れないでください。
-> 施設の RIS・PACS・モダリティにつながないでください。
+## インストール
 
-### 文字コードの注意
-
-* `jis`・`jis_kana` は JIS X 0208 の字だけを書けます。`髙`・`𠮷` のような
-  JIS X 0208 に無い字を含む予約は、作るときに断ります（`ISO_IR 192` を使ってください）
-* `jis_kana`（`ISO 2022 IR 13\ISO 2022 IR 87`）でも、カナは全角のまま書きます。
-  英字のコンポーネントグループを半角カナにする形（PS3.5 H.3.2 の例）は出しません
-
----
-
-## 使い方
-
-### インストール
-
-Python 3.10 以上。
+Python 3.10 以上が要ります。
 
 ```bash
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+## 使い方
 
 ### 予約を作る（CLI）
 
@@ -96,31 +75,33 @@ python -m app.web
 
 MWL だけを起動するときは `python -m app.cli mwl serve` を使います。
 
-### dicom-test-generator からワークリストを取得する
+### モダリティからワークリストを取得する
 
-dicom-test-generator の設定の `modality.worklist` を、ris-emulator に向けます。
+モダリティの MWL の設定（SCU）で、相手を次のようにします。
 
-```yaml
-modality:
-  ae_title: "DTG_CT01"   # ris-emulator の CT の予定の AE タイトルの既定と同じ
-  worklist:
-    ae_title: "RIS_EMU"
-    host: "127.0.0.1"
-    port: 11112
-```
+| 項目 | 値 |
+|------|----|
+| Called AE Title | `RIS_EMU` |
+| ホスト | ris-emulator を動かしているホスト（手元なら `127.0.0.1`） |
+| ポート | `11112` |
 
-```bash
-# dicom-test-generator の側で
-python -m app.cli worklist query --date today
-```
+予約の予定の AE タイトルは、モダリティごとに `config/app_config.yaml` の
+`orders.modalities.<モダリティ>.station_ae_titles` で決まります。モダリティが
+自分の AE タイトルで絞って問い合わせるなら、この値をモダリティの AE タイトルと
+そろえてください。
 
 ### 設定
 
-設定は `config/app_config.yaml` です（[spec/03_web_cli.md](spec/03_web_cli.md)
-の 4 章）。モダリティごとの予定の AE タイトルと検査の種類、依頼科、
-受付番号の接頭辞、MWL の AE タイトルとポートなどを変えられます。
+設定は `config/app_config.yaml` です。モダリティごとの予定の AE タイトルと
+検査の種類、依頼科、受付番号の接頭辞、MWL の AE タイトルとポートなどを変えられます。
+キーの一覧は [spec/03_web_cli.md](docs/spec/03_web_cli.md) の 4 章にあります。
 
----
+### 文字コードの注意
+
+* `jis`・`jis_kana` は JIS X 0208 の字だけを書けます。`髙`・`𠮷` のような
+  JIS X 0208 に無い字を含む予約は、作るときに断ります（`ISO_IR 192` を使ってください）
+* `jis_kana`（`ISO 2022 IR 13\ISO 2022 IR 87`）でも、カナは全角のまま書きます。
+  英字のコンポーネントグループを半角カナにする形（PS3.5 H.3.2 の例）は出しません
 
 ## Docker で動かす
 
@@ -182,41 +163,27 @@ volumes:
 Compose の `secrets` の `file:` は、手元のファイルをそのままの権限で
 コンテナに見せます。こちらも uid 10001 が読める権限にしてください。
 
-### 注意
+### Docker の注意
 
 * 予約は `/app/state` の SQLite に残ります。名前付きのボリュームに置きます
 * 予定の日（`today`）と時刻は、コンテナのローカル時刻（`TZ`）で決まります。
   `TZ` をモダリティの側とそろえてください
 * 予約を作るときは、Web 画面か `docker exec ris-emulator python -m app.cli create CT=3` を使います
 
----
+## 文書
 
-## 開発
+作りと仕様は [docs/](docs/README.md) にあります。
 
-```bash
-pytest
-```
-
-| 場所 | 中身 |
-|------|------|
-| `app/core/` | 予約のモデル、乱数の患者、MWL の照合と応答の組み立て、文字コードの確かめ |
-| `app/services/` | 設定・名簿の読み込み、予約の保存（SQLite）、予約の作成 |
-| `app/mwl/` | MWL の SCP（pynetdicom） |
-| `app/cli/`・`app/web/` | CLI と Web 画面 |
-| `spec/` | 仕様 |
-| `adr/` | 設計の記録 |
-
----
-
-## 出典
+* [目的と範囲](docs/project_charter.md)
+* [構成](docs/architecture.md)
+* [仕様（spec）](docs/README.md#spec)：予約、MWL の SCP、Web 画面・CLI・設定、
+  発番する識別子
+* [設計の判断（ADR）](docs/decisions/README.md)
+* [開発](docs/development.md)：試験の流し方、変更の進め方
 
 MWL の属性と照合の決まりは DICOM PS3.4（Annex K・C.2.2.2）に従います。
-出典の一覧は [ADR-0001](adr/0001-mwl-scp-with-pynetdicom.md) にあります。
-発番する識別子（受付番号・Study Instance UID など）が DICOM・HL7 v2・
-HL7 FHIR R5 の決まりに合うことは [spec/04_identifiers.md](spec/04_identifiers.md)
-にまとめています。
-
----
+発番する識別子は DICOM・HL7 v2・HL7 FHIR R5 の決まりに合わせています
+（[spec/04_identifiers.md](docs/spec/04_identifiers.md)）。
 
 ## ライセンス
 

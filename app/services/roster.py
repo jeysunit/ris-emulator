@@ -1,4 +1,4 @@
-"""患者の名簿（YAML）の読み込み（spec/01_orders.md 3.2）.
+"""患者の名簿（YAML）の読み込み（docs/spec/01_orders.md 3.2）.
 
 形は dicom-test-generator の data/patients_master.yaml と同じ。
 身長（size）は cm で書き、DICOM の Patient's Size（m）に直す。

@@ -1,4 +1,4 @@
-# 03. Web 画面・CLI・設定
+# 03. Web 画面・CLI・設定・Docker
 
 ## 1. 起動の形
 
@@ -8,7 +8,8 @@
 | `python -m app.cli mwl serve` | MWL の SCP だけ |
 | `python -m app.cli create` など | 予約の操作（保存先を直に読み書きする） |
 
-画面と CLI と MWL は同じ SQLite のファイルを使う（ADR-0002）。
+画面と CLI と MWL は同じ SQLite のファイルを使う
+（[ADR-0002](../decisions/0002-sqlite-order-store.md)）。
 
 ## 2. CLI
 
@@ -35,7 +36,7 @@
 | `/orders/<受付番号>` | 予約の詳細と MWL の全属性。状態を変える |
 
 - 上の帯に MWL の AE タイトル、待ち受けの状態、アドレスとポートを出す
-- 作り方は dicom-test-generator の画面と同じ：FastAPI・Jinja2・htmx（v2.0.9、
+- 作り方：FastAPI・Jinja2・htmx（v2.0.9、
   リポジトリに置き、版と sha256 を `scripts/fetch_web_assets.sh` に固定）。
   CSS は手で書いた1ファイル（ビルドの工程を持たない）
 
@@ -44,11 +45,14 @@
 画面の文言は RIS・PACS でふつうに使う用語にする（予約、受付番号、
 モダリティ、AE タイトル、依頼科、予定、実施中、完了、取消）。説明の文は置かない。
 
-### 3.3 安全（dicom-test-generator の spec/12a 10.9 と同じ決まり）
+### 3.3 安全
+
+理由は [ADR-0006](../decisions/0006-web-ui-loopback-by-default.md) にある。
 
 - 既定は 127.0.0.1 だけで待ち受け、認証は付けない。`Host` ヘッダーが
   ループバックの名前でなければ断る（DNS rebinding よけ）
-- 127.0.0.1 以外で待ち受けるときは HTTP Basic を必須にする。パスワードは
+- ループバック（127.0.0.0/8・`::1`・`localhost`）以外で待ち受けるときは
+  HTTP Basic を必須にする。パスワードは
   環境変数 `RIS_WEB_PASSWORD_FILE` が指すファイルから起動のときに1回読む。
   無い・読めないときは起動しない（終了コード 2）。ユーザー名は `ris`
 - 書き込み（POST）は、`Origin`（無ければ `Referer`）が同じ origin で、
@@ -68,7 +72,7 @@
 | `orders.institution_name` | `TEST HOSPITAL` | 施設名 |
 | `orders.accession_prefix` | `RE` | 受付番号の接頭辞（英数字 4 字まで） |
 | `orders.patient_id_prefix` | `RE` | 乱数の患者 ID の接頭辞（英数字 8 字まで） |
-| `orders.issuer_namespace` | `RIS_EMU` | Issuer of Patient ID・Issuer of Accession Number Sequence（英数字と `_` で 16 字まで。空なら返さない。spec/04） |
+| `orders.issuer_namespace` | `RIS_EMU` | Issuer of Patient ID・Issuer of Accession Number Sequence（英数字と `_` で 16 字まで。空なら返さない。ADR-0005） |
 | `orders.default_character_set` | `utf8` | 文字コードの既定 |
 | `orders.roster_path` | `data/patients_sample.yaml` | 名簿 |
 | `orders.departments` | 内科など | 依頼科 |
@@ -79,17 +83,17 @@
 - 相対のパスは、プロセスの作業ディレクトリから辿る
 - 環境変数 `RIS_WEB_BIND_ADDRESS`・`RIS_MWL_BIND_ADDRESS` があれば、
   `web.bind_address`・`mwl.bind_address` より先に効く
-- 既定の予定の AE タイトルは dicom-test-generator の既定（`DTG_CT01`）に合わせ、
-  設定を変えずに DTG がワークリストを取得できるようにしている
+- 予定の AE タイトル（`station_ae_titles`）は、モダリティの側の AE タイトルと
+  そろえる。違うと、モダリティが自分の AE タイトルで絞ったときに予約が返らない
 
 ## 5. Docker
 
-- ベースイメージは dicom-test-generator と同じ `python:3.12-slim-trixie`（digest で固定）
+- ベースイメージは `python:3.12-slim-trixie`（digest で固定）
 - root 以外のユーザー（`ris`、uid 10001）で動かす。書き込むのは `/app/state` だけ
 - `CMD` は `python -m app.web`（画面と MWL を1つのコンテナで）
 - イメージは `RIS_WEB_BIND_ADDRESS=0.0.0.0`・`RIS_MWL_BIND_ADDRESS=0.0.0.0` を持ち、
   設定ファイルを mount しなくても外から届く。`RIS_WEB_PASSWORD_FILE` で
   パスワードのファイルを渡す。ファイルは uid 10001 が読める権限にする（例 `chmod 0444`）
 - 予定の日（`today`）と時刻はローカル時刻（`TZ`）で決まる。`TZ` を
-  dicom-test-generator とそろえる（例 `TZ=Asia/Tokyo`）。ベースイメージに
+  モダリティの側とそろえる（例 `TZ=Asia/Tokyo`）。ベースイメージに
   tzdata が入っていることを確かめた（`/usr/share/zoneinfo/Asia/Tokyo`）

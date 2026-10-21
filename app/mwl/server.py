@@ -1,4 +1,4 @@
-"""MWL の SCP（pynetdicom。ADR-0001、spec/02_mwl_scp.md）.
+"""MWL の SCP（pynetdicom。ADR-0001、docs/spec/02_mwl_scp.md）.
 
 C-FIND（Modality Worklist Information Model - FIND、1.2.840.10008.5.1.4.31）と
 C-ECHO（Verification）を受ける。予約は要求のたびに保存先から読み直す。

@@ -1,6 +1,6 @@
-"""待ち受けのアドレスと認証・CSRF の確かめ（spec/03_web_cli.md 3.3）.
+"""待ち受けのアドレスと認証・CSRF の確かめ（docs/spec/03_web_cli.md 3.3）.
 
-dicom-test-generator の Web 画面（spec/12a 10.9）と同じ決まり：
+決まり（理由は docs/decisions/0006-web-ui-loopback-by-default.md）：
 - 既定は 127.0.0.1 だけで待ち受け、認証は付けない
 - 127.0.0.1 以外で待ち受けるときは HTTP Basic を必須にし、パスワードのファイルが無ければ起動しない
 - 書き込みの要求は、同じ origin で、起動のたびに作る token を返したときだけ受ける

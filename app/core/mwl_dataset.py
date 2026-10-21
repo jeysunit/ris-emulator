@@ -1,4 +1,4 @@
-"""予約から MWL の応答の Identifier を組み立てる（spec/02_mwl_scp.md 4 章）.
+"""予約から MWL の応答の Identifier を組み立てる（docs/spec/02_mwl_scp.md 4 章）.
 
 出典は DICOM PS3.4 Table K.6-1（Modality Worklist の属性）と、
 K.4.1.1.3.2（応答には要求に入っていた属性だけを入れる）。Pure な処理。
