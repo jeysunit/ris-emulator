@@ -1,5 +1,8 @@
 # 開発
 
+- 作成日：2026-10-21
+- 最終更新日：2026-10-22
+
 ## 1. 環境
 
 Python 3.10 以上。試験の依存（pytest・httpx）も `requirements.txt` に入っている。
@@ -26,6 +29,17 @@ npx markdownlint-cli2 "**/*.md" "#.venv" "#.pytest_cache"
 ```
 
 決まりは `.markdownlint-cli2.yaml` にある（本文は 80 字で折り返す）。
+
+文書を直したら、冒頭の「最終更新日」をその日に直す（[README.md](README.md) の
+「冒頭の日付」）。付け忘れは、commit の範囲を渡して確かめる。
+
+```bash
+python scripts/check_doc_dates.py origin/main..HEAD
+```
+
+範囲の中で足した・直した文書（ルートの README.md と docs/ の下の .md。ADR を除く）
+ごとに、範囲の中で最後にその文書を変えた commit を見る。その commit の中身の
+「最終更新日」が commit の日より古いか、行が無ければ失敗する（終了コード 1）。
 
 ## 4. 変更の進め方
 

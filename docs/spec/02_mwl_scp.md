@@ -1,5 +1,8 @@
 # 02. MWL の SCP
 
+- 作成日：2026-10-21
+- 最終更新日：2026-10-22
+
 出典は [ADR-0001](../decisions/0001-mwl-scp-with-pynetdicom.md) の「出典」の節
 （DICOM PS3.4 K.4・K.6・C.2.2.2）。
 

@@ -1,5 +1,8 @@
 # 文書の索引
 
+- 作成日：2026-10-22
+- 最終更新日：2026-10-22
+
 ris-emulator の文書はこのディレクトリにあります。使い方はルートの
 [README](../README.md) を読んでください。ここには、作りを知りたい人と、
 直したい人のための文書を置いています。
@@ -14,6 +17,24 @@ ris-emulator の文書はこのディレクトリにあります。使い方は�
 | [decisions/](decisions/README.md) | なぜそう決めたか（ADR） | 採用した後は本文を書き換えない。判断を変えるときは新しい ADR を起こす |
 | [roadmap.md](roadmap.md) | まだ作っていないもの | 作ったら spec に移して消す |
 | [development.md](development.md) | 開発の環境、試験、変更の進め方 | 手順が変わったら直す |
+
+### 冒頭の日付
+
+ADR 以外の文書（ルートの README と、この docs/ の下の文書）は、題の直後に
+次の2行を置きます。ファイルを Git の外に写して渡したときにも、いつの内容かが
+分かるようにするためです。
+
+```markdown
+- 作成日：YYYY-MM-DD
+- 最終更新日：YYYY-MM-DD
+```
+
+- 作成日は、ファイルを作った日です。別の文書から分けて作ったときは、元の文書を
+  作った日にします
+- 最終更新日は、中身を直したら、その日に直します。付け忘れは
+  `scripts/check_doc_dates.py` で確かめます（[development.md](development.md) の 3 章）
+
+ADR は「状態」「日付」「作成日」の3行を置きます（[decisions/README.md](decisions/README.md)）。
 
 ## spec
 
