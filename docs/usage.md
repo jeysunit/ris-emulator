@@ -48,12 +48,14 @@ Web 画面（<http://127.0.0.1:8081/>、ユーザー名 `ris`）と MWL（AE タ
 ### Docker Compose で起動する
 
 `secrets` の `file:` はローカルのファイルを元の権限のままコンテナにマウントするので、
-こちらも uid 10001 が読み取れる権限にします。
+こちらも uid 10001 が読み取れる権限にします。`container_name` を指定しておくと、
+以降の `docker exec ris-emulator ...` がそのまま使えます。
 
 ```yaml
 services:
   ris:
     image: ghcr.io/jeysunit/ris-emulator:latest
+    container_name: ris-emulator
     environment:
       TZ: Asia/Tokyo
       RIS_WEB_PASSWORD_FILE: /run/secrets/ris_web_password
