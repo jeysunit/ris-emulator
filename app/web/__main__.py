@@ -34,7 +34,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="ris-emulator の Web 画面と MWL の SCP を起動する（既定は 127.0.0.1:8081 と 127.0.0.1:11112）",
         epilog=(
             f"127.0.0.1 以外で待ち受けるときは {PASSWORD_FILE_ENV} にパスワードのファイルを指す"
-            f"（ユーザー名は {USERNAME}）。TLS は前段のリバースプロキシで付ける。"
+            f"（ユーザー名は {USERNAME}）。TLS は手前に置くリバースプロキシで付ける。"
         ),
     )
     parser.add_argument(

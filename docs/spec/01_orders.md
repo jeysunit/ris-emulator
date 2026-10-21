@@ -91,7 +91,7 @@ Specific Character Set で書けるかを確かめる。書けない字があれ
 - 状態は画面と CLI で手で変える。どの状態からどの状態へも変えられる
 - MWL で返す状態は設定の `mwl.statuses` で決める（完了・取消は入れられない）
 - `SCHEDULED`・`STARTED` は PS3.3 C.4.10 の Defined Terms
-- MPPS で状態を進めるのは次の段（[roadmap.md](../roadmap.md)）
+- MPPS で状態を進める機能は、次に作るもの（[roadmap.md](../roadmap.md)）
 
 ## 6. 一度に作れる数
 
