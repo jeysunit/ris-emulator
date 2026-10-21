@@ -1,0 +1,130 @@
+# 使い方
+
+ris-emulator を起動し、モダリティからワークリストを取得できるようにするまでの手順です。
+コマンドの引数と設定の項目の一覧は [spec/03_web_cli.md](spec/03_web_cli.md) にあります。
+
+## 1. 起動する
+
+Python で直接起動する方法と、Docker で起動する方法があります。
+
+### Python で起動する
+
+Python 3.10 以上が必要です。
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+python -m app.web
+```
+
+Web 画面（<http://127.0.0.1:8081/>）と MWL（AE タイトル `RIS_EMU`、`127.0.0.1:11112`）が
+起動します。MWL だけを起動するときは `python -m app.cli mwl serve` を使います
+（[spec/03_web_cli.md](spec/03_web_cli.md) の 1 章）。
+
+### Docker で起動する
+
+Docker イメージは `0.0.0.0` で待ち受けるため、HTTP Basic 認証のパスワードの
+ファイルが必要です。ファイルはコンテナの uid 10001 が読み取れる権限にします
+（[spec/03_web_cli.md](spec/03_web_cli.md) の 3.3 と 5 章）。
+
+1. パスワードのファイルを作成する
+
+   ```bash
+   mkdir -p "$HOME/ris-emulator"
+   head -c 24 /dev/urandom | base64 > "$HOME/ris-emulator/password"
+   chmod 0444 "$HOME/ris-emulator/password"
+   ```
+
+2. イメージをビルドして起動する。予約は名前付きボリューム `ris-state` に保存する
+
+   ```bash
+   docker build -t ris-emulator .
+   docker run -d --name ris-emulator \
+     -p 127.0.0.1:8081:8081 -p 127.0.0.1:11112:11112 \
+     -e TZ=Asia/Tokyo \
+     -e RIS_WEB_PASSWORD_FILE=/run/secrets/ris_web_password \
+     -v "$HOME/ris-emulator/password:/run/secrets/ris_web_password:ro" \
+     -v ris-state:/app/state \
+     ris-emulator
+   ```
+
+`TZ` はモダリティ側と合わせます。予定日（`today`）と時刻はコンテナのローカル時刻で
+決まるためです。
+
+Docker Compose を使う場合は、次のように書きます。`secrets` の `file:` は
+ローカルのファイルを元の権限のままコンテナにマウントするので、こちらも uid 10001 が
+読み取れる権限にします。
+
+```yaml
+services:
+  ris:
+    build: .
+    environment:
+      TZ: Asia/Tokyo
+      RIS_WEB_PASSWORD_FILE: /run/secrets/ris_web_password
+    secrets:
+      - ris_web_password
+    volumes:
+      - ris-state:/app/state
+    ports:
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:11112:11112"
+
+secrets:
+  ris_web_password:
+    file: ./secrets/ris_web_password.txt   # chmod 0444 にする
+
+volumes:
+  ris-state:
+```
+
+## 2. 設定を変更する
+
+設定ファイルは `config/app_config.yaml` です。項目の一覧と既定値は
+[spec/03_web_cli.md](spec/03_web_cli.md) の 4 章にあります。
+
+Docker で設定を変更するときは、設定の例をリポジトリの外にコピーして編集し、
+`-v "$HOME/ris-emulator/app_config.yaml:/app/config/app_config.yaml:ro"` を
+`docker run` に追加してマウントします。
+
+## 3. モダリティを接続する
+
+モダリティの MWL の設定（SCU）で、接続先を次のように設定します。
+
+| 項目 | 値 |
+|------|----|
+| Called AE Title | `RIS_EMU` |
+| ホスト | ris-emulator を実行しているホスト（ローカルなら `127.0.0.1`） |
+| ポート | `11112` |
+
+モダリティが自分の AE タイトルで絞り込んで問い合わせる場合は、設定の
+`orders.modalities.<モダリティ>.station_ae_titles` をモダリティの AE タイトルに
+変更します（既定値と規則は [spec/03_web_cli.md](spec/03_web_cli.md) の 4 章）。
+
+## 4. 予約を作成する
+
+CLI で作成します。Web 画面の `/orders/new` からも作成できます。
+
+```bash
+# 今日の CT を 3 件、MR を 1 件（09:00 から 15 分おき）
+python -m app.cli create CT=3 MR=1
+
+# 明日の 13:00 から、名簿の患者で CR を 2 件、文字コードは JIS
+python -m app.cli create CR=2 --date tomorrow --start 13:00 --patients roster --charset jis
+```
+
+Docker では `docker exec ris-emulator python -m app.cli create CT=3` のように実行します。
+引数の一覧は [spec/03_web_cli.md](spec/03_web_cli.md) の 2 章と `--help` にあります。
+文字コードごとに書ける文字の制限は [spec/01_orders.md](spec/01_orders.md) の 3.3 にあります。
+
+## 5. 予約を確認し、状態を変更する
+
+```bash
+python -m app.cli list --date today
+python -m app.cli show RE202610210001
+python -m app.cli status RE202610210001 in_progress
+```
+
+Web 画面の `/orders` でも確認・変更できます。完了・取消にした予約は MWL で返しません
+（[spec/01_orders.md](spec/01_orders.md) の 5 章）。

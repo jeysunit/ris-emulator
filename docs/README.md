@@ -1,12 +1,13 @@
 # ドキュメントの索引
 
-ris-emulator の設計・仕様・開発の手順を書いたドキュメントの索引と、
-ドキュメントの書き方です。使い方はルートの [README](../README.md) にあります。
+ris-emulator の使い方・設計・仕様・開発の手順を書いたドキュメントの索引と、
+ドキュメントの書き方です。
 
 ## 索引
 
 | ドキュメント | 内容 |
 |--------------|------|
+| [usage.md](usage.md) | 使い方：起動、設定の変更、モダリティの接続、予約の作成と確認 |
 | [project_charter.md](project_charter.md) | 目的、範囲、規格に違反しないという前提 |
 | [architecture.md](architecture.md) | プロセス、層、ディレクトリ |
 | [spec/01_orders.md](spec/01_orders.md) | 予約の項目、番号の採番、患者の生成、予定日時、状態 |

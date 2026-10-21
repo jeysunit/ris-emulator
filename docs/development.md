@@ -44,7 +44,7 @@ python scripts/check_doc_dates.py origin/main..HEAD
 1. spec を更新する
 2. 設計判断を伴うなら、ADR を作成する
 3. コードとテストを更新する
-4. 使い方が変わるなら、ルートの README を更新する
+4. 使い方が変わるなら、[usage.md](usage.md) を更新する
 
 ## 5. 同梱する htmx のバージョンを上げる
 
