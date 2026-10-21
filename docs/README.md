@@ -16,7 +16,7 @@ ris-emulator の使い方・設計・仕様・開発の手順を書いたドキ�
 | [spec/04_identifiers.md](spec/04_identifiers.md) | 発番する識別子と、DICOM・HL7 v2・FHIR R5 の規則との対応 |
 | [decisions/README.md](decisions/README.md) | ADR の一覧と、ADR に固有の書き方 |
 | [roadmap.md](roadmap.md) | 未実装の機能 |
-| [development.md](development.md) | 開発環境、テスト、確認のスクリプト、変更の手順 |
+| [development.md](development.md) | 開発環境と Python での起動、テスト、確認のスクリプト、変更の手順 |
 
 ## 書き方
 

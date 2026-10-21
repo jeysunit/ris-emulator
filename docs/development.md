@@ -1,6 +1,6 @@
 # 開発
 
-## 1. 環境
+## 1. 環境と Python での起動
 
 Python 3.10 以上。テストの依存パッケージ（pytest・httpx）も `requirements.txt` に含まれる。
 
@@ -8,6 +8,16 @@ Python 3.10 以上。テストの依存パッケージ（pytest・httpx）も `r
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
+```
+
+Python で直接起動すると、Web 画面（<http://127.0.0.1:8081/>）と MWL（AE タイトル
+`RIS_EMU`、`127.0.0.1:11112`）が 127.0.0.1 で待ち受けます。MWL だけを起動するときは
+`python -m app.cli mwl serve` を使います
+（[spec/03_web_cli.md](spec/03_web_cli.md) の 1 章）。
+CLI は `python -m app.cli` で実行します。
+
+```bash
+python -m app.web
 ```
 
 ## 2. テスト
