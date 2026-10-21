@@ -1,8 +1,5 @@
 # ris-emulator
 
-- 作成日：2026-10-21
-- 最終更新日：2026-10-22
-
 開発・テスト用の RIS エミュレーターです。架空の患者と検査の予約を作成し、
 MWL（Modality Worklist、C-FIND の SCP）で返します。
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""変更した文書の「最終更新日」が、その commit の日より古くないかを確かめる.
+"""変更した ADR の「最終更新日」が、その commit の日より古くないかを確かめる.
 
 使い方: python scripts/check_doc_dates.py origin/main..HEAD
 
-範囲の中で足した・直した文書（ルートの README.md と docs/ の下の .md。
-ADR と ADR の雛形を除く）ごとに、範囲の中でその文書を最後に変えた commit の中身を読む。
+範囲の中で足した・直した ADR（docs/decisions/NNNN-*.md。雛形と README は除く）ごとに、
+範囲の中でその ADR を最後に変えた commit の中身を読む。
 冒頭の「- 最終更新日：YYYY-MM-DD」が無いか、その commit の日（committer の日付）より
 古ければ失敗する。途中の commit で付け忘れても、後の commit で直してあれば通る。
 「最後に変えた commit」は git log の履歴の単純化に従う。merge でどちらの親とも違う
@@ -18,11 +18,10 @@ import re
 import subprocess
 import sys
 from datetime import date
-from pathlib import PurePosixPath
 
 HEADER_LINES = 10
 UPDATED = re.compile(r"^- 最終更新日：(\d{4}-\d{2}-\d{2})\s*$")
-ADR = re.compile(r"^docs/decisions/(\d{4}-.+|template)\.md$")
+ADR = re.compile(r"^docs/decisions/\d{4}-[^/]+\.md$")
 
 
 class GitError(Exception):
@@ -37,13 +36,8 @@ def git(*args: str) -> str:
 
 
 def is_dated_document(path: str) -> bool:
-    """最終更新日の行を持つべき文書か."""
-    if ADR.match(path):
-        return False
-    if path == "README.md":
-        return True
-    pure = PurePosixPath(path)
-    return pure.suffix == ".md" and pure.parts[0] == "docs"
+    """最終更新日の行を持つべき文書（ADR）か."""
+    return ADR.match(path) is not None
 
 
 def last_updated(text: str) -> str | None:

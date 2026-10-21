@@ -1,8 +1,5 @@
 # 開発
 
-- 作成日：2026-10-21
-- 最終更新日：2026-10-22
-
 ## 1. 環境
 
 Python 3.10 以上。テストの依存パッケージ（pytest・httpx）も `requirements.txt` に含まれる。
@@ -32,8 +29,8 @@ Markdown の形式を確認する（設定は `.markdownlint-cli2.yaml`）。
 npx markdownlint-cli2 "**/*.md" "#.venv" "#.pytest_cache"
 ```
 
-最終更新日の記入漏れを、コミットの範囲を指定して検出する。範囲の中で最後に変更した
-コミットの日付より「最終更新日」が古いか、行が無ければ終了コード 1 で失敗する。
+ADR の最終更新日の記入漏れを、コミットの範囲を指定して検出する。範囲の中で最後に
+変更したコミットの日付より「最終更新日」が古いか、行が無ければ終了コード 1 で失敗する。
 
 ```bash
 python scripts/check_doc_dates.py origin/main..HEAD
