@@ -1,28 +1,10 @@
 # 使い方
 
-ris-emulator を起動し、モダリティからワークリストを取得できるようにするまでの手順です。
+ris-emulator を Docker で起動し、モダリティからワークリストを取得できるようにするまでの手順です。
 コマンドの引数と設定の項目の一覧は [spec/03_web_cli.md](spec/03_web_cli.md) にあります。
+Python で直接起動する方法は、開発する人向けに [development.md](development.md) にあります。
 
 ## 1. 起動する
-
-Python で直接起動する方法と、Docker で起動する方法があります。
-
-### Python で起動する
-
-Python 3.10 以上が必要です。
-
-```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-python -m app.web
-```
-
-Web 画面（<http://127.0.0.1:8081/>）と MWL（AE タイトル `RIS_EMU`、`127.0.0.1:11112`）が
-起動します。MWL だけを起動するときは `python -m app.cli mwl serve` を使います
-（[spec/03_web_cli.md](spec/03_web_cli.md) の 1 章）。
-
-### Docker で起動する
 
 Docker イメージは `0.0.0.0` で待ち受けるため、HTTP Basic 認証のパスワードの
 ファイルが必要です。ファイルはコンテナの uid 10001 が読み取れる権限にします
@@ -36,30 +18,44 @@ Docker イメージは `0.0.0.0` で待ち受けるため、HTTP Basic 認証の
    chmod 0444 "$HOME/ris-emulator/password"
    ```
 
-2. イメージをビルドして起動する。予約は名前付きボリューム `ris-state` に保存する
+2. GHCR のイメージを取得して起動する。予約は名前付きボリューム `ris-state` に保存する
 
    ```bash
-   docker build -t ris-emulator .
+   docker pull ghcr.io/jeysunit/ris-emulator:latest
    docker run -d --name ris-emulator \
      -p 127.0.0.1:8081:8081 -p 127.0.0.1:11112:11112 \
      -e TZ=Asia/Tokyo \
      -e RIS_WEB_PASSWORD_FILE=/run/secrets/ris_web_password \
      -v "$HOME/ris-emulator/password:/run/secrets/ris_web_password:ro" \
      -v ris-state:/app/state \
-     ris-emulator
+     ghcr.io/jeysunit/ris-emulator:latest
    ```
+
+Web 画面（<http://127.0.0.1:8081/>、ユーザー名 `ris`）と MWL（AE タイトル `RIS_EMU`、
+`127.0.0.1:11112`）が起動します。
 
 `TZ` はモダリティ側と合わせます。予定日（`today`）と時刻はコンテナのローカル時刻で
 決まるためです。
 
-Docker Compose を使う場合は、次のように書きます。`secrets` の `file:` は
-ローカルのファイルを元の権限のままコンテナにマウントするので、こちらも uid 10001 が
-読み取れる権限にします。
+### イメージのタグ
+
+| タグ | 内容 |
+|------|------|
+| `latest` | main ブランチの最新 |
+| `vX.Y.Z` | リリースの版 |
+| `sha-<コミットの短い hash>` | 特定のコミット |
+
+### Docker Compose で起動する
+
+`secrets` の `file:` はローカルのファイルを元の権限のままコンテナにマウントするので、
+こちらも uid 10001 が読み取れる権限にします。`container_name` を指定しておくと、
+以降の `docker exec ris-emulator ...` がそのまま使えます。
 
 ```yaml
 services:
   ris:
-    build: .
+    image: ghcr.io/jeysunit/ris-emulator:latest
+    container_name: ris-emulator
     environment:
       TZ: Asia/Tokyo
       RIS_WEB_PASSWORD_FILE: /run/secrets/ris_web_password
@@ -79,12 +75,22 @@ volumes:
   ris-state:
 ```
 
+### イメージを自分でビルドする
+
+リポジトリのソースからイメージを作るときは、`docker pull` の代わりに次を実行し、
+`docker run` の最後のイメージ名を `ris-emulator` にします。Compose では `image:` の
+代わりに `build: .` と書きます。
+
+```bash
+docker build -t ris-emulator .
+```
+
 ## 2. 設定を変更する
 
-設定ファイルは `config/app_config.yaml` です。項目の一覧と既定値は
+設定ファイルは、イメージの中の `/app/config/app_config.yaml` です。項目の一覧と既定値は
 [spec/03_web_cli.md](spec/03_web_cli.md) の 4 章にあります。
 
-Docker で設定を変更するときは、設定の例をリポジトリの外にコピーして編集し、
+設定を変更するときは、リポジトリの `config/app_config.yaml` をコピーして編集し、
 `-v "$HOME/ris-emulator/app_config.yaml:/app/config/app_config.yaml:ro"` を
 `docker run` に追加してマウントします。
 
@@ -104,26 +110,25 @@ Docker で設定を変更するときは、設定の例をリポジトリの外�
 
 ## 4. 予約を作成する
 
-CLI で作成します。Web 画面の `/orders/new` からも作成できます。
+CLI をコンテナの中で実行して作成します。Web 画面の `/orders/new` からも作成できます。
 
 ```bash
 # 今日の CT を 3 件、MR を 1 件（09:00 から 15 分おき）
-python -m app.cli create CT=3 MR=1
+docker exec ris-emulator python -m app.cli create CT=3 MR=1
 
 # 明日の 13:00 から、名簿の患者で CR を 2 件、文字コードは JIS
-python -m app.cli create CR=2 --date tomorrow --start 13:00 --patients roster --charset jis
+docker exec ris-emulator python -m app.cli create CR=2 --date tomorrow --start 13:00 --patients roster --charset jis
 ```
 
-Docker では `docker exec ris-emulator python -m app.cli create CT=3` のように実行します。
 引数の一覧は [spec/03_web_cli.md](spec/03_web_cli.md) の 2 章と `--help` にあります。
 文字コードごとに書ける文字の制限は [spec/01_orders.md](spec/01_orders.md) の 3.3 にあります。
 
 ## 5. 予約を確認し、状態を変更する
 
 ```bash
-python -m app.cli list --date today
-python -m app.cli show RE202610210001
-python -m app.cli status RE202610210001 in_progress
+docker exec ris-emulator python -m app.cli list --date today
+docker exec ris-emulator python -m app.cli show RE202610210001
+docker exec ris-emulator python -m app.cli status RE202610210001 in_progress
 ```
 
 Web 画面の `/orders` でも確認・変更できます。完了・取消にした予約は MWL で返しません

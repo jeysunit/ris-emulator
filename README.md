@@ -23,12 +23,13 @@ flowchart LR
 
 ## クイックスタート
 
-Docker で起動し、予約を1件作成します。Web 画面（<http://127.0.0.1:8081/>、
-ユーザー名 `ris`）と MWL（AE タイトル `RIS_EMU`、`127.0.0.1:11112`）が使えます。
+GHCR のイメージを取得して起動し、予約を1件作成します。Web 画面
+（<http://127.0.0.1:8081/>、ユーザー名 `ris`）と MWL（AE タイトル `RIS_EMU`、
+`127.0.0.1:11112`）が使えます。
 
 ```bash
 mkdir -p "$HOME/ris-emulator" && head -c 24 /dev/urandom | base64 > "$HOME/ris-emulator/password" && chmod 0444 "$HOME/ris-emulator/password"
-docker build -t ris-emulator . && docker run -d --name ris-emulator -p 127.0.0.1:8081:8081 -p 127.0.0.1:11112:11112 -e TZ=Asia/Tokyo -e RIS_WEB_PASSWORD_FILE=/run/secrets/ris_web_password -v "$HOME/ris-emulator/password:/run/secrets/ris_web_password:ro" -v ris-state:/app/state ris-emulator
+docker run -d --name ris-emulator -p 127.0.0.1:8081:8081 -p 127.0.0.1:11112:11112 -e TZ=Asia/Tokyo -e RIS_WEB_PASSWORD_FILE=/run/secrets/ris_web_password -v "$HOME/ris-emulator/password:/run/secrets/ris_web_password:ro" -v ris-state:/app/state ghcr.io/jeysunit/ris-emulator:latest
 docker exec ris-emulator python -m app.cli create CT=1
 ```
 

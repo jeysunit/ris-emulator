@@ -57,3 +57,4 @@ MWL (app/mwl/) ─┘
 | `scripts/` | 同梱する htmx の取得スクリプト、ADR の最終更新日の検証スクリプト |
 | `tests/` | テスト。`app/` と同じ構成に分ける |
 | `docs/` | ドキュメント（[README](README.md) が索引） |
+| `.github/workflows/` | テストと、GHCR へのイメージの公開（`image.yml`） |

@@ -101,3 +101,7 @@
 - 予定日（`today`）と時刻はローカル時刻（`TZ`）で決まる。`TZ` を
   モダリティ側と合わせる（例 `TZ=Asia/Tokyo`）。ベースイメージに
   tzdata が含まれることを確認済み（`/usr/share/zoneinfo/Asia/Tokyo`）
+- イメージは GitHub Actions（`.github/workflows/image.yml`）で、テストが成功してから
+  `ghcr.io/jeysunit/ris-emulator` に公開する。main への push で `latest` と
+  `sha-<コミットの短い hash>`、版のタグ（`v*`）の push で `vX.Y.Z` と `sha-<コミットの短い hash>` を付ける。
+  PR ではテストとビルドだけを行い、公開しない
