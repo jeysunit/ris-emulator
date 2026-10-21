@@ -12,8 +12,8 @@ flowchart LR
   RIS["ris-emulator<br/>予約の作成・MWL の SCP"]
   MOD["モダリティ"]
   PACS[("PACS")]
-  MOD -- "C-FIND（MWL）" --> RIS
-  MOD -- "C-STORE" --> PACS
+  RIS -->|"ワークリスト（C-FIND の応答）"| MOD
+  MOD -->|"画像（C-STORE）"| PACS
 ```
 
 ## 注意

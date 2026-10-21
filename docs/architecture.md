@@ -14,10 +14,10 @@ flowchart LR
   CLI["python -m app.cli"]
   DB[("SQLite<br/>state/ris.sqlite3")]
   MOD["モダリティ"]
-  WEB --> DB
-  MWL --> DB
-  CLI --> DB
-  MOD -- "C-FIND（MWL）" --> MWL
+  WEB <-->|"予約（読み書き）"| DB
+  CLI <-->|"予約（読み書き）"| DB
+  DB -->|"予約"| MWL
+  MWL -->|"ワークリスト（C-FIND の応答）"| MOD
 ```
 
 - `python -m app.web` は、Web 画面と MWL の SCP を1つのプロセスで実行する
