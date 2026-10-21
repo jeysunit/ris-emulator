@@ -1,4 +1,4 @@
-"""Web 画面（FastAPI＋htmx。spec/03_web_cli.md 3 章）."""
+"""Web 画面（FastAPI＋htmx。docs/spec/03_web_cli.md 3 章）."""
 
 from __future__ import annotations
 

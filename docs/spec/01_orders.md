@@ -1,5 +1,8 @@
 # 01. 予約
 
+- 作成日：2026-10-21
+- 最終更新日：2026-10-22
+
 ## 1. 予約の1件
 
 予約の1件は、MWL の1件（Scheduled Procedure Step が1つ）に当たる。
@@ -22,7 +25,7 @@
 | 依頼医 | Requesting Physician・Referring Physician's Name | 乱数の氏名（同じ人） |
 | 施設名 | Institution Name | 設定の `institution_name` |
 | 優先度 | Requested Procedure Priority | `ROUTINE` |
-| 文字コード | Specific Character Set | spec/02 の 5 章 |
+| 文字コード | Specific Character Set | [02_mwl_scp.md](02_mwl_scp.md) の 5 章 |
 | 状態 | Scheduled Procedure Step Status | 5 章 |
 
 ## 2. 番号
@@ -34,9 +37,11 @@
 - 長さは SH の 16 字に収める。`accession_prefix` は英数字 4 字まで。
   1 日に作れる予約は 9999 件まで
 - 連番の取得と予約の保存は1つのトランザクションで行う。作るのを断ったときは
-  連番を使わない（欠番を作らない。ADR-0002）
-- dicom-test-generator は Requested Procedure ID を画像の Study ID（SH）に写すので、
+  連番を使わない（欠番を作らない。[ADR-0002](../decisions/0002-sqlite-order-store.md)）
+- モダリティによっては Requested Procedure ID を画像の Study ID（SH）に写すので、
   16 字を超えない形にしている
+- 番号の形と、DICOM・HL7 v2・FHIR R5 の決まりとの対応は
+  [04_identifiers.md](04_identifiers.md) にある
 
 ## 3. 患者
 
@@ -53,11 +58,10 @@
 
 ### 3.2 名簿
 
-- 形は dicom-test-generator の `data/patients_master.yaml` と同じ
-  （`patient_id`・`patient_name.alphabetic/ideographic/phonetic`・
-  `birth_date`・`sex`・`weight`（kg）・`size`（cm））
+- 1人の項目は `patient_id`・`patient_name.alphabetic/ideographic/phonetic`・
+  `birth_date`・`sex`・`weight`（kg）・`size`（cm）。例は `data/patients_sample.yaml`
 - 予約ごとに名簿から乱数で選ぶ（同じ患者が何度も出てよい）
-- 設定の `roster_path` で dicom-test-generator の名簿をそのまま指せる
+- 名簿のファイルは設定の `orders.roster_path` で指す
 - 氏名の各コンポーネントグループは 64 字まで。`=`・`\`・制御文字を含む名簿は読まない
   （PS3.5 6.2 の PN の決まり）
 
@@ -87,7 +91,7 @@ Specific Character Set で書けるかを確かめる。書けない字があれ
 - 状態は画面と CLI で手で変える。どの状態からどの状態へも変えられる
 - MWL で返す状態は設定の `mwl.statuses` で決める（完了・取消は入れられない）
 - `SCHEDULED`・`STARTED` は PS3.3 C.4.10 の Defined Terms
-- MPPS で状態を進めるのは次の段（ADR-0001）
+- MPPS で状態を進めるのは次の段（[roadmap.md](../roadmap.md)）
 
 ## 6. 一度に作れる数
 

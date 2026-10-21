@@ -1,8 +1,14 @@
 # 04. 発番する識別子と規格
 
+- 作成日：2026-10-21
+- 最終更新日：2026-10-22
+
 この RIS が発番する識別子は、DICOM の VR の決まりに合わせ、さらに HL7 v2
 （IHE RAD-4 の OMI・ORM）と HL7 FHIR R5 にエスケープや変換なしでそのまま
-入る形に絞る。確かめた原典は 5 章（2026-10-21 に確かめた）。
+入る形に絞る。確かめた原典は 3 章（2026-10-21 に確かめた）。
+この形にした理由は [ADR-0003](../decisions/0003-identifiers-fit-dicom-and-hl7.md)・
+[ADR-0004](../decisions/0004-ris-issues-study-instance-uid.md)・
+[ADR-0005](../decisions/0005-return-issuer-namespace.md) にある。
 
 ## 1. 表
 
@@ -13,51 +19,22 @@
 | Scheduled Procedure Step ID | (0040,0009)・SH・16 字 | `SPS<YYYYMMDD><4 桁>`（15 字） | OBR-20 Filler Field 1（Table 4.4-6）、IPC-4（EI・22 字、Table 4.4-16） | 写す先は決めない |
 | Patient ID | (0010,0020)・LO・64 字。`\` と制御文字は不可（PS3.5 6.2） | 乱数は `<接頭辞 英数字 8 字まで><7 桁>`（15 字まで）。名簿は LO の決まりに加え、HL7 v2 の区切りの字 `^ ~ & \|` と前後の空白を断る | PID-3（Assigning Authority の namespace ID を必ず入れる。RAD TF-2 の PID の節） | `Patient.identifier` の値 |
 | Study Instance UID | (0020,000D)・UI・64 字。数と `.` だけ、成分は 0 で始まらない（PS3.5 9.1） | `2.25.<UUID の 10 進>`（PS3.5 B.2 の UUID 由来の形。UUID は 39 桁まで、全体で 44 字まで） | ZDS-1（RP・200 字、v2.3.1、Table 4.4-7）、IPC-3（EI・70 字、v2.5.1、Table 4.4-16） | `ImagingStudy.identifier`：system `urn:dicom:uid`、value `urn:oid:<UID>`。FHIR の oid 型の正規表現 `urn:oid:[0-2](\.(0\|[1-9][0-9]*))+` に合う |
-| 発番の出どころ | Issuer of Patient ID (0010,0021)・LO、Issuer of Accession Number Sequence (0008,0051) の Local Namespace Entity ID | 設定の `orders.issuer_namespace`（既定 `RIS_EMU`、英数字と `_` で 16 字まで。空なら返さない） | PID-3 の Assigning Authority の namespace ID、IPC-1 の namespace ID | `Identifier.system` に写すときは、使う側が URI を決める（下の 3 章） |
+| 発番の出どころ | Issuer of Patient ID (0010,0021)・LO、Issuer of Accession Number Sequence (0008,0051) の Local Namespace Entity ID | 設定の `orders.issuer_namespace`（既定 `RIS_EMU`、英数字と `_` で 16 字まで。空なら返さない） | PID-3 の Assigning Authority の namespace ID、IPC-1 の namespace ID | `Identifier.system` に写すときは、使う側が URI を決める（ADR-0005） |
 
-## 2. 決めたこと
+## 2. 確かめること
 
-- 受付番号・Requested Procedure ID・Scheduled Procedure Step ID は、英数字だけ・
-  16 字までに限る（`app/core/models.py` の `IDENTIFIER_PATTERN`）。SH は
-  `\` と制御文字以外の字を許すが、HL7 v2 の区切りの字と FHIR の URL の中で
-  エスケープが要る字を避けるために絞った
-- IHE は OBR-18・IPC-1 の受付番号を 16 字までと決めている（DICOM の SH に写すため）。
-  この RIS の受付番号は 14 字で、接頭辞を 4 字にしても 16 字に収まる
-- Study Instance UID は PS3.5 9.1 の形を確かめてから保存する（`is_valid_uid`）
+- 受付番号・Requested Procedure ID・Scheduled Procedure Step ID は、英数字だけで
+  16 字までに限る（`app/core/models.py` の `IDENTIFIER_PATTERN`）
+- Study Instance UID は PS3.5 9.1 の形を確かめてから保存する（`is_valid_uid`）。
+  Study Instance UID は予約を作るときに発番し、要求に含まれていれば MWL で値を返す
+  （Return Key Type 1）
 - 名簿の Patient ID に HL7 v2 の区切りの字があれば、名簿を読まない
+- Issuer of Patient ID と Issuer of Accession Number Sequence は
+  `orders.issuer_namespace` の値で返す。`issuer_namespace: ""` にすれば、
+  Issuer of Patient ID は空、Issuer of Accession Number Sequence は項目なしで返す
+- これらの決まりは `tests/core/test_identifiers.py` で固定している
 
-## 3. 発番の出どころ（Issuer）を持つか
-
-**持つ（推奨）。** 既定で `RIS_EMU` を返す。
-
-- PS3.4 Table K.6-1 では Issuer of Patient ID と Issuer of Accession Number Sequence
-  はどちらも Return Key Type 3（返さなくてよい）
-- それでも返すのは、複数の RIS や病院の ID が混ざる試験（Patient ID が重なる場合）を
-  作れるようにするため。IHE RAD TF-2 は HL7 v2 の PID-3 に Assigning Authority の
-  namespace ID を必ず入れることを求めており、その値に当たる
-- Universal Entity ID（OID など）は持たない。そのため IHE の Enterprise Identity
-  Option（RAD TF-2 4.4.4.1.2.2.9。IPC-1 の universal ID と universal ID type まで
-  求める）には足りない。FHIR の `Identifier.system` に写すときは、使う側が
-  namespace から URI を決める（例 `urn:oid:<自分の OID>`、または URL）
-- `issuer_namespace: ""` にすれば、Issuer of Patient ID は空、
-  Issuer of Accession Number Sequence は項目なしで返す
-
-## 4. Study Instance UID を RIS が発番する根拠
-
-- PS3.4 Table K.6-1：Study Instance UID (0020,000D) は Requested Procedure の属性で、
-  Matching Key Type O・**Return Key Type 1**（SCP は必ず値を返す）
-- IHE RAD TF-2 4.8.4.1.1.1（Study UIDs and Series UIDs）：Study Instance UID は
-  Scheduled Workflow で **Order Filler が生成し、Modality Worklist でモダリティに渡す**。
-  モダリティが作るのは、予約の無い撮影（RAD TF-2x Appendix A の Table A.1-2）などの例外だけ
-- IHE RAD TF-2 4.4（Procedure Scheduled [RAD-4]）：Order Filler（DSS/OF）は
-  Study Instance UID を ZDS-1（v2.3.1）・IPC-3（v2.5.1）で Image Manager に送る
-- IHE RAD TF-1 Figure 3.4-3（Scheduled Workflow の情報モデル）：Requested Procedure の
-  識別子として Accession Number・Study Instance UID・Requested Procedure ID を持つ
-
-この RIS は Order Filler（DSS/OF）の役なので、Study Instance UID を予約を作るときに
-発番し、MWL で返す。
-
-## 5. 原典
+## 3. 原典
 
 - DICOM PS3.5 2026d 6.2 Value Representation（SH・LO・UI）
   <https://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html>

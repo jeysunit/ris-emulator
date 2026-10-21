@@ -1,1 +1,1 @@
-"""MWL（Modality Worklist、C-FIND）の SCP（spec/02_mwl_scp.md）."""
+"""MWL（Modality Worklist、C-FIND）の SCP（docs/spec/02_mwl_scp.md）."""

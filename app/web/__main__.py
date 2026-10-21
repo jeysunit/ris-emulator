@@ -1,4 +1,4 @@
-"""`python -m app.web`：画面と MWL の SCP を起動する（spec/03_web_cli.md 3 章）.
+"""`python -m app.web`：画面と MWL の SCP を起動する（docs/spec/03_web_cli.md 3 章）.
 
 終了コード：0=正常に止めた、2=設定の誤り（127.0.0.1 以外でパスワードが無いなどを含む）、
 4=MWL を待ち受けられない。

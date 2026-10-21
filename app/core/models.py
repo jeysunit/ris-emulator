@@ -1,4 +1,4 @@
-"""予約（Order）と患者のモデル（spec/01_orders.md）."""
+"""予約（Order）と患者のモデル（docs/spec/01_orders.md）."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ SPS_STATUS_TERMS: dict[OrderStatus, str] = {
 
 
 class CharacterSet(str, Enum):
-    """応答の Specific Character Set の選択（dicom-test-generator の spec/12 7.1 と同じ3つ）."""
+    """応答の Specific Character Set の選択（docs/spec/02_mwl_scp.md 5 章）."""
 
     UTF8 = "utf8"
     JIS = "jis"
@@ -135,7 +135,7 @@ class Patient(BaseModel):
     def _check_patient_id(cls, value: str) -> str:
         """Patient ID：LO（64 字、`\\` と制御文字なし。PS3.5 6.2）。HL7 v2 の区切りの字
         （`^~&|`）と前後の空白も断る（HL7 v2 の PID-3 と FHIR の Identifier.value に
-        エスケープなしで入れるため。spec/04_identifiers.md）."""
+        エスケープなしで入れるため。docs/spec/04_identifiers.md）."""
         if "\\" in value or has_control_chars(value):
             raise ValueError("patient_id must not contain backslash or control characters")
         if any(char in HL7_V2_DELIMITERS for char in value):
@@ -205,7 +205,7 @@ class Order(BaseModel):
     @field_validator("accession_number", "requested_procedure_id", "scheduled_procedure_step_id")
     @classmethod
     def _check_sh_identifier(cls, value: str) -> str:
-        """発番する SH の識別子は英数字だけ（spec/04_identifiers.md の 2 章）."""
+        """発番する SH の識別子は英数字だけ（docs/spec/04_identifiers.md の 2 章）."""
         if not IDENTIFIER_PATTERN.fullmatch(value):
             raise ValueError("identifier must be ASCII letters and digits, 16 characters or fewer")
         return value

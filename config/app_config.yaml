@@ -1,4 +1,4 @@
-# ris-emulator の設定（spec/03_web_cli.md の 4 章）。
+# ris-emulator の設定（docs/spec/03_web_cli.md の 4 章）。
 # 相対のパスは、プロセスの作業ディレクトリから辿る。
 # 開発・試験の環境だけで使う。本物の患者のデータを入れない。
 

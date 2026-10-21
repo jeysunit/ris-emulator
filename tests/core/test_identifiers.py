@@ -1,4 +1,4 @@
-"""発番する識別子が DICOM・HL7 v2（IHE RAD-4）・FHIR R5 にそのまま入るかの試験（spec/04_identifiers.md）."""
+"""発番する識別子が DICOM・HL7 v2（IHE RAD-4）・FHIR R5 にそのまま入るかの試験（docs/spec/04_identifiers.md）."""
 
 from __future__ import annotations
 
