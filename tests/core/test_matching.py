@@ -14,7 +14,7 @@ def _full() -> Dataset:
     ds.AccessionNumber = "RE202610210001"
     ds.StudyInstanceUID = "2.25.1234"
     sps = Dataset()
-    sps.ScheduledStationAETitle = "DTG_CT01"
+    sps.ScheduledStationAETitle = "CT01"
     sps.ScheduledProcedureStepStartDate = "20261021"
     sps.ScheduledProcedureStepStartTime = "093000"
     sps.Modality = "CT"
@@ -52,8 +52,8 @@ def test_empty_identifier_has_no_matching_keys() -> None:
 
 
 def test_station_ae_title_single_value() -> None:
-    assert matches(_full(), _request(ScheduledStationAETitle="DTG_CT01"))
-    assert not matches(_full(), _request(ScheduledStationAETitle="DTG_MR01"))
+    assert matches(_full(), _request(ScheduledStationAETitle="CT01"))
+    assert not matches(_full(), _request(ScheduledStationAETitle="MR01"))
 
 
 def test_modality_single_value() -> None:

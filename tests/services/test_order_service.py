@@ -41,8 +41,8 @@ def test_create_ct3_mr1(service: OrderService) -> None:
     assert orders[0].scheduled_procedure_step_id == "SPS202610210001"
     # 装置ごとに 09:00 から 15 分おき
     assert [order.scheduled_time for order in orders] == ["090000", "091500", "093000", "090000"]
-    assert {order.scheduled_station_ae_title for order in orders[:3]} == {"DTG_CT01"}
-    assert orders[3].scheduled_station_ae_title == "DTG_MR01"
+    assert {order.scheduled_station_ae_title for order in orders[:3]} == {"CT01"}
+    assert orders[3].scheduled_station_ae_title == "MR01"
     assert len({order.study_instance_uid for order in orders}) == 4
     assert all(order.study_instance_uid.startswith("2.25.") for order in orders)
     assert len({order.patient.patient_id for order in orders}) == 4

@@ -34,8 +34,8 @@ def _order(**updates: object) -> Order:
             size_m=1.72,
         ),
         modality="CT",
-        scheduled_station_ae_title="DTG_CT01",
-        scheduled_station_name="CT01",
+        scheduled_station_ae_title="CT01",
+        scheduled_station_name="CT_ROOM_1",
         scheduled_date="20261021",
         scheduled_time="093000",
         procedure=Procedure(code="CT0002", name="胸部 CT 単純"),
@@ -63,7 +63,8 @@ def test_full_dataset_has_ihe_required_values() -> None:
     assert ds.StudyInstanceUID == "2.25.1234"
     assert ds.RequestingService == "内科"
     sps = ds.ScheduledProcedureStepSequence[0]
-    assert sps.ScheduledStationAETitle == "DTG_CT01"
+    assert sps.ScheduledStationAETitle == "CT01"
+    assert sps.ScheduledStationName == "CT_ROOM_1"
     assert sps.ScheduledProcedureStepStartDate == "20261021"
     assert sps.ScheduledProcedureStepStartTime == "093000"
     assert sps.Modality == "CT"
@@ -110,7 +111,7 @@ def test_empty_sequence_in_request_returns_whole_item() -> None:
     request.IssuerOfAccessionNumberSequence = []
     response = build_response(order_to_dataset(_order()), request)
     item = response.ScheduledProcedureStepSequence[0]
-    assert item.ScheduledStationAETitle == "DTG_CT01"
+    assert item.ScheduledStationAETitle == "CT01"
     assert item.ScheduledProtocolCodeSequence[0].CodeValue == "CT0002"
     assert response.RequestedProcedureCodeSequence[0].CodingSchemeDesignator == "99RISEMU"
     assert len(response.IssuerOfAccessionNumberSequence) == 0
