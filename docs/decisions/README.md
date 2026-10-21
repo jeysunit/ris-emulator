@@ -3,8 +3,8 @@
 - 作成日：2026-10-22
 - 最終更新日：2026-10-22
 
-ADR（Architecture Decision Record）は、設計判断とその理由を1件ずつ残す記録です。
-現在の動作は [spec](../spec/) に書き、ここには判断と理由だけを書きます。
+ADR（Architecture Decision Record）の一覧と、ADR に固有の書き方です。
+ドキュメントに共通の規則は [docs/README.md の「書き方」](../README.md#書き方) に従います。
 
 ## 一覧
 
@@ -18,9 +18,6 @@ ADR（Architecture Decision Record）は、設計判断とその理由を1件ず
 | [0006](0006-web-ui-loopback-by-default.md) | Web 画面は既定でループバックだけで待ち受け、それ以外のアドレスでは認証を必須にする | 採用 |
 
 ## 書き方
-
-ドキュメントに共通の規則は [docs/README.md の「書き方」](../README.md#書き方) に従います。
-ここには ADR に固有の規則だけを書きます。
 
 - 新しい ADR は [template.md](template.md) をコピーして書きます。ファイル名は
   `NNNN-英語の-kebab-case.md` で、番号は連番にします

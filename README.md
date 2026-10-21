@@ -177,18 +177,7 @@ Compose の `secrets` の `file:` は、ローカルのファイルを元の権�
 
 ## ドキュメント
 
-設計と仕様は [docs/](docs/README.md) にあります。
-
-- [目的と範囲](docs/project_charter.md)
-- [構成](docs/architecture.md)
-- [仕様（spec）](docs/README.md#spec)：予約、MWL の SCP、Web 画面・CLI・設定、
-  発番する識別子
-- [設計判断（ADR）](docs/decisions/README.md)
-- [開発](docs/development.md)：テストの実行方法、変更の手順
-
-MWL の属性と照合の規則は DICOM PS3.4（Annex K・C.2.2.2）に従います。
-発番する識別子は DICOM・HL7 v2・HL7 FHIR R5 の規則に合わせています
-（[spec/04_identifiers.md](docs/spec/04_identifiers.md)）。
+設計・仕様・開発の手順は [docs/README.md](docs/README.md) から参照してください。
 
 ## ライセンス
 
