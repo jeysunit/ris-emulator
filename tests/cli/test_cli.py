@@ -61,6 +61,36 @@ def test_errors_and_exit_codes(config_file: Path, capsys: pytest.CaptureFixture[
     assert code == 2 and "not found" in err
 
 
+def test_create_with_stations(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    raw = yaml.safe_load(config_file.read_text(encoding="utf-8"))
+    raw["orders"]["modalities"]["CT"]["stations"].append(
+        {"name": "CT2号機", "ae_title": "CT02", "station_name": "CT02"}
+    )
+    config_file.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
+    code, out, _ = _run(
+        capsys, "create", "CT=1", "MR=1", "--station", "CT2号機", "--station", "MR1号機",
+        "--date", "20261021", "--json", "--config", str(config_file),
+    )  # fmt: skip
+    assert code == 0
+    orders = json.loads(out)
+    assert [(o["modality"], o["scheduled_station_ae_title"]) for o in orders] == [
+        ("CT", "CT02"),
+        ("MR", "MR01"),
+    ]
+    code, _, err = _run(capsys, "create", "CT=1", "--station", "CT9号機", "--config", str(config_file))
+    assert code == 2 and "台帳に無い装置です: CT9号機" in err and "CT1号機、CT2号機" in err
+    code, _, err = _run(
+        capsys, "create", "CT=1", "--station", "CT1号機", "--station", "CT2号機", "--config", str(config_file)
+    )
+    assert code == 2 and "1つだけ" in err
+
+
+def test_old_station_ae_option_is_gone(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        main(["create", "CT=1", "--station-ae", "CT01", "--config", str(config_file)])
+    assert exit_info.value.code == 2
+
+
 def test_status_transitions(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(capsys, "create", "CT=1", "--date", "20261021", "--json", "--config", str(config_file))
     accession = json.loads(out)[0]["accession_number"]

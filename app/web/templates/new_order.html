@@ -11,10 +11,19 @@
     <legend>モダリティごとの件数（合わせて {{ max_orders }} 件まで）</legend>
     <div class="counts">
       {% for modality, entry in catalog.items() %}
-      <label>{{ modality }}
-        <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric">
-        <span class="muted">{{ entry.station_ae_titles | join(', ') }}</span>
-      </label>
+      <div>
+        <label>{{ modality }}
+          <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric">
+        </label>
+        <label>装置
+          <select name="station_{{ modality }}" aria-label="{{ modality }} の装置">
+            <option value="">順に使う</option>
+            {% for station in entry.stations %}
+            <option value="{{ station.name }}"{% if values.get('station_' ~ modality) == station.name %} selected{% endif %}>{{ station.name }}（{{ station.ae_title }}）</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
       {% endfor %}
     </div>
   </fieldset>
@@ -22,9 +31,7 @@
     <legend>予定</legend>
     <label>予定日 <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required></label>
     <label>開始時刻 <input type="time" name="start" value="{{ values.get('start', '09:00') }}" required></label>
-    <label>間隔（分） <input type="number" name="interval" min="0" max="{{ max_interval }}" value="{{ values.get('interval', '15') }}"></label>
-    <label>予定の AE タイトル <input type="text" name="station_ae" maxlength="16" value="{{ values.get('station_ae', '') }}" placeholder="空なら設定の値"></label>
-  </fieldset>
+    <label>間隔（分） <input type="number" name="interval" min="0" max="{{ max_interval }}" value="{{ values.get('interval', '15') }}"></label>  </fieldset>
   <fieldset>
     <legend>患者と依頼</legend>
     <label><input type="radio" name="patients" value="random"{% if values.get('patients', 'random') == 'random' %} checked{% endif %}> 乱数で作る</label>

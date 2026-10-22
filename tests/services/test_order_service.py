@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, time
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.models import CharacterSet, OrderStatus
-from app.services.config import load_config
+from app.services.config import AppConfig, Station, load_config
 from app.services.order_service import (
     OrderRequest,
     OrderService,
@@ -23,6 +24,7 @@ from app.services.order_service import (
     parse_time_option,
 )
 from app.services.roster import load_roster
+from app.services.store import OrderStore
 
 from tests.conftest import ROOT, TODAY
 
@@ -87,21 +89,46 @@ def test_roster_patients(service: OrderService) -> None:
         assert tanaka.size_m == 1.72
 
 
-def test_overrides(service: OrderService) -> None:
+def _two_ct_stations(config: AppConfig, store: OrderStore) -> OrderService:
+    """CT の台帳に CT1号機・CT2号機を並べた設定（docs/spec/01_orders.md 1 章）."""
+    ct = config.orders.modalities["CT"].model_copy(
+        update={
+            "stations": [
+                Station(name="CT1号機", ae_title="CT01", station_name="CT01"),
+                Station(name="CT2号機", ae_title="CT02", station_name="CT02"),
+            ]
+        }
+    )
+    orders = config.orders.model_copy(
+        update={"modalities": {**config.orders.modalities, "CT": ct}}
+    )
+    return OrderService(config.model_copy(update={"orders": orders}), store, today=lambda: TODAY)
+
+
+def test_overrides(config: AppConfig, store: OrderStore) -> None:
+    service = _two_ct_stations(config, store)
     orders = service.create_orders(
         _request(
             counts={"CT": 2},
             start_time=time(13, 0),
             interval_minutes=30,
-            station_ae_title="CT_OTHER",
+            stations={"CT": "CT2号機"},
             department="救急科",
             character_set=CharacterSet.JIS_KANA,
         )
     )
     assert [order.scheduled_time for order in orders] == ["130000", "133000"]
-    assert {order.scheduled_station_ae_title for order in orders} == {"CT_OTHER"}
+    assert {order.scheduled_station_ae_title for order in orders} == {"CT02"}
+    assert {order.scheduled_station_name for order in orders} == {"CT02"}
+    assert {order.scheduled_station_label for order in orders} == {"CT2号機"}
     assert {order.requesting_service for order in orders} == {"救急科"}
     assert {order.character_set for order in orders} == {CharacterSet.JIS_KANA}
+
+
+def test_stations_rotate_when_not_chosen(config: AppConfig, store: OrderStore) -> None:
+    orders = _two_ct_stations(config, store).create_orders(_request(counts={"CT": 3}))
+    assert [order.scheduled_station_ae_title for order in orders] == ["CT01", "CT02", "CT01"]
+    assert [order.scheduled_station_label for order in orders] == ["CT1号機", "CT2号機", "CT1号機"]
 
 
 def test_unknown_modality_is_rejected(service: OrderService) -> None:
@@ -114,9 +141,31 @@ def test_schedule_must_fit_in_the_day(service: OrderService) -> None:
         service.create_orders(_request(counts={"CT": 3}, start_time=time(23, 30)))
 
 
-def test_bad_station_ae_title(service: OrderService) -> None:
-    with pytest.raises(ValidationError, match="AE タイトル"):
-        service.create_orders(_request(station_ae_title="TOO_LONG_AE_TITLE_X"))
+@pytest.mark.parametrize(
+    ("stations", "message"),
+    [
+        ({"CT": "CT9号機"}, "CT の台帳に無い装置です: CT9号機"),
+        ({"CT": "MR1号機"}, "CT の台帳に無い装置です: MR1号機"),
+        ({"MR": "MR1号機"}, "件数を指定していないモダリティの装置です"),
+    ],
+)
+def test_bad_station_is_rejected(
+    service: OrderService, stations: dict[str, str], message: str
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        service.create_orders(_request(counts={"CT": 1}, stations=stations))
+    assert service.list_orders() == []
+
+
+def test_cli_station_names(service: OrderService) -> None:
+    assert service.stations_by_name(["CT1号機", "MR1号機"], ["CT", "MR"]) == {
+        "CT": "CT1号機",
+        "MR": "MR1号機",
+    }
+    with pytest.raises(ValidationError, match="台帳: CT1号機"):
+        service.stations_by_name(["CT9号機"], ["CT"])
+    with pytest.raises(ValidationError, match="1つだけ"):
+        service.stations_by_name(["CT1号機", "CT1号機"], ["CT"])
 
 
 @pytest.mark.parametrize("department", ["科" * 65, "内科\\外科", "内科\n"])
@@ -254,11 +303,69 @@ def test_config_errors(tmp_path: Path) -> None:
     statuses = tmp_path / "statuses.yaml"
     statuses.write_text(
         "mwl:\n  statuses: [completed]\norders:\n  modalities:\n    CT:\n"
-        "      station_ae_titles: [CT1]\n      procedures: [{code: C1, name: n}]\n",
+        "      stations: [{name: CT1号機, ae_title: CT1}]\n      procedures: [{code: C1, name: n}]\n",
         encoding="utf-8",
     )
     with pytest.raises(ConfigurationError, match="must not include completed"):
         load_config(statuses)
+
+
+def _config_with_ct(tmp_path: Path, ct: str) -> Path:
+    path = tmp_path / "app_config.yaml"
+    path.write_text(
+        f"orders:\n  modalities:\n    CT:\n{ct}      procedures: [{{code: C1, name: n}}]\n"
+        "    MR:\n      stations: [{name: MR1号機, ae_title: MR01}]\n"
+        "      procedures: [{code: M1, name: n}]\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_station_registry_is_loaded(tmp_path: Path) -> None:
+    path = _config_with_ct(
+        tmp_path,
+        "      stations:\n"
+        "        - {name: CT1号機, ae_title: CT01, station_name: CT01}\n"
+        "        - {name: CT2号機, ae_title: CT02, station_name: CT02}\n",
+    )
+    stations = load_config(path).orders.modalities["CT"].stations
+    assert [(s.name, s.ae_title, s.station_name) for s in stations] == [
+        ("CT1号機", "CT01", "CT01"),
+        ("CT2号機", "CT02", "CT02"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("ct", "message"),
+    [
+        (
+            "      stations: [{name: CT1号機, ae_title: CT_AE_TITLE_17CHR}]\n",
+            "orders.modalities.CT.stations.0.ae_title",
+        ),
+        ("      stations: [{name: CT1号機, ae_title: 'CT\\\\01'}]\n", "ae_title"),
+        ("      stations: [{name: CT1号機, ae_title: CT01, station_name: STATION_NAME_17CH}]\n", "station_name"),
+        ("      stations: [{name: CT1号機, ae_title: CT01, station_name: 'A\\\\B'}]\n", "station_name"),
+        ("      stations: [{name: ' ', ae_title: CT01}]\n", "name"),
+        ("      stations: [{name: 'CT1号機 ', ae_title: CT01}]\n", "leading or trailing spaces"),
+        ("      stations: [{name: MR1号機, ae_title: CT01}]\n", "station names must be unique: MR1号機"),
+        ("      stations: []\n", "stations"),
+    ],
+)
+def test_station_registry_errors(tmp_path: Path, ct: str, message: str) -> None:
+    with pytest.raises(ConfigurationError, match=re.escape(message)):
+        load_config(_config_with_ct(tmp_path, ct))
+
+
+@pytest.mark.parametrize(
+    "ct",
+    [
+        "      station_ae_titles: [CT01]\n      stations: [{name: CT1号機, ae_title: CT01}]\n",
+        "      station_name: CT01\n      stations: [{name: CT1号機, ae_title: CT01}]\n",
+    ],
+)
+def test_old_station_keys_are_rejected(tmp_path: Path, ct: str) -> None:
+    with pytest.raises(ConfigurationError, match="no longer supported; write stations"):
+        load_config(_config_with_ct(tmp_path, ct))
 
 
 def test_roster_errors(tmp_path: Path) -> None:

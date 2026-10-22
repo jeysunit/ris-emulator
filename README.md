@@ -34,6 +34,20 @@ docker run -d --name ris-emulator -p 127.0.0.1:8081:8081 -p 127.0.0.1:11112:1111
 docker exec ris-emulator python -m app.cli create CT=1
 ```
 
+## バージョンアップの時の注意
+
+装置の台帳を入れた版から、予定の AE タイトルの設定と CLI の引数が変わりました。
+古い形のままでは起動しないので、次のように書き換えてください。
+
+| 古い形（使えない） | 新しい形 |
+|--------------------|----------|
+| 設定の `orders.modalities.<モダリティ>.station_ae_titles: ["CT01", "CT02"]` と `station_name: "CT01"` | `stations:` に装置ごとの `{name: "CT1号機", ae_title: "CT01", station_name: "CT01"}` を並べる（`name` は画面と CLI で選ぶ名前） |
+| CLI の `create CT=1 --station-ae CT01` | `create CT=1 --station CT1号機`（台帳の `name` で選ぶ） |
+| 画面の「予定の AE タイトル」の入力 | モダリティごとの「装置」の選択 |
+
+自分の設定ファイルをマウントしていなければ、書き換えは要りません（イメージの中の設定は
+新しい形です）。書き方の例は [docs/usage.md](docs/usage.md) の 3 章にあります。
+
 ## ドキュメント
 
 使い方・設計・仕様・開発の手順は [docs/README.md](docs/README.md) から参照してください。

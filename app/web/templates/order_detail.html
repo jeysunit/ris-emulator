@@ -9,7 +9,11 @@
   <dt>状態</dt><dd>{{ status_labels[order.status] }}</dd>
   <dt>予定日時</dt><dd>{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</dd>
   <dt>モダリティ</dt><dd>{{ order.modality }}</dd>
+  {% if order.scheduled_station_label %}
+  <dt>装置</dt><dd>{{ order.scheduled_station_label }}</dd>
+  {% endif %}
   <dt>予定の AE タイトル</dt><dd class="mono">{{ order.scheduled_station_ae_title }}</dd>
+  <dt>予定の装置名</dt><dd class="mono">{{ order.scheduled_station_name }}</dd>
   <dt>検査名</dt><dd>{{ order.procedure.name }}（{{ order.procedure.code }}）</dd>
   <dt>依頼科</dt><dd>{{ order.requesting_service }}</dd>
   <dt>患者 ID</dt><dd class="mono">{{ order.patient.patient_id }}</dd>

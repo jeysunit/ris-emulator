@@ -15,6 +15,7 @@ ADR（Architecture Decision Record）の一覧と、ADR に固有の書き方で
 | [0006](0006-web-ui-loopback-by-default.md) | Web 画面は既定でループバックだけで待ち受け、それ以外のアドレスでは認証を必須にする | 採用 |
 | [0007](0007-mpps-advances-order-status.md) | MPPS を受けて予約の状態を進め、DISCONTINUED は「中止」にする | 採用 |
 | [0008](0008-retake-mode.md) | 撮り直しの扱いを設定で選び、既定は IHE の Append Case にする | 採用 |
+| [0009](0009-station-registry-in-config.md) | 装置の台帳は設定ファイルに持ち、予約では装置を名前で選ぶ | 採用 |
 
 ## 書き方
 

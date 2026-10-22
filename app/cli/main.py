@@ -78,7 +78,13 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[choice.value for choice in CharacterSet],
         help="応答の文字コード（default: 設定の default_character_set）",
     )
-    create.add_argument("--station-ae", help="予定の AE タイトル（default: 設定のモダリティごとの値）")
+    create.add_argument(
+        "--station",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="装置の台帳の名前（モダリティごとに1つ。繰り返せる。default: 台帳の装置を順に使う）",
+    )
     create.add_argument("--department", help="依頼科（default: 設定の departments から乱数で選ぶ）")
     create.add_argument("--seed", type=int, help="シード（同じシードで同じ患者になる）")
     create.add_argument("--json", action="store_true", help="JSON で出す")
@@ -145,7 +151,7 @@ def create_command(args: argparse.Namespace) -> int:
         interval_minutes=args.interval,
         patient_source=args.patients,
         character_set=CharacterSet(args.charset) if args.charset else None,
-        station_ae_title=args.station_ae,
+        stations=service.stations_by_name(args.station, list(counts)),
         department=args.department,
         seed=args.seed,
     )
