@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from app.core.exceptions import ConfigurationError, OrderNotFoundError, ValidationError
+from app.core.exceptions import (
+    ConfigurationError,
+    InvalidTransitionError,
+    OrderNotFoundError,
+    ValidationError,
+)
 from app.core.models import CharacterSet, OrderStatus
 from app.services.config import load_config
 from app.services.order_service import (
@@ -133,6 +138,44 @@ def test_status_change_and_listing(service: OrderService) -> None:
     assert service.list_orders(date_from="20261022") == []
     with pytest.raises(OrderNotFoundError):
         service.set_status("NOPE", OrderStatus.CANCELLED)
+
+
+def test_final_status_cannot_change(service: OrderService) -> None:
+    order = service.create_orders(_request(counts={"CT": 1}))[0]
+    completed = service.set_status(order.accession_number, OrderStatus.COMPLETED)
+    for status in (OrderStatus.SCHEDULED, OrderStatus.IN_PROGRESS, OrderStatus.CANCELLED):
+        with pytest.raises(InvalidTransitionError, match="完了の予約は"):
+            service.set_status(order.accession_number, status)
+    stored = service.get(order.accession_number)
+    assert stored.status is OrderStatus.COMPLETED
+    assert stored.updated_at == completed.updated_at
+
+
+def test_in_progress_can_go_back_to_scheduled(service: OrderService) -> None:
+    order = service.create_orders(_request(counts={"CT": 1}))[0]
+    service.set_status(order.accession_number, OrderStatus.IN_PROGRESS)
+    back = service.set_status(order.accession_number, OrderStatus.SCHEDULED)
+    assert back.status is OrderStatus.SCHEDULED
+
+
+def test_same_status_is_a_no_op(service: OrderService) -> None:
+    order = service.create_orders(_request(counts={"CT": 1}))[0]
+    cancelled = service.set_status(order.accession_number, OrderStatus.CANCELLED)
+    again = service.set_status(order.accession_number, OrderStatus.CANCELLED)
+    assert again.status is OrderStatus.CANCELLED
+    assert again.updated_at == cancelled.updated_at
+    assert service.get(order.accession_number).updated_at == cancelled.updated_at
+
+
+def test_transition_is_checked_against_the_stored_state(service: OrderService) -> None:
+    """取消が先に保存されたら、後から届いた予定への変更は断る（読んだ時点の状態で判断しない）."""
+    order = service.create_orders(_request(counts={"CT": 1}))[0]
+    service.set_status(order.accession_number, OrderStatus.IN_PROGRESS)
+    other = OrderService(service.config, store=type(service.store)(service.store.path))
+    other.set_status(order.accession_number, OrderStatus.CANCELLED)
+    with pytest.raises(InvalidTransitionError):
+        service.set_status(order.accession_number, OrderStatus.SCHEDULED)
+    assert service.get(order.accession_number).status is OrderStatus.CANCELLED
 
 
 def test_parse_helpers() -> None:

@@ -26,6 +26,10 @@ class ValidationError(RisEmulatorError):
     """CLI・画面から入った値の誤り."""
 
 
+class InvalidTransitionError(ValidationError):
+    """遷移の表に無い向きへ予約の状態を変えようとした."""
+
+
 class OrderNotFoundError(RisEmulatorError):
     """受付番号に当たる予約が無い."""
 

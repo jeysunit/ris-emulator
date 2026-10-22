@@ -132,6 +132,60 @@ def test_status_change_with_htmx(config: AppConfig, service: OrderService) -> No
         assert bad.status_code == 400
 
 
+def _status_options(html: str, accession_number: str) -> list[str]:
+    """一覧の行の状態の選択肢の値."""
+    return re.findall(r'<option value="([a-z_]+)"', _row(html, accession_number))
+
+
+def _row(html: str, accession_number: str) -> str:
+    row = re.search(rf'<tr id="order-{accession_number}".*?</tr>', html, re.S)
+    assert row is not None
+    return row.group(0)
+
+
+def test_list_offers_only_allowed_statuses(config: AppConfig, service: OrderService) -> None:
+    scheduled, done = service.create_orders(
+        OrderRequest(counts={"CT": 2}, scheduled_date=TODAY, seed=1)
+    )
+    service.set_status(done.accession_number, OrderStatus.COMPLETED)
+    with _client(config, service) as client:
+        html = client.get("/orders?date=2026-10-21").text
+    assert _status_options(html, scheduled.accession_number) == [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+    ]
+    # 完了の行は選択肢を出さず、状態の名前だけ
+    done_row = _row(html, done.accession_number)
+    assert "<select" not in done_row and "完了" in done_row
+
+
+def test_final_status_change_is_rejected(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    cancelled = service.set_status(order.accession_number, OrderStatus.CANCELLED)
+    with _client(config, service) as client:
+        htmx = client.post(
+            f"/orders/{order.accession_number}/status",
+            data={"status": "in_progress"},
+            headers={"Origin": ORIGIN, "X-CSRF-Token": _token(client), "HX-Request": "true"},
+        )
+        assert htmx.status_code == 400
+        form = client.post(
+            f"/orders/{order.accession_number}/status",
+            data={"status": "scheduled", "csrf_token": _token(client)},
+            headers={"Origin": ORIGIN},
+        )
+        assert form.status_code == 400
+        assert "取消の予約は予定に変更できません" in form.text
+        detail = client.get(f"/orders/{order.accession_number}").text
+    stored = service.get(order.accession_number)
+    assert stored.status is OrderStatus.CANCELLED
+    assert stored.updated_at == cancelled.updated_at
+    # 終わりの状態の詳細には、状態を変えるフォームを出さない
+    assert "状態を変える" not in detail
+
+
 def test_detail_page(config: AppConfig, service: OrderService) -> None:
     order = service.create_orders(OrderRequest(counts={"MR": 1}, scheduled_date=TODAY, seed=1))[0]
     with _client(config, service) as client:

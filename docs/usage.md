@@ -131,5 +131,6 @@ docker exec ris-emulator python -m app.cli show RE202610210001
 docker exec ris-emulator python -m app.cli status RE202610210001 in_progress
 ```
 
-Web 画面の `/orders` でも確認・変更できます。完了・取消にした予約は MWL で返しません
-（[spec/01_orders.md](spec/01_orders.md) の 5 章）。
+Web 画面の `/orders` でも確認・変更できます。完了・取消にした予約は MWL で返しません。
+完了・取消は終わりの状態で、ほかの状態に戻せません。やり直すときは新しい予約を
+作成してください（[spec/01_orders.md](spec/01_orders.md) の 5 章）。

@@ -13,8 +13,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from app.core.exceptions import OrderNotFoundError
-from app.core.models import Order, OrderStatus
+from app.core.exceptions import InvalidTransitionError, OrderNotFoundError
+from app.core.models import STATUS_LABELS, Order, OrderStatus, can_transition
 
 BUSY_TIMEOUT_SECONDS = 10.0
 # (連番, 患者 ID の有無を引く関数) → 保存する予約
@@ -162,9 +162,19 @@ class OrderStore:
                 raise OrderNotFoundError(
                     "Order not found", {"accession_number": accession_number}
                 )
-            order = Order.model_validate_json(row[0]).model_copy(
-                update={"status": status, "updated_at": _now()}
-            )
+            current = Order.model_validate_json(row[0])
+            if status == current.status:
+                # 同じ状態は何もしない（更新日時も変えない）
+                conn.execute("ROLLBACK")
+                return current
+            if not can_transition(current.status, status):
+                conn.execute("ROLLBACK")
+                raise InvalidTransitionError(
+                    f"{STATUS_LABELS[current.status]}の予約は"
+                    f"{STATUS_LABELS[status]}に変更できません",
+                    {"accession_number": accession_number, "status": current.status.value},
+                )
+            order = current.model_copy(update={"status": status, "updated_at": _now()})
             conn.execute(
                 "UPDATE orders SET status = ?, body = ? WHERE accession_number = ?",
                 (status.value, order.model_dump_json(), accession_number),

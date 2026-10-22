@@ -37,6 +37,35 @@ STATUS_LABELS: dict[OrderStatus, str] = {
     OrderStatus.CANCELLED: "取消",
 }
 
+# 状態を変更できる向き（docs/spec/01_orders.md 5 章）。完了・取消は終わりの状態で、
+# どこへも変更できない。同じ状態の指定は遷移ではなく「何もしない」として扱う
+ALLOWED_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
+    OrderStatus.SCHEDULED: frozenset(
+        {OrderStatus.IN_PROGRESS, OrderStatus.COMPLETED, OrderStatus.CANCELLED}
+    ),
+    OrderStatus.IN_PROGRESS: frozenset(
+        {OrderStatus.SCHEDULED, OrderStatus.COMPLETED, OrderStatus.CANCELLED}
+    ),
+    OrderStatus.COMPLETED: frozenset(),
+    OrderStatus.CANCELLED: frozenset(),
+}
+
+
+def can_transition(current: OrderStatus, new: OrderStatus) -> bool:
+    """`current` から `new` へ変更できるか。同じ状態は True（何もしない）."""
+    return new == current or new in ALLOWED_TRANSITIONS[current]
+
+
+def selectable_statuses(current: OrderStatus) -> list[OrderStatus]:
+    """画面の選択肢：今の状態と、今の状態から変更できる状態（定義の順）."""
+    return [status for status in OrderStatus if can_transition(current, status)]
+
+
+def is_final(status: OrderStatus) -> bool:
+    """終わりの状態（ほかの状態へ変更できない）か."""
+    return not ALLOWED_TRANSITIONS[status]
+
+
 # Scheduled Procedure Step Status (0040,0020) の Defined Terms（PS3.3 C.4.10）。
 # 完了・取消は MWL で返さない前提なので、対応する語を持たない
 SPS_STATUS_TERMS: dict[OrderStatus, str] = {
