@@ -7,7 +7,7 @@ from collections.abc import Iterator
 import pytest
 from pydicom.dataset import Dataset
 from pydicom.uid import generate_uid
-from pynetdicom import AE, Association
+from pynetdicom import AE, Association, evt
 from pynetdicom.sop_class import ModalityPerformedProcedureStep
 
 from app.core.models import Order, OrderStatus
@@ -209,6 +209,38 @@ def test_scp_assigns_uid_when_missing(store: OrderStore, service: OrderService) 
     uid = str(reply.AffectedSOPInstanceUID)
     assert uid.startswith("2.25.")
     assert service.list_mpps(order.accession_number)[0].sop_instance_uid == uid
+
+
+def test_assigned_uid_is_in_the_response_command(server: MwlServer, service: OrderService) -> None:
+    """SOP Instance UID を付けない N-CREATE の応答の Command Set に、発番した UID が入る."""
+    order = _orders(service)[0]
+    received: list[str] = []
+
+    def on_recv(event: evt.Event) -> None:
+        command = event.message.command_set
+        if "AffectedSOPInstanceUID" in command:
+            received.append(str(command.AffectedSOPInstanceUID))
+
+    ae = AE(ae_title=SCU_AE)
+    ae.add_requested_context(ModalityPerformedProcedureStep)
+    association = ae.associate(
+        "127.0.0.1", server.port, ae_title="RIS_EMU", evt_handlers=[(evt.EVT_DIMSE_RECV, on_recv)]
+    )
+    assert association.is_established
+    try:
+        status, _ = association.send_n_create(
+            _create_attributes(_step(order)), ModalityPerformedProcedureStep, None
+        )
+        assert int(status.Status) == 0x0000
+        assert len(received) == 1 and received[0].startswith("2.25.")
+        # 受け取った UID で N-SET できる
+        result, _ = association.send_n_set(
+            _set_attributes("COMPLETED"), ModalityPerformedProcedureStep, received[0]
+        )
+        assert int(result.Status) == 0x0000
+    finally:
+        association.release()
+    assert service.get(order.accession_number).status is OrderStatus.COMPLETED
 
 
 @pytest.mark.parametrize("uid", ["1.2.abc", "1.02.3", "1." + "2" * 70])

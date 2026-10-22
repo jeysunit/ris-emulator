@@ -35,8 +35,9 @@ Response = tuple[int | Dataset, Dataset | None]
 def handle_n_create(store: OrderStore, sop_instance_uid: str | None, attributes: Dataset) -> Response:
     """N-CREATE を処理して (Status, 応答の Attribute List) を返す.
 
-    SOP Instance UID が要求に無ければ SCP が発番し、応答の Attribute List の
-    Affected SOP Instance UID で返す（PS3.7 10.1.5.1.4）。
+    SOP Instance UID が要求に無ければ SCP が発番し、応答の Affected SOP Instance UID で
+    返す（PS3.7 10.1.5.1.4）。pynetdicom は、要求に UID が無いときだけ、handler が返した
+    Dataset の AffectedSOPInstanceUID を応答の Command Set に移す。
     """
     reply: Dataset | None = None
     if sop_instance_uid is None:
