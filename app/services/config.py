@@ -10,6 +10,7 @@ import os
 import re
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
@@ -26,6 +27,7 @@ PATIENT_ID_PREFIX_MAX_LENGTH = 8
 ISSUER_PATTERN = re.compile(r"[A-Za-z0-9_]{1,16}")
 WEB_BIND_ENV = "RIS_WEB_BIND_ADDRESS"
 MWL_BIND_ENV = "RIS_MWL_BIND_ADDRESS"
+RetakeMode = Literal["append", "new_order"]
 
 
 class MwlConfig(BaseModel):
@@ -77,6 +79,9 @@ class OrdersConfig(BaseModel):
     roster_path: str = "data/patients_sample.yaml"
     departments: list[str] = Field(default_factory=lambda: ["内科"], min_length=1)
     modalities: dict[str, ModalityCatalog] = Field(..., min_length=1)
+    # 撮り直しの扱い（docs/spec/01_orders.md 7 章、ADR-0008）。append は IHE の Append Case で
+    # RIS は何もしない。new_order は撮り直しの予約を作る（施設のローカルルール）
+    retake_mode: RetakeMode = "append"
 
     @field_validator("accession_prefix", "patient_id_prefix")
     @classmethod

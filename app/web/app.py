@@ -35,6 +35,7 @@ from app.services.config import AppConfig
 from app.services.order_service import (
     MAX_INTERVAL_MINUTES,
     MAX_ORDERS_PER_REQUEST,
+    RETAKE_FROM,
     OrderRequest,
     OrderService,
     parse_date_option,
@@ -235,7 +236,34 @@ def create_app(
             dataset=str(order_to_dataset(order)),
             character_set_labels=CHARACTER_SET_LABELS,
             mpps_records=order_service.list_mpps(order.accession_number),
+            retakes=order_service.list_retakes(order.accession_number),
+            can_retake=config.orders.retake_mode == "new_order" and order.status in RETAKE_FROM,
+            today=order_service.today(),
         )
+
+    @app.post("/orders/{accession_number}/retake")
+    async def create_retake(request: Request, accession_number: str) -> Response:
+        form = await request.form()
+        values = {key: value for key, value in form.items() if isinstance(value, str)}
+        today = order_service.today()
+        try:
+            date_text = values.get("date", "").strip()
+            start_text = values.get("start", "").strip()
+            retake, _ = order_service.create_retake(
+                accession_number,
+                scheduled_date=parse_date_option(date_text, today) if date_text else None,
+                start_time=parse_time_option(start_text) if start_text else None,
+            )
+        except OrderNotFoundError as exc:
+            raise HTTPException(HTTP_NOT_FOUND, "Order not found") from exc
+        except ValidationError as exc:
+            return _render_detail(
+                request,
+                _get_order(order_service, accession_number),
+                error=exc.message,
+                status_code=HTTP_BAD_REQUEST,
+            )
+        return RedirectResponse(f"/orders/{retake.accession_number}", status_code=HTTP_SEE_OTHER)
 
     @app.post("/orders/{accession_number}/status")
     def change_status(

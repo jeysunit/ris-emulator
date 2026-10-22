@@ -39,6 +39,11 @@ UID_ROOT = "2.25"
 MIN_YEAR = 1900
 MAX_YEAR = 9999
 PatientSource = Literal["random", "roster"]
+# 撮り直しを作れる元の予約の状態（docs/spec/01_orders.md 7 章）。予定はまだ撮っていない、
+# 取消は検査そのものを取り消したので、撮り直さない
+RETAKE_FROM = frozenset(
+    {OrderStatus.IN_PROGRESS, OrderStatus.COMPLETED, OrderStatus.DISCONTINUED}
+)
 
 
 def check_scheduled_date(value: date) -> date:
@@ -146,10 +151,63 @@ class OrderService:
         config: AppConfig,
         store: OrderStore | None = None,
         today: Callable[[], date] = date.today,
+        now: Callable[[], datetime] = datetime.now,
     ):
         self.config = config
         self.store = store or OrderStore(Path(config.database))
         self.today = today
+        self.now = now
+
+    def create_retake(
+        self,
+        accession_number: str,
+        scheduled_date: date | None = None,
+        start_time: time | None = None,
+    ) -> tuple[Order, Order]:
+        """撮り直しの予約を作る（`orders.retake_mode` が `new_order` のときだけ）.
+
+        元の予約の内容を写し、受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
+        Study Instance UID を新しく発番する。予定日時の既定は作った時点（分まで）。
+        戻り値は (撮り直しの予約, 元の予約)。docs/spec/01_orders.md 7 章。
+        """
+        if self.config.orders.retake_mode != "new_order":
+            raise ValidationError(
+                f"撮り直しの扱いが {self.config.orders.retake_mode} なので、撮り直しの予約は作れません"
+                "（orders.retake_mode）"
+            )
+        created = self.today()
+        day = check_scheduled_date(scheduled_date or created)
+        at = start_time or self.now().time().replace(second=0, microsecond=0)
+        prefix = self.config.orders.accession_prefix
+        stamp = created.strftime("%Y%m%d")
+
+        def build(sequence: int, original: Order) -> Order:
+            if sequence > DAILY_SEQUENCE_MAX:
+                raise ValidationError(f"1 日に作れる予約は {DAILY_SEQUENCE_MAX} 件までです")
+            number = f"{stamp}{sequence:04d}"
+            retake = original.model_copy(
+                update={
+                    "accession_number": f"{prefix}{number}",
+                    "requested_procedure_id": f"RP{number}",
+                    "scheduled_procedure_step_id": f"SPS{number}",
+                    "study_instance_uid": f"{UID_ROOT}.{uuid.uuid4().int}",
+                    "scheduled_date": day.strftime("%Y%m%d"),
+                    "scheduled_time": at.strftime("%H%M%S"),
+                    "status": OrderStatus.SCHEDULED,
+                    "retake_of": original.accession_number,
+                }
+            )
+            # model_copy は検証しないので、値を検証し直す
+            retake = Order.model_validate(retake.model_dump())
+            check_encodable(retake)
+            return retake
+
+        return self.store.add_retake_order(
+            f"accession:{created:%Y%m%d}", accession_number, build, RETAKE_FROM
+        )
+
+    def list_retakes(self, accession_number: str) -> list[Order]:
+        return self.store.list_retakes(accession_number)
 
     def create_orders(self, request: OrderRequest) -> list[Order]:
         """予約を作って保存する。どこかで誤りがあれば何も保存せず、連番も使わない."""

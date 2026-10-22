@@ -28,6 +28,8 @@ from app.core.models import STATUS_LABELS, Order, OrderStatus, can_transition
 BUSY_TIMEOUT_SECONDS = 10.0
 # (連番, 患者 ID の有無を引く関数) → 保存する予約
 OrderBuilder = Callable[[list[int], Callable[[str], bool]], list[Order]]
+# (連番, 元の予約) → 撮り直しの予約
+RetakeBuilder = Callable[[int, Order], Order]
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS orders (
@@ -138,26 +140,77 @@ class OrderStore:
                     (counter, numbers[-1]),
                 )
                 for order in saved:
-                    conn.execute(
-                        "INSERT INTO orders (accession_number, patient_id, modality, "
-                        "scheduled_station_ae_title, scheduled_date, scheduled_time, status, body) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        (
-                            order.accession_number,
-                            order.patient.patient_id,
-                            order.modality,
-                            order.scheduled_station_ae_title,
-                            order.scheduled_date,
-                            order.scheduled_time,
-                            order.status.value,
-                            order.model_dump_json(),
-                        ),
-                    )
+                    _insert_order(conn, order)
                 conn.execute("COMMIT")
             except BaseException:
                 conn.execute("ROLLBACK")
                 raise
         return saved
+
+    def add_retake_order(
+        self,
+        counter: str,
+        accession_number: str,
+        build: RetakeBuilder,
+        retake_from: frozenset[OrderStatus],
+    ) -> tuple[Order, Order]:
+        """元の予約から撮り直しの予約を作って足し、元の予約の状態を合わせる.
+
+        元の予約の状態の確認・連番の取得・撮り直しの予約の保存・元の予約の状態の変更を
+        1つのトランザクションで行う（docs/spec/01_orders.md 7 章）。元の予約の状態が
+        `retake_from` に無ければ InvalidTransitionError。元の予約が実施中なら中止にし、
+        完了・中止ならそのままにする。戻り値は (撮り直しの予約, 元の予約)。
+        """
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                original = _load_order(conn, accession_number)
+                if original is None:
+                    raise OrderNotFoundError(
+                        "Order not found", {"accession_number": accession_number}
+                    )
+                if original.status not in retake_from:
+                    raise InvalidTransitionError(
+                        f"{STATUS_LABELS[original.status]}の予約からは撮り直しを作れません",
+                        {"accession_number": accession_number, "status": original.status.value},
+                    )
+                row = conn.execute(
+                    "SELECT value FROM counters WHERE name = ?", (counter,)
+                ).fetchone()
+                number = (row[0] if row else 0) + 1
+                now = _now()
+                retake = build(number, original).model_copy(
+                    update={"created_at": now, "updated_at": now}
+                )
+                conn.execute(
+                    "INSERT INTO counters (name, value) VALUES (?, ?) "
+                    "ON CONFLICT(name) DO UPDATE SET value = excluded.value",
+                    (counter, number),
+                )
+                _insert_order(conn, retake)
+                if original.status is OrderStatus.IN_PROGRESS:
+                    # 始めた撮影は正常に終わらなかった（PS3.3 C.4.14 の DISCONTINUED）
+                    original = original.model_copy(
+                        update={"status": OrderStatus.DISCONTINUED, "updated_at": now}
+                    )
+                    conn.execute(
+                        "UPDATE orders SET status = ?, body = ? WHERE accession_number = ?",
+                        (original.status.value, original.model_dump_json(), accession_number),
+                    )
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return retake, original
+
+    def list_retakes(self, accession_number: str) -> list[Order]:
+        """その予約から作った撮り直しの予約（作った順）."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT body FROM orders WHERE json_extract(body, '$.retake_of') = ? ORDER BY id",
+                (accession_number,),
+            ).fetchall()
+        return [Order.model_validate_json(row[0]) for row in rows]
 
     def get(self, accession_number: str) -> Order:
         with self._connect() as conn:
@@ -342,6 +395,24 @@ class OrderStore:
             )
             for row in rows
         ]
+
+
+def _insert_order(conn: sqlite3.Connection, order: Order) -> None:
+    conn.execute(
+        "INSERT INTO orders (accession_number, patient_id, modality, "
+        "scheduled_station_ae_title, scheduled_date, scheduled_time, status, body) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            order.accession_number,
+            order.patient.patient_id,
+            order.modality,
+            order.scheduled_station_ae_title,
+            order.scheduled_date,
+            order.scheduled_time,
+            order.status.value,
+            order.model_dump_json(),
+        ),
+    )
 
 
 def _load_order(conn: sqlite3.Connection, accession_number: str) -> Order | None:

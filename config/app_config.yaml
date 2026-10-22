@@ -20,6 +20,7 @@ orders:
   default_character_set: "utf8"   # utf8, jis, jis_kana
   roster_path: "data/patients_sample.yaml"
   departments: ["内科", "外科", "整形外科", "脳神経外科", "呼吸器内科", "消化器内科", "救急科"]
+  retake_mode: "append"           # 撮り直し：append（同じ予約の中で追加。IHE）、new_order（撮り直しの予約を作る）
   # station_ae_titles は予約の予定の AE タイトル。モダリティの側の AE タイトルとそろえる
   # （16 字まで。複数あれば予約ごとに順に回す）
   modalities:

@@ -155,6 +155,28 @@ def test_final_order_is_not_changed_by_mpps(assoc: Association, service: OrderSe
     assert len(service.list_mpps(order.accession_number)) == 1
 
 
+def test_append_case_records_second_mpps(assoc: Association, service: OrderService) -> None:
+    """retake_mode が append（既定）：完了の予約に2つ目の MPPS が来ても、記録だけで予約は増えない.
+
+    IHE RAD TF-2 4.6.4.1.2.3.3 Append Case（同じ SPS を参照する追加の PPS）。
+    """
+    assert service.config.orders.retake_mode == "append"
+    order = _orders(service)[0]
+    first = generate_uid()
+    _create(assoc, first, _create_attributes(_step(order)))
+    _set(assoc, first, "COMPLETED")
+    second = generate_uid()
+    assert _create(assoc, second, _create_attributes(_step(order))) == 0x0000
+    assert int(_set(assoc, second, "COMPLETED").Status) == 0x0000
+    assert service.get(order.accession_number).status is OrderStatus.COMPLETED
+    assert len(service.list_orders()) == 1
+    records = service.list_mpps(order.accession_number)
+    assert [(r.sop_instance_uid, r.status) for r in records] == [
+        (first, "COMPLETED"),
+        (second, "COMPLETED"),
+    ]
+
+
 @pytest.mark.parametrize(
     ("pps_status", "order_status"),
     [("COMPLETED", OrderStatus.COMPLETED), ("DISCONTINUED", OrderStatus.DISCONTINUED)],

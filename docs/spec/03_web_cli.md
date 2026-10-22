@@ -18,6 +18,7 @@
 | `create CT=3 MR=1` | 予約を作成する。`--date`・`--start`・`--interval`・`--patients random/roster`・`--charset`・`--station-ae`・`--department`・`--seed`・`--json` |
 | `list` | 一覧。`--date`・`--status`・`--modality`・`--json` |
 | `show <受付番号>` | 予約の MWL の全属性 |
+| `retake <受付番号>` | 撮り直しの予約を作る（`orders.retake_mode` が `new_order` のとき）。`--date`・`--start`・`--json` |
 | `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`・`discontinued`）。変更できる向きは [01_orders.md](01_orders.md) の 5 章 |
 | `mwl serve` | MWL・MPPS の SCP を起動する |
 | `version` | バージョン |
@@ -33,7 +34,7 @@
 |------|------|
 | `/orders` | 予約の一覧（予定日・状態・モダリティで絞り込む）。行ごとに状態を選んで変更する（htmx） |
 | `/orders/new` | 予約の作成：モダリティごとの件数、予定日、開始時刻、間隔、予定の AE タイトル、患者（乱数・名簿）、依頼科、文字コード、シード |
-| `/orders/<受付番号>` | 予約の詳細と MWL の全属性。状態を変更する |
+| `/orders/<受付番号>` | 予約の詳細と MWL の全属性。状態を変更する。`orders.retake_mode` が `new_order` なら、実施中・完了・中止の予約から撮り直しの予約を作る |
 
 - 画面上部のバーに、MWL の AE タイトル、待ち受けの状態、アドレスとポートを表示する
 - 実装：FastAPI・Jinja2・htmx（v2.0.9。リポジトリに同梱し、バージョンと sha256 を
@@ -75,6 +76,7 @@
 | `orders.default_character_set` | `utf8` | 文字コードの既定値 |
 | `orders.roster_path` | `data/patients_sample.yaml` | 名簿 |
 | `orders.departments` | 内科など | 依頼科 |
+| `orders.retake_mode` | `append` | 撮り直しの扱い：`append`（同じ予約の中で追加。RIS は何もしない）・`new_order`（撮り直しの予約を作る）。[01_orders.md](01_orders.md) の 7 章 |
 | `orders.modalities.<モダリティ>` | CT・MR・CR・DX・US・MG | `station_ae_titles`・`station_name`・`procedures`（`code`・`name`） |
 | `web.bind_address`・`web.port` | `127.0.0.1`・`8081` | 画面の待ち受けアドレスとポート |
 | `web.start_mwl` | true | 画面のプロセスで MWL も起動する |

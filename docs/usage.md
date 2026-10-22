@@ -140,3 +140,19 @@ Web 画面の `/orders` でも確認・変更できます。完了・取消・�
 なります。受けた MPPS は予約の詳細に表示します
 （[spec/05_mpps_scp.md](spec/05_mpps_scp.md)）。MPPS の記録は消しません。初期化するときは
 データベースのファイル（コンテナではボリューム `ris-state`）を作り直します。
+
+## 6. 撮り直す
+
+撮り直しの扱いは、設定の `orders.retake_mode` で選びます。モダリティの側の撮り直しの
+設定と合わせてください。
+
+- `append`（既定）：同じ予約の中で撮り直します（IHE の Append Case）。RIS は何もしません
+- `new_order`：撮り直しは別の検査です。予約の詳細の「撮り直しの予約を作る」か、
+  次のコマンドで、新しい受付番号・Study Instance UID の撮り直しの予約を作ります
+
+```bash
+docker exec ris-emulator python -m app.cli retake RE202610210001
+```
+
+撮り直しを作れるのは、実施中・完了・中止の予約です。実施中の予約から作ると、元の予約は
+中止になります（[spec/01_orders.md](spec/01_orders.md) の 7 章）。

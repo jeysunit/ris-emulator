@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
@@ -13,6 +13,7 @@ from app.services.store import OrderStore
 
 ROOT = Path(__file__).resolve().parent.parent
 TODAY = date(2026, 10, 21)
+NOW = datetime(2026, 10, 21, 14, 37, 52)
 
 
 @pytest.fixture
@@ -36,3 +37,11 @@ def store(config: AppConfig) -> OrderStore:
 @pytest.fixture
 def service(config: AppConfig, store: OrderStore) -> OrderService:
     return OrderService(config, store, today=lambda: TODAY)
+
+
+def new_order_service(config: AppConfig, store: OrderStore) -> OrderService:
+    """撮り直しの扱いを new_order にした OrderService（今の時刻は NOW に固定）."""
+    orders = config.orders.model_copy(update={"retake_mode": "new_order"})
+    return OrderService(
+        config.model_copy(update={"orders": orders}), store, today=lambda: TODAY, now=lambda: NOW
+    )
