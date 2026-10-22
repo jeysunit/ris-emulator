@@ -20,7 +20,7 @@ from app.core.exceptions import (
     OrderNotFoundError,
     ValidationError,
 )
-from app.core.models import STATUS_LABELS, CharacterSet, Order, OrderStatus
+from app.core.models import CHARACTER_SET_LABELS, STATUS_LABELS, CharacterSet, Order, OrderStatus
 from app.core.mwl_dataset import order_to_dataset
 from app.mwl.server import MwlServer
 from app.services.config import load_config
@@ -76,7 +76,9 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument(
         "--charset",
         choices=[choice.value for choice in CharacterSet],
-        help="応答の文字コード（default: 設定の default_character_set）",
+        help="応答の文字コード："
+        + "、".join(f"{choice.value}={CHARACTER_SET_LABELS[choice]}" for choice in CharacterSet)
+        + "（default: 設定の default_character_set）",
     )
     create.add_argument(
         "--station",

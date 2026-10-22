@@ -21,7 +21,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.models import (
-    CHARACTER_SET_TERMS,
+    CHARACTER_SET_LABELS,
     STATUS_LABELS,
     CharacterSet,
     Order,
@@ -77,9 +77,6 @@ SECURITY_HEADERS = {
     "Cache-Control": "no-store",
 }
 BASIC_CHALLENGE = 'Basic realm="ris-emulator", charset="UTF-8"'
-CHARACTER_SET_LABELS = {
-    choice: "\\".join(CHARACTER_SET_TERMS[choice]) for choice in CharacterSet
-}
 
 
 def create_app(

@@ -9,6 +9,8 @@ from pydicom.filereader import read_dataset
 from pydicom.filewriter import write_dataset
 
 from app.core.models import (
+    CHARACTER_SET_LABELS,
+    CHARACTER_SET_TERMS,
     CharacterSet,
     Order,
     OrderStatus,
@@ -145,3 +147,49 @@ def test_character_sets_round_trip(choice: CharacterSet, expected: object) -> No
         assert "田中".encode() in raw
     else:
         assert b"\x1b$B" in raw  # JIS X 0208 への切り替え
+
+
+def test_character_set_labels() -> None:
+    """選択肢はすべて名前を持ち、名前に値の区切り `\\` も、それが見える `¥` も無い."""
+    assert set(CHARACTER_SET_LABELS) == set(CharacterSet)
+    for label in CHARACTER_SET_LABELS.values():
+        assert "\\" not in label and "¥" not in label
+    assert CHARACTER_SET_LABELS[CharacterSet.JIS] == "日本語（JIS X 0208、ISO 2022 IR 87）"
+
+
+@pytest.mark.parametrize("choice", list(CharacterSet))
+def test_character_set_terms_follow_ps3_3(choice: CharacterSet) -> None:
+    """PS3.3 C.12.1.1.2：ISO_IR 192 は値1つだけ。符号拡張（ISO 2022）は値2つ以上で、重ねない."""
+    terms = CHARACTER_SET_TERMS[choice]
+    if "ISO_IR 192" in terms:
+        assert terms == ["ISO_IR 192"]
+    if any(term.startswith("ISO 2022") for term in terms):
+        assert len(terms) >= 2
+        # 値 1 の空は ISO 2022 IR 6 とみなす
+        effective = [term or "ISO 2022 IR 6" for term in terms]
+        assert len(set(effective)) == len(effective)
+        assert all(term.startswith("ISO 2022") for term in effective)
+
+
+def _bytes(text: str) -> bytes:
+    """PS3.5 の Encoded representation（`05/09` のような 列/行 の並び）をバイト列にする."""
+    return bytes(int(column) * 16 + int(row) for column, row in (pair.split("/") for pair in text.split()))
+
+
+def test_jis_encoding_matches_ps3_5_example_h3_1() -> None:
+    """PS3.5 Example H.3-1（Specific Character Set `\\ISO 2022 IR 87`）と同じバイト列になる."""
+    name = PersonName(alphabetic="Yamada^Tarou", ideographic="山田^太郎", phonetic="やまだ^たろう")
+    patient = _order().patient.model_copy(update={"name": name})
+    ds = order_to_dataset(_order(character_set=CharacterSet.JIS, patient=patient))
+    buffer = DicomBytesIO()
+    buffer.is_little_endian = True
+    buffer.is_implicit_VR = True
+    write_dataset(buffer, ds)
+    expected = _bytes(
+        "05/09 06/01 06/13 06/01 06/04 06/01 5/14 05/04 06/01 07/02 06/15 07/05 03/13 "
+        "01/11 02/04 04/02 03/11 03/03 04/05 04/04 01/11 02/08 04/02 05/14 "
+        "01/11 02/04 04/02 04/02 04/00 04/15 03/10 01/11 02/08 04/02 03/13 "
+        "01/11 02/04 04/02 02/04 06/04 02/04 05/14 02/04 04/00 01/11 02/08 04/02 05/14 "
+        "01/11 02/04 04/02 02/04 03/15 02/04 06/13 02/04 02/06 01/11 02/08 04/02"
+    )
+    assert expected in buffer.getvalue()

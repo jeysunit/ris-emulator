@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.core.charset import find_unencodable
 from app.core.exceptions import ConfigurationError, ValidationError
 from app.core.models import (
-    CHARACTER_SET_TERMS,
+    CHARACTER_SET_LABELS,
     LO_MAX_LENGTH,
     CharacterSet,
     Order,
@@ -138,9 +138,10 @@ def check_encodable(order: Order) -> None:
     problems = find_unencodable(order_to_dataset(order))
     if problems:
         attribute, chars = problems[0]
-        label = "\\".join(CHARACTER_SET_TERMS[order.character_set])
+        label = CHARACTER_SET_LABELS[order.character_set]
+        unicode = CHARACTER_SET_LABELS[CharacterSet.UTF8]
         raise ValidationError(
-            f"{attribute} の「{chars}」は {label} で書けません。文字コードを ISO_IR 192 にするか、"
+            f"{attribute} の「{chars}」は{label}で書けません。文字コードを{unicode}にするか、"
             f"値を直してください（患者 ID {order.patient.patient_id}）"
         )
 
