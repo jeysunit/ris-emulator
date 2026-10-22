@@ -96,7 +96,8 @@ docker build -t ris-emulator .
 
 ## 3. モダリティを接続する
 
-モダリティの MWL の設定（SCU）で、接続先を次のように設定します。
+モダリティの MWL の設定（SCU）で、接続先を次のように設定します。MPPS を送る
+モダリティは、MPPS の送り先にも同じ値を設定します。
 
 | 項目 | 値 |
 |------|----|
@@ -131,6 +132,11 @@ docker exec ris-emulator python -m app.cli show RE202610210001
 docker exec ris-emulator python -m app.cli status RE202610210001 in_progress
 ```
 
-Web 画面の `/orders` でも確認・変更できます。完了・取消にした予約は MWL で返しません。
-完了・取消は終わりの状態で、ほかの状態に戻せません。やり直すときは新しい予約を
-作成してください（[spec/01_orders.md](spec/01_orders.md) の 5 章）。
+Web 画面の `/orders` でも確認・変更できます。完了・取消・中止にした予約は MWL で
+返しません。完了・取消・中止は終わりの状態で、ほかの状態に戻せません。やり直すときは
+新しい予約を作成してください（[spec/01_orders.md](spec/01_orders.md) の 5 章）。
+
+モダリティが MPPS を送ると、予約は撮影の開始で実施中に、完了で完了に、中止で中止に
+なります。受けた MPPS は予約の詳細に表示します
+（[spec/05_mpps_scp.md](spec/05_mpps_scp.md)）。MPPS の記録は消しません。初期化するときは
+データベースのファイル（コンテナではボリューム `ris-state`）を作り直します。

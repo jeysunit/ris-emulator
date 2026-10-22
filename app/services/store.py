@@ -7,13 +7,22 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-from app.core.exceptions import InvalidTransitionError, OrderNotFoundError
+from app.core.exceptions import (
+    DuplicateMppsError,
+    InvalidTransitionError,
+    MppsNotFoundError,
+    MppsNotInProgressError,
+    OrderNotFoundError,
+)
 from app.core.models import STATUS_LABELS, Order, OrderStatus, can_transition
 
 BUSY_TIMEOUT_SECONDS = 10.0
@@ -37,7 +46,47 @@ CREATE TABLE IF NOT EXISTS counters (
     name TEXT PRIMARY KEY,
     value INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS mpps (
+    sop_instance_uid TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    accession_numbers TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
+# MPPS の Performed Procedure Step Status (0040,0252) の Enumerated Values（PS3.3 C.4.14）
+PPS_IN_PROGRESS = "IN PROGRESS"
+PPS_COMPLETED = "COMPLETED"
+PPS_DISCONTINUED = "DISCONTINUED"
+PPS_STATUSES = frozenset({PPS_IN_PROGRESS, PPS_COMPLETED, PPS_DISCONTINUED})
+# MPPS の状態 → 結び付いた予約の状態
+_ORDER_STATUS_FOR_PPS = {
+    PPS_IN_PROGRESS: OrderStatus.IN_PROGRESS,
+    PPS_COMPLETED: OrderStatus.COMPLETED,
+    PPS_DISCONTINUED: OrderStatus.DISCONTINUED,
+}
+
+
+@dataclass(frozen=True)
+class MppsRecord:
+    """受け付けた MPPS の1件（docs/spec/05_mpps_scp.md 4 章）."""
+
+    sop_instance_uid: str
+    status: str
+    accession_numbers: list[str]
+    body: dict[str, Any]
+    created_at: str
+    updated_at: str
+
+
+@dataclass(frozen=True)
+class MppsResult:
+    """MPPS の処理の結果。`unchanged` は遷移の表に無いので状態を変えなかった予約."""
+
+    linked: list[str] = field(default_factory=list)
+    changed: list[str] = field(default_factory=list)
+    unchanged: list[tuple[str, OrderStatus]] = field(default_factory=list)
 
 
 class OrderStore:
@@ -181,6 +230,162 @@ class OrderStore:
             )
             conn.execute("COMMIT")
         return order
+
+
+    def create_mpps(
+        self,
+        sop_instance_uid: str,
+        steps: Sequence[tuple[str, str]],
+        body: dict[str, Any],
+    ) -> MppsResult:
+        """N-CREATE（IN PROGRESS）の MPPS を記録し、結び付いた予約を実施中にする.
+
+        `steps` は Scheduled Step Attributes Sequence の項目の
+        (Accession Number, Scheduled Procedure Step ID)。両方が一致する予約に結び付ける。
+        MPPS の記録と予約の状態の変更は1つのトランザクションで行う。
+        """
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                found = conn.execute(
+                    "SELECT 1 FROM mpps WHERE sop_instance_uid = ?", (sop_instance_uid,)
+                ).fetchone()
+                if found is not None:
+                    raise DuplicateMppsError(
+                        "MPPS already exists", {"sop_instance_uid": sop_instance_uid}
+                    )
+                orders = _orders_for_steps(conn, steps)
+                result = _apply_mpps(conn, orders, OrderStatus.IN_PROGRESS)
+                now = _now()
+                conn.execute(
+                    "INSERT INTO mpps (sop_instance_uid, status, accession_numbers, body, "
+                    "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        sop_instance_uid,
+                        PPS_IN_PROGRESS,
+                        json.dumps(result.linked),
+                        json.dumps(body, ensure_ascii=False),
+                        now,
+                        now,
+                    ),
+                )
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return result
+
+    def update_mpps(
+        self, sop_instance_uid: str, status: str | None, modifications: dict[str, Any]
+    ) -> MppsResult:
+        """N-SET の値を記録し、COMPLETED・DISCONTINUED なら結び付いた予約を完了・中止にする.
+
+        記録した MPPS が無ければ MppsNotFoundError、IN PROGRESS でなければ
+        MppsNotInProgressError（PS3.4 F.7.2.2.3）。
+        """
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT status, accession_numbers, body FROM mpps WHERE sop_instance_uid = ?",
+                    (sop_instance_uid,),
+                ).fetchone()
+                if row is None:
+                    raise MppsNotFoundError(
+                        "MPPS not found", {"sop_instance_uid": sop_instance_uid}
+                    )
+                if row[0] != PPS_IN_PROGRESS:
+                    raise MppsNotInProgressError(
+                        "MPPS may no longer be updated",
+                        {"sop_instance_uid": sop_instance_uid, "status": row[0]},
+                    )
+                accession_numbers: list[str] = json.loads(row[1])
+                new_status = status or row[0]
+                result = MppsResult(linked=accession_numbers)
+                if new_status != PPS_IN_PROGRESS:
+                    orders = [_load_order(conn, number) for number in accession_numbers]
+                    result = _apply_mpps(
+                        conn,
+                        [order for order in orders if order is not None],
+                        _ORDER_STATUS_FOR_PPS[new_status],
+                    )
+                body = {**json.loads(row[2]), **modifications}
+                conn.execute(
+                    "UPDATE mpps SET status = ?, body = ?, updated_at = ? "
+                    "WHERE sop_instance_uid = ?",
+                    (new_status, json.dumps(body, ensure_ascii=False), _now(), sop_instance_uid),
+                )
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return result
+
+    def list_mpps(self, accession_number: str) -> list[MppsRecord]:
+        """予約に結び付いた MPPS を、受けた順に返す."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sop_instance_uid, status, accession_numbers, body, created_at, updated_at "
+                "FROM mpps WHERE EXISTS "
+                "(SELECT 1 FROM json_each(mpps.accession_numbers) WHERE value = ?) "
+                "ORDER BY created_at, rowid",
+                (accession_number,),
+            ).fetchall()
+        return [
+            MppsRecord(
+                sop_instance_uid=row[0],
+                status=row[1],
+                accession_numbers=json.loads(row[2]),
+                body=json.loads(row[3]),
+                created_at=row[4],
+                updated_at=row[5],
+            )
+            for row in rows
+        ]
+
+
+def _load_order(conn: sqlite3.Connection, accession_number: str) -> Order | None:
+    row = conn.execute(
+        "SELECT body FROM orders WHERE accession_number = ?", (accession_number,)
+    ).fetchone()
+    return Order.model_validate_json(row[0]) if row else None
+
+
+def _orders_for_steps(
+    conn: sqlite3.Connection, steps: Sequence[tuple[str, str]]
+) -> list[Order]:
+    """Accession Number と Scheduled Procedure Step ID の両方が一致する予約（重ねない）."""
+    orders: list[Order] = []
+    for accession_number, step_id in steps:
+        if not accession_number or not step_id:
+            continue
+        order = _load_order(conn, accession_number)
+        if order is None or order.scheduled_procedure_step_id != step_id:
+            continue
+        if all(o.accession_number != order.accession_number for o in orders):
+            orders.append(order)
+    return orders
+
+
+def _apply_mpps(
+    conn: sqlite3.Connection, orders: list[Order], status: OrderStatus
+) -> MppsResult:
+    """MPPS が求める状態へ予約を変える。遷移の表に無ければ変えずに `unchanged` に入れる."""
+    result = MppsResult(linked=[order.accession_number for order in orders])
+    now = _now()
+    for order in orders:
+        if order.status == status:
+            continue
+        if not can_transition(order.status, status):
+            result.unchanged.append((order.accession_number, order.status))
+            continue
+        updated = order.model_copy(update={"status": status, "updated_at": now})
+        conn.execute(
+            "UPDATE orders SET status = ?, body = ? WHERE accession_number = ?",
+            (status.value, updated.model_dump_json(), order.accession_number),
+        )
+        result.changed.append(order.accession_number)
+    return result
 
 
 def _now() -> str:

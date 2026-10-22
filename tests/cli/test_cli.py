@@ -76,6 +76,17 @@ def test_status_transitions(config_file: Path, capsys: pytest.CaptureFixture[str
     assert code == 0 and "完了" in out
 
 
+def test_discontinued_status(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code, out, _ = _run(capsys, "create", "CT=1", "--date", "20261021", "--json", "--config", str(config_file))
+    accession = json.loads(out)[0]["accession_number"]
+    # 予定から中止へは変更できない（中止は始めた撮影を止めたこと）
+    code, _, err = _run(capsys, "status", accession, "discontinued", "--config", str(config_file))
+    assert code == 2 and "予定の予約は中止に変更できません" in err
+    _run(capsys, "status", accession, "in_progress", "--config", str(config_file))
+    code, out, _ = _run(capsys, "status", accession, "discontinued", "--config", str(config_file))
+    assert code == 0 and "中止" in out
+
+
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(capsys, "version")
     assert code == 0 and out.startswith("ris-emulator ")

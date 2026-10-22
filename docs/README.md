@@ -14,6 +14,7 @@ ris-emulator の使い方・設計・仕様・開発の手順を書いたドキ�
 | [spec/02_mwl_scp.md](spec/02_mwl_scp.md) | MWL の SCP：応答の流れ、照合、返す属性、文字コード |
 | [spec/03_web_cli.md](spec/03_web_cli.md) | Web 画面・CLI・設定・Docker |
 | [spec/04_identifiers.md](spec/04_identifiers.md) | 発番する識別子と、DICOM・HL7 v2・FHIR R5 の規則との対応 |
+| [spec/05_mpps_scp.md](spec/05_mpps_scp.md) | MPPS の SCP：N-CREATE・N-SET、予約との結び付け、記録 |
 | [decisions/README.md](decisions/README.md) | ADR の一覧と、ADR に固有の書き方 |
 | [roadmap.md](roadmap.md) | 未実装の機能 |
 | [development.md](development.md) | 開発環境と Python での起動、テスト、確認のスクリプト、変更の手順 |

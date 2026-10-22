@@ -1,6 +1,7 @@
-"""MWL の SCP（pynetdicom。ADR-0001、docs/spec/02_mwl_scp.md）.
+"""MWL と MPPS の SCP（pynetdicom。ADR-0001・ADR-0007、docs/spec/02_mwl_scp.md・05_mpps_scp.md）.
 
-C-FIND（Modality Worklist Information Model - FIND、1.2.840.10008.5.1.4.31）と
+C-FIND（Modality Worklist Information Model - FIND、1.2.840.10008.5.1.4.31）、
+N-CREATE・N-SET（Modality Performed Procedure Step、1.2.840.10008.3.1.2.3.3）と
 C-ECHO（Verification）を受ける。予約は要求のたびに保存先から読み直す。
 """
 
@@ -12,11 +13,16 @@ from typing import Any
 
 from pydicom.dataset import Dataset
 from pynetdicom import AE, evt
-from pynetdicom.sop_class import ModalityWorklistInformationFind, Verification
+from pynetdicom.sop_class import (
+    ModalityPerformedProcedureStep,
+    ModalityWorklistInformationFind,
+    Verification,
+)
 
 from app.core.exceptions import MwlServerError
 from app.core.matching import has_matching_keys, matches
 from app.core.mwl_dataset import build_response, has_unsupported_keys, order_to_dataset
+from app.mwl.mpps import STATUS_PROCESSING_FAILURE, handle_n_create, handle_n_set
 from app.services.config import MwlConfig
 from app.services.store import OrderStore
 
@@ -66,12 +72,17 @@ class MwlServer:
         ae = AE(ae_title=self.config.ae_title)
         ae.require_called_aet = self.config.require_called_ae_title
         ae.add_supported_context(ModalityWorklistInformationFind)
+        ae.add_supported_context(ModalityPerformedProcedureStep)
         ae.add_supported_context(Verification)
         return ae
 
     @property
     def handlers(self) -> list[tuple[Any, Any]]:
-        return [(evt.EVT_C_FIND, self._handle_find)]
+        return [
+            (evt.EVT_C_FIND, self._handle_find),
+            (evt.EVT_N_CREATE, self._handle_n_create),
+            (evt.EVT_N_SET, self._handle_n_set),
+        ]
 
     def start(self) -> None:
         if self._server is not None:
@@ -129,6 +140,24 @@ class MwlServer:
         if self._server is not None:
             self._server.shutdown()
             self._server = None
+
+    def _handle_n_create(self, event: Any) -> tuple[int | Dataset, Dataset | None]:
+        try:
+            return handle_n_create(
+                self.store, event.request.AffectedSOPInstanceUID, event.attribute_list
+            )
+        except Exception:  # noqa: BLE001 - 相手には Processing Failure を返し、理由はログに残す
+            logger.exception("MPPS N-CREATE failed")
+            return STATUS_PROCESSING_FAILURE, None
+
+    def _handle_n_set(self, event: Any) -> tuple[int | Dataset, Dataset | None]:
+        try:
+            return handle_n_set(
+                self.store, event.request.RequestedSOPInstanceUID, event.modification_list
+            )
+        except Exception:  # noqa: BLE001 - 相手には Processing Failure を返し、理由はログに残す
+            logger.exception("MPPS N-SET failed")
+            return STATUS_PROCESSING_FAILURE, None
 
     def _handle_find(self, event: Any) -> Iterator[tuple[int, Dataset | None]]:
         requestor = event.assoc.requestor

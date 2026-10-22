@@ -7,12 +7,13 @@ ADR（Architecture Decision Record）の一覧と、ADR に固有の書き方で
 
 | 番号 | タイトル | 状態 |
 |------|----------|------|
-| [0001](0001-mwl-scp-with-pynetdicom.md) | MWL の SCP を pynetdicom で自前で実装する | 採用 |
+| [0001](0001-mwl-scp-with-pynetdicom.md) | MWL の SCP を pynetdicom で自前で実装する | 採用（「MPPS は次に作る」の節は ADR-0007 で置き換え済み） |
 | [0002](0002-sqlite-order-store.md) | 予約の保存先は SQLite にする | 採用 |
 | [0003](0003-identifiers-fit-dicom-and-hl7.md) | 発番する識別子は DICOM・HL7 v2・FHIR R5 にそのまま入る形式に限定する | 採用 |
 | [0004](0004-ris-issues-study-instance-uid.md) | Study Instance UID は予約の作成時に RIS が発番する | 採用 |
 | [0005](0005-return-issuer-namespace.md) | 発番元（Issuer）を既定で返す | 採用 |
 | [0006](0006-web-ui-loopback-by-default.md) | Web 画面は既定でループバックだけで待ち受け、それ以外のアドレスでは認証を必須にする | 採用 |
+| [0007](0007-mpps-advances-order-status.md) | MPPS を受けて予約の状態を進め、DISCONTINUED は「中止」にする | 採用 |
 
 ## 書き方
 

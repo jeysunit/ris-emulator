@@ -5,14 +5,15 @@
 開発・テスト用の RIS エミュレーターです。架空の患者と検査の予約を作成し、
 MWL（Modality Worklist、C-FIND の SCP）で返します。モダリティがワークリストを
 取得し、予約の内容で撮影して PACS へ送信する流れのうち、予約の作成とワークリストの
-応答を担当します。
+応答を担当します。モダリティの MPPS を受けて、予約を実施中・完了・中止にします。
 
 ```mermaid
 flowchart LR
-  RIS["ris-emulator<br/>予約の作成・MWL の SCP"]
+  RIS["ris-emulator<br/>予約の作成・MWL と MPPS の SCP"]
   MOD["モダリティ"]
   PACS[("PACS")]
   RIS -->|"ワークリスト（C-FIND の応答）"| MOD
+  MOD -->|"撮影の開始・完了・中止（MPPS）"| RIS
   MOD -->|"画像（C-STORE）"| PACS
 ```
 

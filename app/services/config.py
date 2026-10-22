@@ -15,7 +15,7 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from app.core.exceptions import ConfigurationError
-from app.core.models import CharacterSet, OrderStatus, Procedure, validate_ae_title
+from app.core.models import CharacterSet, OrderStatus, Procedure, is_final, validate_ae_title
 
 PORT_MIN = 1
 PORT_MAX = 65535
@@ -119,7 +119,8 @@ class AppConfig(BaseModel):
 
     @model_validator(mode="after")
     def _check_statuses(self) -> AppConfig:
-        unsupported = {OrderStatus.COMPLETED, OrderStatus.CANCELLED} & set(self.mwl.statuses)
+        # 終わりの状態（完了・取消・中止）は MWL で返さない
+        unsupported = {status for status in self.mwl.statuses if is_final(status)}
         if unsupported:
             names = ", ".join(sorted(status.value for status in unsupported))
             raise ValueError(f"mwl.statuses must not include {names}")
