@@ -43,8 +43,9 @@
 
 ## 出典（2026-10-23 に確認）
 
-- DICOM PS3.4 Table K.6-1（Scheduled Station AE Title は Matching Key Type R・Return Key
-  Type 1、Scheduled Station Name は Matching Key Type O・Return Key Type 2）
+- DICOM PS3.4 Table K.6-1（Scheduled Station AE Title は Matching Key Type R・
+  Return Key Type 1、Scheduled Station Name は Matching Key Type O・
+  Return Key Type 2）
   <https://dicom.nema.org/medical/dicom/current/output/chtml/part04/sect_K.6.html>
 - DICOM PS3.5 6.2 Value Representation（AE・SH）
   <https://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html>
