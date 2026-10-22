@@ -15,7 +15,7 @@ from app.services.config import AppConfig
 from app.services.order_service import OrderRequest, OrderService
 from app.services.store import OrderStore
 
-from tests.conftest import TODAY
+from tests.conftest import TODAY, new_order_service
 
 SCU_AE = "TEST_SCU"
 
@@ -121,6 +121,22 @@ def test_filter_by_station_and_date_range(server: MwlServer, service: OrderServi
     # 要求に無い属性は返さない
     assert "RequestingService" not in response
     assert "ScheduledProcedureStepStatus" not in sps
+
+
+def test_retake_order_is_returned_with_new_study(
+    server: MwlServer, config: AppConfig, store: OrderStore
+) -> None:
+    retaking = new_order_service(config, store)
+    original = retaking.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    retaking.set_status(original.accession_number, OrderStatus.IN_PROGRESS)
+    retake, _ = retaking.create_retake(original.accession_number)
+    found, final = _find(
+        server, _query(ScheduledStationAETitle="CT01", ScheduledProcedureStepStartDate="20261021")
+    )
+    assert final == 0x0000
+    # 元の予約は中止になって返らず、撮り直しの予約が新しい Study Instance UID で返る
+    assert [r.AccessionNumber for r in found] == [retake.accession_number]
+    assert found[0].StudyInstanceUID == retake.study_instance_uid != original.study_instance_uid
 
 
 def test_filter_by_modality_and_open_range(server: MwlServer, service: OrderService) -> None:

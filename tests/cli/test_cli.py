@@ -87,6 +87,39 @@ def test_discontinued_status(config_file: Path, capsys: pytest.CaptureFixture[st
     assert code == 0 and "中止" in out
 
 
+def _set_retake_mode(config_file: Path, mode: str) -> None:
+    raw = yaml.safe_load(config_file.read_text(encoding="utf-8"))
+    raw["orders"]["retake_mode"] = mode
+    config_file.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
+
+
+def test_retake(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code, out, _ = _run(capsys, "create", "CT=1", "--date", "20261021", "--json", "--config", str(config_file))
+    accession = json.loads(out)[0]["accession_number"]
+    # 予定の予約からは作れない
+    _set_retake_mode(config_file, "new_order")
+    code, _, err = _run(capsys, "retake", accession, "--config", str(config_file))
+    assert code == 2 and "予定の予約からは撮り直しを作れません" in err
+    _run(capsys, "status", accession, "in_progress", "--config", str(config_file))
+    code, out, _ = _run(
+        capsys, "retake", accession, "--date", "20261022", "--start", "10:30", "--json", "--config", str(config_file)
+    )
+    assert code == 0
+    retake = json.loads(out)[0]
+    assert retake["retake_of"] == accession and retake["accession_number"] != accession
+    assert (retake["scheduled_date"], retake["scheduled_time"], retake["status"]) == ("20261022", "103000", "scheduled")
+    code, out, _ = _run(capsys, "list", "--status", "discontinued", "--json", "--config", str(config_file))
+    assert [o["accession_number"] for o in json.loads(out)] == [accession]
+
+
+def test_retake_in_append_mode(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code, out, _ = _run(capsys, "create", "CT=1", "--date", "20261021", "--json", "--config", str(config_file))
+    accession = json.loads(out)[0]["accession_number"]
+    _run(capsys, "status", accession, "completed", "--config", str(config_file))
+    code, _, err = _run(capsys, "retake", accession, "--config", str(config_file))
+    assert code == 2 and "append" in err
+
+
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(capsys, "version")
     assert code == 0 and out.startswith("ris-emulator ")

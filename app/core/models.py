@@ -233,8 +233,17 @@ class Order(BaseModel):
     priority: str = "ROUTINE"
     character_set: CharacterSet = CharacterSet.UTF8
     status: OrderStatus = OrderStatus.SCHEDULED
+    # 撮り直しの予約の、元の予約の受付番号（docs/spec/01_orders.md 7 章）。MWL には入れない
+    retake_of: str = ""
     created_at: str = ""
     updated_at: str = ""
+
+    @field_validator("retake_of")
+    @classmethod
+    def _check_retake_of(cls, value: str) -> str:
+        if value and not IDENTIFIER_PATTERN.fullmatch(value):
+            raise ValueError("retake_of must be an accession number")
+        return value
 
     @field_validator("scheduled_station_ae_title")
     @classmethod

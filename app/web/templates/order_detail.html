@@ -18,6 +18,12 @@
   <dt>Scheduled Procedure Step ID</dt><dd class="mono">{{ order.scheduled_procedure_step_id }}</dd>
   <dt>Study Instance UID</dt><dd class="mono">{{ order.study_instance_uid }}</dd>
   <dt>文字コード</dt><dd class="mono">{{ character_set_labels[order.character_set] }}</dd>
+  {% if order.retake_of %}
+  <dt>撮り直しの元</dt><dd class="mono"><a href="/orders/{{ order.retake_of }}">{{ order.retake_of }}</a></dd>
+  {% endif %}
+  {% if retakes %}
+  <dt>撮り直し</dt><dd class="mono">{% for r in retakes %}<a href="/orders/{{ r.accession_number }}">{{ r.accession_number }}</a>{% if not loop.last %} {% endif %}{% endfor %}</dd>
+  {% endif %}
 </dl>
 {% if not is_final(order.status) %}
 <form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
@@ -30,6 +36,14 @@
     </select>
   </label>
   <button type="submit" class="btn">状態を変える</button>
+</form>
+{% endif %}
+{% if can_retake %}
+<form method="post" action="/orders/{{ order.accession_number }}/retake" class="filters">
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+  <label>予定日 <input type="date" name="date" value="{{ today.isoformat() }}"></label>
+  <label>予定時刻 <input type="time" name="start" placeholder="空なら今の時刻"></label>
+  <button type="submit" class="btn">撮り直しの予約を作る</button>
 </form>
 {% endif %}
 <h2>MPPS</h2>

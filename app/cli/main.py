@@ -47,6 +47,7 @@ EPILOG = """\
   python -m app.cli list --date today
   python -m app.cli status RE202610210001 in_progress
   python -m app.cli show RE202610210001
+  python -m app.cli retake RE202610210001
   python -m app.cli mwl serve
 """
 
@@ -95,6 +96,17 @@ def build_parser() -> argparse.ArgumentParser:
     show = sub.add_parser("show", parents=[common], help="予約の MWL の応答の全属性を出す")
     show.add_argument("accession_number")
     show.set_defaults(func=show_command)
+
+    retake = sub.add_parser(
+        "retake",
+        parents=[common],
+        help="撮り直しの予約を作る（orders.retake_mode が new_order のとき）",
+    )
+    retake.add_argument("accession_number", help="元の予約の受付番号")
+    retake.add_argument("--date", default="", help="予定の日：today・tomorrow・YYYYMMDD（default: 今日）")
+    retake.add_argument("--start", default="", help="予定の時刻 HH:MM（default: 今の時刻）")
+    retake.add_argument("--json", action="store_true", help="JSON で出す")
+    retake.set_defaults(func=retake_command)
 
     status = sub.add_parser("status", parents=[common], help="予約の状態を変える")
     status.add_argument("accession_number")
@@ -158,6 +170,23 @@ def list_command(args: argparse.Namespace) -> int:
 def show_command(args: argparse.Namespace) -> int:
     order = _service(args).get(args.accession_number)
     print(order_to_dataset(order))
+    return EXIT_OK
+
+
+def retake_command(args: argparse.Namespace) -> int:
+    service = _service(args)
+    retake, original = service.create_retake(
+        args.accession_number,
+        scheduled_date=parse_date_option(args.date, service.today()) if args.date else None,
+        start_time=parse_time_option(args.start) if args.start else None,
+    )
+    if args.json:
+        _print_orders([retake], as_json=True)
+    else:
+        print(
+            f"{retake.accession_number}: 撮り直しの予約（元 {original.accession_number}、"
+            f"{STATUS_LABELS[original.status]}）"
+        )
     return EXIT_OK
 
 

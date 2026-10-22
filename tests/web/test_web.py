@@ -11,9 +11,10 @@ from fastapi.testclient import TestClient
 from app.core.models import OrderStatus
 from app.services.config import AppConfig
 from app.services.order_service import OrderRequest, OrderService
+from app.services.store import OrderStore
 from app.web.app import create_app
 from app.web.auth import PASSWORD_FILE_ENV, WebStartupError, startup_password
-from tests.conftest import TODAY
+from tests.conftest import TODAY, new_order_service
 
 ORIGIN = "http://127.0.0.1:8081"
 
@@ -198,6 +199,50 @@ def test_in_progress_offers_discontinued(config: AppConfig, service: OrderServic
         "cancelled",
         "discontinued",
     ]
+
+
+def test_retake_button_only_in_new_order_mode(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    service.set_status(order.accession_number, OrderStatus.COMPLETED)
+    with _client(config, service) as client:
+        detail = client.get(f"/orders/{order.accession_number}").text
+        assert "撮り直しの予約を作る" not in detail
+        refused = client.post(
+            f"/orders/{order.accession_number}/retake",
+            data={"csrf_token": _token(client)},
+            headers={"Origin": ORIGIN},
+        )
+        assert refused.status_code == 400
+    assert len(service.list_orders()) == 1
+
+
+def test_retake_from_detail(config: AppConfig, store: OrderStore) -> None:
+    retaking = new_order_service(config, store)
+    web_config = retaking.config
+    scheduled, done = retaking.create_orders(
+        OrderRequest(counts={"CT": 2}, scheduled_date=TODAY, seed=1)
+    )
+    retaking.set_status(done.accession_number, OrderStatus.COMPLETED)
+    with _client(web_config, retaking) as client:
+        # 予定の予約にはボタンを出さない
+        assert "撮り直しの予約を作る" not in client.get(f"/orders/{scheduled.accession_number}").text
+        detail = client.get(f"/orders/{done.accession_number}").text
+        assert "撮り直しの予約を作る" in detail
+        response = client.post(
+            f"/orders/{done.accession_number}/retake",
+            data={"csrf_token": _token(client), "date": "2026-10-21", "start": "15:00"},
+            headers={"Origin": ORIGIN},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        retake_url = response.headers["location"]
+        retake_page = client.get(retake_url).text
+        original_page = client.get(f"/orders/{done.accession_number}").text
+    retake = retaking.list_retakes(done.accession_number)[0]
+    assert retake_url == f"/orders/{retake.accession_number}"
+    assert retake.scheduled_time == "150000"
+    assert f'<a href="/orders/{done.accession_number}">' in retake_page and "撮り直しの元" in retake_page
+    assert f'<a href="/orders/{retake.accession_number}">' in original_page
 
 
 def test_detail_shows_mpps(config: AppConfig, service: OrderService) -> None:
