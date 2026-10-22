@@ -1,0 +1,5 @@
+# OpenSpec の成果物の設定。ルートの .markdownlint-cli2.yaml と同じ規則に、行長だけを外す。
+# tasks.md のタスクは1行で書く（OpenSpec はチェックボックスの行だけをタスクの説明として読む）
+MD024: false
+MD060: false
+MD013: false

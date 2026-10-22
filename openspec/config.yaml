@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  成果物（proposal・specs・design・tasks）は日本語で書く。
+  ris-emulator は、開発・テスト用の RIS エミュレーター。架空の患者と検査の予約を作成し、
+  MWL（Modality Worklist、C-FIND の SCP）でモダリティへ返す。予約の作成は CLI と Web 画面で行う。
+  返す値と動作は DICOM と HL7（v2・FHIR）の規則に違反しない。これはほかの都合より優先し、
+  規格に関わる要件には出典（PS3.x の節など）を書く。
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
