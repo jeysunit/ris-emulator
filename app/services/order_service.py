@@ -22,7 +22,6 @@ from app.core.models import (
     OrderStatus,
     Patient,
     has_control_chars,
-    validate_ae_title,
 )
 from app.core.mwl_dataset import order_to_dataset
 from app.core.patient_factory import make_patient, make_patient_id, make_person_name
@@ -64,7 +63,8 @@ class OrderRequest(BaseModel):
     interval_minutes: int = Field(15, ge=0, le=MAX_INTERVAL_MINUTES)
     patient_source: PatientSource = "random"
     character_set: CharacterSet | None = None
-    station_ae_title: str | None = None
+    # モダリティ → 装置の台帳の名前。無いモダリティは台帳の装置を予約ごとに順に使う
+    stations: dict[str, str] = Field(default_factory=dict)
     department: str | None = None
     seed: int | None = None
 
@@ -219,11 +219,7 @@ class OrderService:
         if unknown:
             known = ", ".join(catalog)
             raise ValidationError(f"設定に無いモダリティです: {', '.join(unknown)}（設定: {known}）")
-        if request.station_ae_title is not None:
-            try:
-                validate_ae_title(request.station_ae_title)
-            except ValueError as exc:
-                raise ValidationError(f"AE タイトルが正しくありません: {exc}") from exc
+        self._check_stations(request)
         if request.department is not None:
             _check_lo_text("依頼科", request.department)
         check_scheduled_date(request.scheduled_date)
@@ -245,6 +241,34 @@ class OrderService:
 
         return self.store.add_numbered_orders(f"accession:{created:%Y%m%d}", total, build)
 
+    def stations_by_name(self, names: list[str], modalities: list[str]) -> dict[str, str]:
+        """CLI の `--station` の名前を、モダリティ → 名前にする（名前は台帳の全体で重ならない）."""
+        catalog = self.config.orders.modalities
+        chosen: dict[str, str] = {}
+        for name in names:
+            modality = next(
+                (key for key, entry in catalog.items() if entry.station(name) is not None), None
+            )
+            if modality is None:
+                known = "、".join(
+                    station.name for key in modalities if key in catalog for station in catalog[key].stations
+                )
+                raise ValidationError(f"台帳に無い装置です: {name}（台帳: {known}）")
+            if modality in chosen:
+                raise ValidationError(f"{modality} の装置は1つだけ指定してください: {chosen[modality]}、{name}")
+            chosen[modality] = name
+        return chosen
+
+    def _check_stations(self, request: OrderRequest) -> None:
+        """選んだ装置が、件数を指定したモダリティの台帳にあるか（docs/spec/01_orders.md 1 章）."""
+        catalog = self.config.orders.modalities
+        for modality, name in request.stations.items():
+            if modality not in request.counts:
+                raise ValidationError(f"件数を指定していないモダリティの装置です: {modality}={name}")
+            if catalog[modality].station(name) is None:
+                known = "、".join(station.name for station in catalog[modality].stations)
+                raise ValidationError(f"{modality} の台帳に無い装置です: {name}（台帳: {known}）")
+
     def _build_orders(
         self,
         request: OrderRequest,
@@ -263,7 +287,9 @@ class OrderService:
         index = 0
         for modality, count in request.counts.items():
             entry = catalog[modality]
+            chosen = entry.station(request.stations[modality]) if modality in request.stations else None
             for slot in range(count):
+                station = chosen or entry.stations[slot % len(entry.stations)]
                 number = f"{stamp}{numbers[index]:04d}"
                 index += 1
                 start = datetime.combine(request.scheduled_date, request.start_time) + timedelta(
@@ -282,9 +308,9 @@ class OrderService:
                         issuer_namespace=self.config.orders.issuer_namespace,
                         patient=patient,
                         modality=modality,
-                        scheduled_station_ae_title=request.station_ae_title
-                        or entry.station_ae_titles[slot % len(entry.station_ae_titles)],
-                        scheduled_station_name=entry.station_name,
+                        scheduled_station_ae_title=station.ae_title,
+                        scheduled_station_name=station.station_name,
+                        scheduled_station_label=station.name,
                         scheduled_date=start.strftime("%Y%m%d"),
                         scheduled_time=start.strftime("%H%M%S"),
                         procedure=rng.choice(entry.procedures),

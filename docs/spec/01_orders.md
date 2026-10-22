@@ -13,8 +13,9 @@
 | Study Instance UID | (0020,000D) | `2.25.` + UUID の整数 |
 | 患者 | Patient's Name・ID・Birth Date・Sex・Weight・Size | 3 章 |
 | モダリティ | Modality (0008,0060) | 指定 |
-| 予定の AE タイトル | Scheduled Station AE Title (0040,0001) | 指定。無ければ設定のモダリティごとの値（複数あれば順に使う） |
-| 予定の装置名 | Scheduled Station Name (0040,0010) | 設定のモダリティごとの値 |
+| 装置 | （MWL には入れない） | モダリティごとに、設定の装置の台帳（`stations`）から名前で選ぶ。選ばなければ台帳の装置を予約ごとに順に使う |
+| 予定の AE タイトル | Scheduled Station AE Title (0040,0001) | 選んだ装置の `ae_title` |
+| 予定の装置名 | Scheduled Station Name (0040,0010) | 選んだ装置の `station_name`（空なら空の値で返す。Return Key Type 2） |
 | 予定日時 | Scheduled Procedure Step Start Date・Time | 4 章 |
 | 検査名 | Requested Procedure Description・Scheduled Procedure Step Description | 設定の検査の種類から乱数で選ぶ |
 | 検査コード | Requested Procedure Code Sequence・Scheduled Protocol Code Sequence | 同じ検査の種類のコード（既定の Coding Scheme Designator は `99RISEMU`） |

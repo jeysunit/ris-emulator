@@ -39,6 +39,25 @@ def test_list_shows_orders(config: AppConfig, service: OrderService) -> None:
     assert response.headers["content-security-policy"].startswith("default-src 'self'")
 
 
+def test_station_name_is_shown(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    # 台帳より前に作った予約（装置の名前を持たない）
+    legacy = order.model_copy(
+        update={"accession_number": "RE202610209999", "scheduled_station_label": ""}
+    )
+    service.store.add_numbered_orders("legacy", 1, lambda _numbers, _exists: [legacy])
+    with _client(config, service) as client:
+        html = client.get("/orders?date=2026-10-21").text
+        detail = client.get(f"/orders/{order.accession_number}").text
+        legacy_detail = client.get(f"/orders/{legacy.accession_number}").text
+    assert "<th>装置</th>" in html
+    assert "CT1号機" in _row(html, order.accession_number)
+    legacy_row = _row(html, legacy.accession_number)
+    assert "号機" not in legacy_row and "CT01" in legacy_row
+    assert "<dt>装置</dt><dd>CT1号機</dd>" in detail
+    assert "<dt>装置</dt>" not in legacy_detail
+
+
 def test_root_redirects(config: AppConfig, service: OrderService) -> None:
     with _client(config, service) as client:
         response = client.get("/", follow_redirects=False)
@@ -63,14 +82,22 @@ def test_create_from_form(config: AppConfig, service: OrderService) -> None:
                 "charset": "jis",
                 "department": "外科",
                 "seed": "5",
+                "station_MR": "MR1号機",
+                # 件数の無いモダリティの装置の欄は使わない
+                "station_CR": "CR1号機",
             },
             headers={"Origin": ORIGIN},
             follow_redirects=False,
         )
     assert response.status_code == 303
     assert response.headers["location"] == "/orders?date=2026-10-21"
+    assert "順に使う" in page.text and "CT1号機（CT01）" in page.text
+    assert 'name="station_ae"' not in page.text
     orders = service.list_orders()
     assert [o.modality for o in orders].count("CT") == 3
+    assert {o.scheduled_station_label for o in orders} == {"CT1号機", "MR1号機"}
+    html_rows = [o for o in orders if o.modality == "MR"]
+    assert html_rows[0].scheduled_station_ae_title == "MR01"
     assert {o.requesting_service for o in orders} == {"外科"}
     assert {o.character_set.value for o in orders} == {"jis"}
     assert sorted({o.scheduled_time for o in orders if o.modality == "CT"}) == ["100000", "102000", "104000"]
@@ -87,11 +114,12 @@ def test_create_errors_are_shown(config: AppConfig, service: OrderService) -> No
         assert "1 以上の件数" in response.text
         response = client.post(
             "/orders",
-            data={"csrf_token": _token(client), "count_CT": "1", "date": "2026-10-21", "start": "09:00", "station_ae": "BAD\\AE"},
+            data={"csrf_token": _token(client), "count_CT": "1", "date": "2026-10-21", "start": "09:00", "station_CT": "MR1号機"},
             headers={"Origin": ORIGIN},
         )
+        # 別のモダリティの装置が送られた
         assert response.status_code == 400
-        assert "AE タイトル" in response.text
+        assert "CT の台帳に無い装置です: MR1号機" in response.text
     assert service.list_orders() == []
 
 

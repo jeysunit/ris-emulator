@@ -105,9 +105,22 @@ docker build -t ris-emulator .
 | ホスト | ris-emulator を実行しているホスト（ローカルなら `127.0.0.1`） |
 | ポート | `11112` |
 
-モダリティが自分の AE タイトルで絞り込んで問い合わせる場合は、設定の
-`orders.modalities.<モダリティ>.station_ae_titles` をモダリティの AE タイトルに
-変更します（既定値と規則は [spec/03_web_cli.md](spec/03_web_cli.md) の 4 章）。
+モダリティが自分の AE タイトルで絞り込んで問い合わせる場合は、設定の装置の台帳
+`orders.modalities.<モダリティ>.stations` の `ae_title` をモダリティの AE タイトルに
+変更します。装置が複数あれば、台帳に並べます（既定値と規則は
+[spec/03_web_cli.md](spec/03_web_cli.md) の 4 章）。
+
+```yaml
+orders:
+  modalities:
+    CT:
+      stations:
+        - {name: "CT1号機", ae_title: "CT01", station_name: "CT01"}
+        - {name: "CT2号機", ae_title: "CT02", station_name: "CT02"}
+```
+
+予約を作るときは、画面のモダリティごとの「装置」か、CLI の `--station CT2号機` で
+装置を名前で選びます。選ばなければ台帳の装置を順に使います。
 
 ## 4. 予約を作成する
 

@@ -17,7 +17,8 @@ MWL（Modality Worklist、C-FIND の SCP）で返す。モダリティがワー�
 - 患者は乱数で生成するか、名簿（YAML）から選ぶ。氏名は英字・漢字・カナの
   3つのコンポーネントグループで保持する
 - 受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
-  Study Instance UID・予定日時・予定の AE タイトル・検査名・依頼科の設定
+  Study Instance UID・予定日時・装置（予定の AE タイトルと装置名）・検査名・依頼科の設定。
+  装置は設定ファイルの台帳から名前で選ぶ
 - MWL の SCP。C-FIND に、予定の AE タイトル・日付の範囲・モダリティ・患者 ID・
   氏名・受付番号などで絞り込んで応答する
 - 応答の文字コードを `ISO_IR 192`・`\ISO 2022 IR 87`・

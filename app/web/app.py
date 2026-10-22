@@ -359,7 +359,12 @@ def _order_request(values: dict[str, str], config: AppConfig, today: date) -> Or
         interval_minutes=interval,
         patient_source=patients,  # type: ignore[arg-type]
         character_set=character_set,
-        station_ae_title=values.get("station_ae", "").strip() or None,
+        # 件数を入れたモダリティの装置だけを使う。空は「順に使う」
+        stations={
+            modality: name
+            for modality in counts
+            if (name := values.get(f"station_{modality}", "").strip())
+        },
         department=values.get("department", "").strip() or None,
         seed=seed,
     )

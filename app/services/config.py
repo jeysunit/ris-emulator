@@ -10,13 +10,22 @@ import os
 import re
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from app.core.exceptions import ConfigurationError
-from app.core.models import CharacterSet, OrderStatus, Procedure, is_final, validate_ae_title
+from app.core.models import (
+    LO_MAX_LENGTH,
+    SH_MAX_LENGTH,
+    CharacterSet,
+    OrderStatus,
+    Procedure,
+    has_control_chars,
+    is_final,
+    validate_ae_title,
+)
 
 PORT_MIN = 1
 PORT_MAX = 65535
@@ -51,19 +60,62 @@ class MwlConfig(BaseModel):
         return validate_ae_title(value)
 
 
-class ModalityCatalog(BaseModel):
-    """モダリティごとの予定の装置と検査の種類."""
+class Station(BaseModel):
+    """装置の台帳の1台（docs/spec/03_web_cli.md 4 章）.
+
+    `name` は画面と CLI で選ぶ運用上の名前で、MWL には入れない。`ae_title` は
+    Scheduled Station AE Title (0040,0001)、`station_name` は Scheduled Station Name
+    (0040,0010) に入れる。
+    """
 
     model_config = {"frozen": True}
 
-    station_ae_titles: list[str] = Field(..., min_length=1)
-    station_name: str = ""
+    name: str = Field(..., min_length=1, max_length=LO_MAX_LENGTH)
+    ae_title: str
+    station_name: str = Field("", max_length=SH_MAX_LENGTH)
+
+    @field_validator("name")
+    @classmethod
+    def _check_name(cls, value: str) -> str:
+        if not value.strip() or has_control_chars(value):
+            raise ValueError("name must not be blank or contain control characters")
+        return value
+
+    @field_validator("ae_title")
+    @classmethod
+    def _check_ae_title(cls, value: str) -> str:
+        return validate_ae_title(value)
+
+    @field_validator("station_name")
+    @classmethod
+    def _check_station_name(cls, value: str) -> str:
+        """SH（16 字まで、`\\` と制御文字なし。PS3.5 6.2）."""
+        if "\\" in value or has_control_chars(value):
+            raise ValueError("station_name must not contain backslash or control characters")
+        return value
+
+
+class ModalityCatalog(BaseModel):
+    """モダリティごとの装置の台帳と検査の種類."""
+
+    model_config = {"frozen": True}
+
+    stations: list[Station] = Field(..., min_length=1)
     procedures: list[Procedure] = Field(..., min_length=1)
 
-    @field_validator("station_ae_titles")
+    @model_validator(mode="before")
     @classmethod
-    def _check_ae_titles(cls, values: list[str]) -> list[str]:
-        return [validate_ae_title(value) for value in values]
+    def _reject_old_keys(cls, data: Any) -> Any:
+        """古い形（station_ae_titles・station_name）は推測で変換せずに断る."""
+        if isinstance(data, dict) and ({"station_ae_titles", "station_name"} & data.keys()):
+            raise ValueError(
+                "station_ae_titles and station_name are no longer supported; write stations: "
+                '[{name: "CT1号機", ae_title: "CT01", station_name: "CT01"}] instead'
+            )
+        return data
+
+    def station(self, name: str) -> Station | None:
+        return next((station for station in self.stations if station.name == name), None)
 
 
 class OrdersConfig(BaseModel):
@@ -103,6 +155,10 @@ class OrdersConfig(BaseModel):
         for key in values:
             if not (key.isascii() and key.isalnum() and key.isupper() and len(key) <= 16):
                 raise ValueError(f"modality '{key}' must be upper-case ASCII (e.g. CT, MR)")
+        names = [station.name for catalog in values.values() for station in catalog.stations]
+        duplicated = sorted({name for name in names if names.count(name) > 1})
+        if duplicated:
+            raise ValueError(f"station names must be unique: {', '.join(duplicated)}")
         return values
 
 

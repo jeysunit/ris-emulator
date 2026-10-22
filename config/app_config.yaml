@@ -21,45 +21,46 @@ orders:
   roster_path: "data/patients_sample.yaml"
   departments: ["内科", "外科", "整形外科", "脳神経外科", "呼吸器内科", "消化器内科", "救急科"]
   retake_mode: "append"           # 撮り直し：append（同じ予約の中で追加。IHE）、new_order（撮り直しの予約を作る）
-  # station_ae_titles は予約の予定の AE タイトル。モダリティの側の AE タイトルとそろえる
-  # （16 字まで。複数あれば予約ごとに順に回す）
+  # stations は装置の台帳。name は画面と CLI で選ぶ名前（MWL には入れない）、
+  # ae_title は Scheduled Station AE Title（モダリティの側の AE タイトルとそろえる。16 字まで）、
+  # station_name は Scheduled Station Name（16 字まで）。予約で装置を選ばなければ、台帳の順に使う
   modalities:
     CT:
-      station_ae_titles: ["CT01"]
-      station_name: "CT01"
+      stations:
+        - {name: "CT1号機", ae_title: "CT01", station_name: "CT01"}
       procedures:
         - {code: "CT0001", name: "頭部 CT 単純"}
         - {code: "CT0002", name: "胸部 CT 単純"}
         - {code: "CT0003", name: "腹部 CT 造影"}
         - {code: "CT0004", name: "胸腹部 CT 造影"}
     MR:
-      station_ae_titles: ["MR01"]
-      station_name: "MR01"
+      stations:
+        - {name: "MR1号機", ae_title: "MR01", station_name: "MR01"}
       procedures:
         - {code: "MR0001", name: "頭部 MRI 単純"}
         - {code: "MR0002", name: "腰椎 MRI 単純"}
         - {code: "MR0003", name: "膝関節 MRI 単純"}
     CR:
-      station_ae_titles: ["CR01"]
-      station_name: "CR01"
+      stations:
+        - {name: "CR1号機", ae_title: "CR01", station_name: "CR01"}
       procedures:
         - {code: "CR0001", name: "胸部 X 線 正面"}
         - {code: "CR0002", name: "腹部 X 線 臥位"}
     DX:
-      station_ae_titles: ["DX01"]
-      station_name: "DX01"
+      stations:
+        - {name: "DX1号機", ae_title: "DX01", station_name: "DX01"}
       procedures:
         - {code: "DX0001", name: "胸部 X 線 正面・側面"}
         - {code: "DX0002", name: "腰椎 X 線 2 方向"}
     US:
-      station_ae_titles: ["US01"]
-      station_name: "US01"
+      stations:
+        - {name: "US1号機", ae_title: "US01", station_name: "US01"}
       procedures:
         - {code: "US0001", name: "腹部 超音波"}
         - {code: "US0002", name: "心臓 超音波"}
     MG:
-      station_ae_titles: ["MG01"]
-      station_name: "MG01"
+      stations:
+        - {name: "MG1号機", ae_title: "MG01", station_name: "MG01"}
       procedures:
         - {code: "MG0001", name: "マンモグラフィ 両側"}
 

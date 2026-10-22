@@ -222,6 +222,8 @@ class Order(BaseModel):
     modality: str = Field(..., min_length=1, max_length=SH_MAX_LENGTH)
     scheduled_station_ae_title: str
     scheduled_station_name: str = ""
+    # 装置の台帳の名前（画面の表示用。MWL には入れない）。台帳より前に作った予約は空
+    scheduled_station_label: str = ""
     scheduled_date: str  # YYYYMMDD
     scheduled_time: str  # HHMMSS
     procedure: Procedure

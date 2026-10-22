@@ -15,7 +15,7 @@
 
 | サブコマンド | 内容 |
 |--------------|------|
-| `create CT=3 MR=1` | 予約を作成する。`--date`・`--start`・`--interval`・`--patients random/roster`・`--charset`・`--station-ae`・`--department`・`--seed`・`--json` |
+| `create CT=3 MR=1` | 予約を作成する。`--date`・`--start`・`--interval`・`--patients random/roster`・`--charset`・`--station`（装置の台帳の名前。モダリティごとに1つ、繰り返せる）・`--department`・`--seed`・`--json` |
 | `list` | 一覧。`--date`・`--status`・`--modality`・`--json` |
 | `show <受付番号>` | 予約の MWL の全属性 |
 | `retake <受付番号>` | 撮り直しの予約を作る（`orders.retake_mode` が `new_order` のとき）。`--date`・`--start`・`--json` |
@@ -33,7 +33,7 @@
 | パス | 内容 |
 |------|------|
 | `/orders` | 予約の一覧（予定日・状態・モダリティで絞り込む）。行ごとに状態を選んで変更する（htmx） |
-| `/orders/new` | 予約の作成：モダリティごとの件数、予定日、開始時刻、間隔、予定の AE タイトル、患者（乱数・名簿）、依頼科、文字コード、シード |
+| `/orders/new` | 予約の作成：モダリティごとの件数と装置（既定は「順に使う」）、予定日、開始時刻、間隔、患者（乱数・名簿）、依頼科、文字コード、シード |
 | `/orders/<受付番号>` | 予約の詳細と MWL の全属性。状態を変更する。`orders.retake_mode` が `new_order` なら、実施中・完了・中止の予約から撮り直しの予約を作る |
 
 - 画面上部のバーに、MWL の AE タイトル、待ち受けの状態、アドレスとポートを表示する
@@ -77,19 +77,27 @@
 | `orders.roster_path` | `data/patients_sample.yaml` | 名簿 |
 | `orders.departments` | 内科など | 依頼科 |
 | `orders.retake_mode` | `append` | 撮り直しの扱い：`append`（同じ予約の中で追加。RIS は何もしない）・`new_order`（撮り直しの予約を作る）。[01_orders.md](01_orders.md) の 7 章 |
-| `orders.modalities.<モダリティ>` | CT・MR・CR・DX・US・MG | `station_ae_titles`・`station_name`・`procedures`（`code`・`name`） |
+| `orders.modalities.<モダリティ>` | CT・MR・CR・DX・US・MG | `stations`（装置の台帳。`name`・`ae_title`・`station_name`）・`procedures`（`code`・`name`） |
 | `web.bind_address`・`web.port` | `127.0.0.1`・`8081` | 画面の待ち受けアドレスとポート |
 | `web.start_mwl` | true | 画面のプロセスで MWL も起動する |
 
 - 相対パスは、プロセスの作業ディレクトリを基準に解決する
 - 環境変数 `RIS_WEB_BIND_ADDRESS`・`RIS_MWL_BIND_ADDRESS` があれば、
   `web.bind_address`・`mwl.bind_address` より優先する
-- 予定の AE タイトル（`station_ae_titles`）の既定値は、モダリティ名に `01` を
-  付けたもの（`CT01`・`MR01`・`CR01`・`DX01`・`US01`・`MG01`）。特定の施設の装置を
-  指さない一般的な名前にしている。値は PS3.5 の AE の規則（16 文字まで、表示可能な
-  ASCII 文字だけで `\` を含まない、空白だけにしない）で検証する
-- 利用者は、この値をモダリティ側の AE タイトルに変更する。異なると、モダリティが
+- 装置の台帳（`stations`）は、モダリティごとに1台以上を並べる。1台ごとに次の3つを持つ
+  - `name`：画面と CLI で選ぶ運用上の名前（例 `CT1号機`）。MWL には入れない。
+    空白だけにせず 64 文字まで、台帳の全体で重ねない
+  - `ae_title`：Scheduled Station AE Title (0040,0001) に入れる。PS3.5 6.2 の AE の規則
+    （16 文字まで、表示可能な ASCII 文字だけで `\` を含まない、空白だけにしない）で検証する
+  - `station_name`：Scheduled Station Name (0040,0010) に入れる。SH の規則（16 文字まで、
+    `\` と制御文字を含まない。PS3.5 6.2）で検証する。省略すると空
+- 台帳の既定値は、モダリティごとに1台（`CT1号機`・`CT01`・`CT01` など、モダリティ名に
+  `1号機`・`01` を付けたもの）。特定の施設の装置を指さない一般的な名前にしている
+- 利用者は、`ae_title` をモダリティ側の AE タイトルに変更する。異なると、モダリティが
   自分の AE タイトルで絞り込んだときに予約が返らない
+- 古い形のキー（モダリティの直下の `station_ae_titles`・`station_name`）がある設定は、
+  `stations` の形を示すエラーで読み込まない（終了コード 2）。古い値から推測して変換しない
+  （名前を推測で決めると、画面に出る名前が利用者の意図と違うため）
 
 ## 5. Docker
 

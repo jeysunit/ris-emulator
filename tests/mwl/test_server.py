@@ -11,7 +11,7 @@ from pynetdicom.sop_class import ModalityWorklistInformationFind, Verification
 
 from app.core.models import CharacterSet, OrderStatus
 from app.mwl.server import MwlServer, find_worklist
-from app.services.config import AppConfig
+from app.services.config import AppConfig, Station
 from app.services.order_service import OrderRequest, OrderService
 from app.services.store import OrderStore
 
@@ -121,6 +121,41 @@ def test_filter_by_station_and_date_range(server: MwlServer, service: OrderServi
     # 要求に無い属性は返さない
     assert "RequestingService" not in response
     assert "ScheduledProcedureStepStatus" not in sps
+
+
+def test_chosen_station_is_in_the_worklist(
+    server: MwlServer, config: AppConfig, store: OrderStore
+) -> None:
+    """装置の台帳で選んだ装置の AE タイトル・装置名・モダリティが SPS に入る（PS3.4 Table K.6-1）."""
+    ct = config.orders.modalities["CT"].model_copy(
+        update={
+            "stations": [
+                Station(name="CT1号機", ae_title="CT01", station_name="CT01"),
+                Station(name="CT2号機", ae_title="CT02", station_name="CT02"),
+            ]
+        }
+    )
+    orders_config = config.orders.model_copy(
+        update={"modalities": {**config.orders.modalities, "CT": ct}}
+    )
+    service = OrderService(
+        config.model_copy(update={"orders": orders_config}), store, today=lambda: TODAY
+    )
+    order = service.create_orders(
+        OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, stations={"CT": "CT2号機"}, seed=1)
+    )[0]
+    found, final = _find(server, _query(ScheduledStationAETitle="CT02"))
+    assert final == 0x0000
+    assert [r.AccessionNumber for r in found] == [order.accession_number]
+    sps = found[0].ScheduledProcedureStepSequence[0]
+    assert (sps.ScheduledStationAETitle, sps.Modality) == ("CT02", "CT")
+    request = _query(ScheduledStationAETitle="CT02")
+    request.ScheduledProcedureStepSequence[0].ScheduledStationName = ""
+    found, _ = _find(server, request)
+    assert found[0].ScheduledProcedureStepSequence[0].ScheduledStationName == "CT02"
+    # 装置の台帳の名前は MWL に入れない
+    assert "CT2号機" not in str(found[0])
+    assert _find(server, _query(ScheduledStationAETitle="CT01"))[0] == []
 
 
 def test_retake_order_is_returned_with_new_study(
