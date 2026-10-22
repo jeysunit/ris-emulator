@@ -67,6 +67,17 @@ def test_unencodable_name_is_rejected(
     assert service.list_orders() == []
 
 
+def test_unencodable_error_uses_character_set_label(config: AppConfig, tmp_path: Path) -> None:
+    """エラーの文は文字コードを表示の名前で書き、値を `\\` でつないだ文字列を出さない."""
+    service = _service_with_roster(config, tmp_path, "髙橋^一郎")
+    with pytest.raises(ValidationError) as excinfo:
+        service.create_orders(_roster_request(CharacterSet.JIS))
+    message = str(excinfo.value)
+    assert "日本語（JIS X 0208、ISO 2022 IR 87）で書けません" in message
+    assert "Unicode（UTF-8、ISO_IR 192）にするか" in message
+    assert "\\" not in message
+
+
 def test_unencodable_name_is_fine_in_utf8(config: AppConfig, tmp_path: Path) -> None:
     service = _service_with_roster(config, tmp_path, "髙橋^一郎")
     orders = service.create_orders(_roster_request(CharacterSet.UTF8))

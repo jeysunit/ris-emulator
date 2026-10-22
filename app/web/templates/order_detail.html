@@ -21,7 +21,7 @@
   <dt>Requested Procedure ID</dt><dd class="mono">{{ order.requested_procedure_id }}</dd>
   <dt>Scheduled Procedure Step ID</dt><dd class="mono">{{ order.scheduled_procedure_step_id }}</dd>
   <dt>Study Instance UID</dt><dd class="mono">{{ order.study_instance_uid }}</dd>
-  <dt>文字コード</dt><dd class="mono">{{ character_set_labels[order.character_set] }}</dd>
+  <dt>文字コード</dt><dd>{{ character_set_labels[order.character_set] }}</dd>
   {% if order.retake_of %}
   <dt>撮り直しの元</dt><dd class="mono"><a href="/orders/{{ order.retake_of }}">{{ order.retake_of }}</a></dd>
   {% endif %}

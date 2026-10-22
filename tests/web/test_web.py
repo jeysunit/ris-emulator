@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import base64
+import html
 import re
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.models import OrderStatus
+from app.core.models import CharacterSet, OrderStatus
 from app.services.config import AppConfig
 from app.services.order_service import OrderRequest, OrderService
 from app.services.store import OrderStore
@@ -62,6 +63,27 @@ def test_root_redirects(config: AppConfig, service: OrderService) -> None:
     with _client(config, service) as client:
         response = client.get("/", follow_redirects=False)
     assert response.status_code == 303 and response.headers["location"] == "/orders"
+
+
+def test_character_set_choices_use_labels(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(
+        OrderRequest(
+            counts={"CT": 1}, scheduled_date=TODAY, seed=1, character_set=CharacterSet.JIS
+        )
+    )[0]
+    with _client(config, service) as client:
+        page = client.get("/orders/new").text
+        detail = client.get(f"/orders/{order.accession_number}").text
+    options = re.findall(r'<option value="(utf8|jis|jis_kana)"[^>]*>([^<]+)</option>', page)
+    assert options == [
+        ("utf8", "Unicode（UTF-8、ISO_IR 192）"),
+        ("jis", "日本語（JIS X 0208、ISO 2022 IR 87）"),
+        ("jis_kana", "日本語と半角カナ（JIS X 0201・JIS X 0208、ISO 2022 IR 13・ISO 2022 IR 87）"),
+    ]
+    assert all("\\" not in label and "¥" not in label for _, label in options)
+    assert "<dt>文字コード</dt><dd>日本語（JIS X 0208、ISO 2022 IR 87）</dd>" in detail
+    # 「MWL の属性」は値をそのまま出す（pydicom の表示）
+    assert "Specific Character Set              CS: ['', 'ISO 2022 IR 87']" in html.unescape(detail)
 
 
 def test_create_from_form(config: AppConfig, service: OrderService) -> None:

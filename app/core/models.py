@@ -99,6 +99,14 @@ CHARACTER_SET_TERMS: dict[CharacterSet, list[str]] = {
     CharacterSet.JIS_KANA: ["ISO 2022 IR 13", "ISO 2022 IR 87"],
 }
 
+# 画面・CLI・エラーの文で見せる名前（docs/spec/02_mwl_scp.md 5 章）。値を `\` でつないだ
+# 文字列は日本語のフォントで `¥` に見えるので出さない。Defined Term の間は `・` でつなぐ
+CHARACTER_SET_LABELS: dict[CharacterSet, str] = {
+    CharacterSet.UTF8: "Unicode（UTF-8、ISO_IR 192）",
+    CharacterSet.JIS: "日本語（JIS X 0208、ISO 2022 IR 87）",
+    CharacterSet.JIS_KANA: "日本語と半角カナ（JIS X 0201・JIS X 0208、ISO 2022 IR 13・ISO 2022 IR 87）",
+}
+
 
 IDENTIFIER_PATTERN = re.compile(r"[A-Za-z0-9]{1,16}")
 # PS3.5 9.1：数の成分を `.` で区切る。成分は 0 か、0 で始まらない数。64 字まで
