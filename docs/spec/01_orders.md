@@ -20,7 +20,8 @@
 | 検査名 | Requested Procedure Description・Scheduled Procedure Step Description | 設定の検査の種類から乱数で選ぶ |
 | 検査コード | Requested Procedure Code Sequence・Scheduled Protocol Code Sequence | 同じ検査の種類のコード（既定の Coding Scheme Designator は `99RISEMU`） |
 | 依頼科 | Requesting Service (0032,1033) | 指定。無ければ設定の `departments` から乱数で選ぶ |
-| 依頼医 | Requesting Physician・Referring Physician's Name | 乱数で生成した氏名（同一人物） |
+| 依頼医 | Requesting Physician (0032,1032) | 乱数で生成した氏名 |
+| 紹介医 | Referring Physician's Name (0008,0090) | 依頼医と同じ氏名（院内の依頼医を紹介医にも入れる） |
 | 施設名 | Institution Name | 設定の `institution_name` |
 | 優先度 | Requested Procedure Priority | `ROUTINE` |
 | 文字コード | Specific Character Set | [02_mwl_scp.md](02_mwl_scp.md) の 5 章 |

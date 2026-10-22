@@ -59,6 +59,39 @@ def test_station_name_is_shown(config: AppConfig, service: OrderService) -> None
     assert "<dt>装置</dt>" not in legacy_detail
 
 
+# 用語の表（openspec/specs/screen-terms/spec.md）の、DICOM の属性の日本語の名前
+SCREEN_TERMS = {
+    "受付番号", "患者 ID", "患者氏名", "生年月日", "性別", "依頼科", "依頼医", "紹介医", "施設名",
+    "モダリティ", "検査名", "優先度", "文字コード",
+    "実施予定医", "予定の AE タイトル", "予定の装置名", "予定日時",
+}  # fmt: skip
+# DICOM の属性名の訳ではない見出し（予約の状態、装置の台帳の名前、撮り直しの関係）と、英語のままの属性名
+OTHER_HEADINGS = {
+    "状態", "装置", "撮り直しの元", "撮り直し",
+    "Requested Procedure ID", "Scheduled Procedure Step ID", "Study Instance UID",
+}  # fmt: skip
+
+
+def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    with _client(config, service) as client:
+        listing = client.get("/orders?date=2026-10-21").text
+        detail = client.get(f"/orders/{order.accession_number}").text
+    headers = re.findall(r"<th>([^<]+)</th>", listing.split("<tbody>")[0])
+    assert headers == [
+        "予定日時", "受付番号", "患者 ID", "患者氏名", "生年月日・性別",
+        "モダリティ", "検査名", "依頼科", "装置", "状態",
+    ]  # fmt: skip
+    for header in headers:
+        assert all(part in SCREEN_TERMS | OTHER_HEADINGS for part in header.split("・")), header
+    items = re.findall(r"<dt>([^<]+)</dt>", detail)
+    assert {"予定日時", "モダリティ", "予定の AE タイトル", "予定の装置名", "検査名", "依頼科",
+            "患者 ID", "患者氏名", "文字コード"} <= set(items)  # fmt: skip
+    assert set(items) <= SCREEN_TERMS | OTHER_HEADINGS
+    # 紹介医の訳を Requesting Physician に使わない
+    assert "紹介医" not in listing and "紹介医" not in detail
+
+
 def test_root_redirects(config: AppConfig, service: OrderService) -> None:
     with _client(config, service) as client:
         response = client.get("/", follow_redirects=False)

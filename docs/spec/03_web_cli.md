@@ -43,7 +43,12 @@
 ### 3.2 画面の文言
 
 画面の文言は RIS・PACS で一般的な用語にする（予約、受付番号、
-モダリティ、AE タイトル、依頼科、予定、実施中、完了、取消）。説明文は置かない。
+モダリティ、AE タイトル、依頼科、装置、予定、実施中、完了、取消、中止）。説明文は置かない。
+
+DICOM の属性に付ける日本語の名前は、用語の表（`openspec/specs/screen-terms/spec.md`）に
+従う。依頼医は Requesting Physician (0032,1032)、紹介医は Referring Physician's Name
+(0008,0090) で、取り違えない。表に無い属性（Requested Procedure ID・
+Scheduled Procedure Step ID・Study Instance UID など）は英語の属性名のまま出す。
 
 ### 3.3 セキュリティ
 
