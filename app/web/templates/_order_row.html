@@ -9,12 +9,16 @@
   <td>{{ order.requesting_service }}</td>
   <td class="mono">{{ order.scheduled_station_ae_title }}</td>
   <td>
+    {% if is_final(order.status) %}
+    {{ status_labels[order.status] }}
+    {% else %}
     <select name="status" aria-label="{{ order.accession_number }} の状態"
             hx-post="/orders/{{ order.accession_number }}/status"
             hx-target="#order-{{ order.accession_number }}" hx-swap="outerHTML">
-      {% for s in statuses %}
+      {% for s in selectable_statuses(order.status) %}
       <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
       {% endfor %}
     </select>
+    {% endif %}
   </td>
 </tr>

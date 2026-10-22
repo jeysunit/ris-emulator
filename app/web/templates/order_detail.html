@@ -2,6 +2,9 @@
 {% block title %}{{ order.accession_number }}{% endblock %}
 {% block content %}
 <h1>予約 {{ order.accession_number }}</h1>
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% endif %}
 <dl class="detail">
   <dt>状態</dt><dd>{{ status_labels[order.status] }}</dd>
   <dt>予定日時</dt><dd>{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</dd>
@@ -16,17 +19,19 @@
   <dt>Study Instance UID</dt><dd class="mono">{{ order.study_instance_uid }}</dd>
   <dt>文字コード</dt><dd class="mono">{{ character_set_labels[order.character_set] }}</dd>
 </dl>
+{% if not is_final(order.status) %}
 <form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   <label>状態
     <select name="status">
-      {% for s in statuses %}
+      {% for s in selectable_statuses(order.status) %}
       <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
       {% endfor %}
     </select>
   </label>
   <button type="submit" class="btn">状態を変える</button>
 </form>
+{% endif %}
 <h2>MWL の属性</h2>
 <pre class="dataset">{{ dataset }}</pre>
 <p><a href="/orders?date={{ order.scheduled_date | date_param }}">予約の一覧へ</a></p>

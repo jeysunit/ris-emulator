@@ -18,12 +18,12 @@
 | `create CT=3 MR=1` | 予約を作成する。`--date`・`--start`・`--interval`・`--patients random/roster`・`--charset`・`--station-ae`・`--department`・`--seed`・`--json` |
 | `list` | 一覧。`--date`・`--status`・`--modality`・`--json` |
 | `show <受付番号>` | 予約の MWL の全属性 |
-| `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`） |
+| `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`）。変更できる向きは [01_orders.md](01_orders.md) の 5 章 |
 | `mwl serve` | MWL の SCP を起動する |
 | `version` | バージョン |
 
-終了コード：0=正常、1=予期しないエラー、2=設定・入力のエラー、3=予約が無い、
-4=MWL のポートで待ち受けられない。
+終了コード：0=正常、1=予期しないエラー、2=設定・入力のエラー（変更できない向きへの
+状態の変更を含む）、3=予約が無い、4=MWL のポートで待ち受けられない。
 
 ## 3. Web 画面
 

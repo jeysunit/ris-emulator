@@ -14,8 +14,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app import __version__
-from app.core.exceptions import ConfigurationError, OrderNotFoundError, ValidationError
-from app.core.models import CHARACTER_SET_TERMS, STATUS_LABELS, CharacterSet, OrderStatus
+from app.core.exceptions import (
+    ConfigurationError,
+    InvalidTransitionError,
+    OrderNotFoundError,
+    ValidationError,
+)
+from app.core.models import (
+    CHARACTER_SET_TERMS,
+    STATUS_LABELS,
+    CharacterSet,
+    Order,
+    OrderStatus,
+    is_final,
+    selectable_statuses,
+)
 from app.core.mwl_dataset import order_to_dataset
 from app.mwl.server import MwlServer
 from app.services.config import AppConfig
@@ -113,6 +126,8 @@ def create_app(
             mwl=mwl,
             mwl_config=config.mwl,
             status_labels=STATUS_LABELS,
+            selectable_statuses=selectable_statuses,
+            is_final=is_final,
             version=__version__,
         )
         return templates.TemplateResponse(request, name, context, status_code=status_code)
@@ -206,13 +221,18 @@ def create_app(
 
     @app.get("/orders/{accession_number}", response_class=HTMLResponse)
     def order_detail(request: Request, accession_number: str) -> HTMLResponse:
-        order = _get_order(order_service, accession_number)
+        return _render_detail(request, _get_order(order_service, accession_number))
+
+    def _render_detail(
+        request: Request, order: Order, *, error: str = "", status_code: int = 200
+    ) -> HTMLResponse:
         return render(
             request,
             "order_detail.html",
+            status_code=status_code,
             order=order,
+            error=error,
             dataset=str(order_to_dataset(order)),
-            statuses=list(OrderStatus),
             character_set_labels=CHARACTER_SET_LABELS,
         )
 
@@ -228,8 +248,18 @@ def create_app(
             order = order_service.set_status(accession_number, new_status)
         except OrderNotFoundError as exc:
             raise HTTPException(HTTP_NOT_FOUND, "Order not found") from exc
+        except InvalidTransitionError as exc:
+            # 一覧の行（htmx）は 4xx で置き換えない。詳細はエラーを付けて表示し直す
+            if request.headers.get("hx-request"):
+                raise HTTPException(HTTP_BAD_REQUEST, exc.message) from exc
+            return _render_detail(
+                request,
+                _get_order(order_service, accession_number),
+                error=f"{exc.message}。表示を読み直してください",
+                status_code=HTTP_BAD_REQUEST,
+            )
         if request.headers.get("hx-request"):
-            return render(request, "_order_row.html", order=order, statuses=list(OrderStatus))
+            return render(request, "_order_row.html", order=order)
         return RedirectResponse(f"/orders/{order.accession_number}", status_code=HTTP_SEE_OTHER)
 
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")

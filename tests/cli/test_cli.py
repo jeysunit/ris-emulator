@@ -61,6 +61,21 @@ def test_errors_and_exit_codes(config_file: Path, capsys: pytest.CaptureFixture[
     assert code == 2 and "not found" in err
 
 
+def test_status_transitions(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code, out, _ = _run(capsys, "create", "CT=1", "--date", "20261021", "--json", "--config", str(config_file))
+    accession = json.loads(out)[0]["accession_number"]
+    code, out, _ = _run(capsys, "status", accession, "in_progress", "--config", str(config_file))
+    assert code == 0 and "実施中" in out
+    code, out, _ = _run(capsys, "status", accession, "completed", "--config", str(config_file))
+    assert code == 0
+    # 完了は終わりの状態。予定に戻せない
+    code, _, err = _run(capsys, "status", accession, "scheduled", "--config", str(config_file))
+    assert code == 2 and "完了の予約は予定に変更できません" in err
+    # 同じ状態は何もしないで成功
+    code, out, _ = _run(capsys, "status", accession, "completed", "--config", str(config_file))
+    assert code == 0 and "完了" in out
+
+
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(capsys, "version")
     assert code == 0 and out.startswith("ris-emulator ")
