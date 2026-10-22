@@ -178,6 +178,54 @@ def test_transition_is_checked_against_the_stored_state(service: OrderService) -
     assert service.get(order.accession_number).status is OrderStatus.CANCELLED
 
 
+def test_mpps_and_order_are_written_together(service: OrderService) -> None:
+    """MPPS の記録が失敗したら、予約の状態の変更も残らない（1つのトランザクション）."""
+    order = service.create_orders(_request(counts={"CT": 1}))[0]
+    steps = [(order.accession_number, order.scheduled_procedure_step_id)]
+    with pytest.raises(TypeError):
+        service.store.create_mpps("1.2.3", steps, {"bad": object()})
+    assert service.get(order.accession_number).status is OrderStatus.SCHEDULED
+    assert service.list_mpps(order.accession_number) == []
+    result = service.store.create_mpps("1.2.3", steps, {})
+    assert result.linked == result.changed == [order.accession_number]
+    assert service.get(order.accession_number).status is OrderStatus.IN_PROGRESS
+
+
+def test_mpps_needs_both_identifiers(service: OrderService) -> None:
+    order = service.create_orders(_request(counts={"CT": 1}))[0]
+    cases = [
+        [(order.accession_number, "SPS_OTHER")],
+        [("RE_OTHER", order.scheduled_procedure_step_id)],
+        [(order.accession_number, "")],
+    ]
+    for index, steps in enumerate(cases, start=1):
+        assert service.store.create_mpps(f"1.2.{index}", steps, {}).linked == []
+    assert service.get(order.accession_number).status is OrderStatus.SCHEDULED
+
+
+def test_discontinued_only_from_in_progress(service: OrderService) -> None:
+    order = service.create_orders(_request(counts={"CT": 1}))[0]
+    with pytest.raises(InvalidTransitionError, match="予定の予約は中止に変更できません"):
+        service.set_status(order.accession_number, OrderStatus.DISCONTINUED)
+    service.set_status(order.accession_number, OrderStatus.IN_PROGRESS)
+    discontinued = service.set_status(order.accession_number, OrderStatus.DISCONTINUED)
+    assert discontinued.status is OrderStatus.DISCONTINUED
+    with pytest.raises(InvalidTransitionError, match="中止の予約は予定に変更できません"):
+        service.set_status(order.accession_number, OrderStatus.SCHEDULED)
+
+
+def test_mwl_statuses_must_not_include_discontinued(tmp_path: Path) -> None:
+    raw = (ROOT / "config" / "app_config.yaml").read_text(encoding="utf-8")
+    changed = raw.replace(
+        'statuses: ["scheduled", "in_progress"]', 'statuses: ["scheduled", "discontinued"]'
+    )
+    assert changed != raw
+    path = tmp_path / "app_config.yaml"
+    path.write_text(changed, encoding="utf-8")
+    with pytest.raises(ConfigurationError, match="discontinued"):
+        load_config(path)
+
+
 def test_parse_helpers() -> None:
     assert parse_count_spec("ct=3") == ("CT", 3)
     assert parse_count_spec("MR:2") == ("MR", 2)

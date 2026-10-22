@@ -186,6 +186,32 @@ def test_final_status_change_is_rejected(config: AppConfig, service: OrderServic
     assert "状態を変える" not in detail
 
 
+def test_in_progress_offers_discontinued(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    service.set_status(order.accession_number, OrderStatus.IN_PROGRESS)
+    with _client(config, service) as client:
+        html = client.get("/orders?date=2026-10-21").text
+    assert _status_options(html, order.accession_number) == [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "discontinued",
+    ]
+
+
+def test_detail_shows_mpps(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    steps = [(order.accession_number, order.scheduled_procedure_step_id)]
+    service.store.create_mpps("1.2.392.1", steps, {})
+    service.store.update_mpps("1.2.392.1", "COMPLETED", {})
+    with _client(config, service) as client:
+        detail = client.get(f"/orders/{order.accession_number}").text
+    assert "1.2.392.1" in detail and "COMPLETED" in detail
+    # MPPS で完了になったので、終わりの状態の表示になる
+    assert "状態を変える" not in detail
+
+
 def test_detail_page(config: AppConfig, service: OrderService) -> None:
     order = service.create_orders(OrderRequest(counts={"MR": 1}, scheduled_date=TODAY, seed=1))[0]
     with _client(config, service) as client:

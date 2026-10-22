@@ -32,6 +32,23 @@
   <button type="submit" class="btn">状態を変える</button>
 </form>
 {% endif %}
+<h2>MPPS</h2>
+{% if mpps_records %}
+<div class="table-wrap">
+<table class="orders">
+  <thead>
+    <tr><th>SOP Instance UID</th><th>状態</th><th>受けた日時</th><th>更新日時</th></tr>
+  </thead>
+  <tbody>
+    {% for m in mpps_records %}
+    <tr><td class="mono">{{ m.sop_instance_uid }}</td><td class="mono">{{ m.status }}</td><td class="nowrap">{{ m.created_at }}</td><td class="nowrap">{{ m.updated_at }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted">受けた MPPS はありません。</p>
+{% endif %}
 <h2>MWL の属性</h2>
 <pre class="dataset">{{ dataset }}</pre>
 <p><a href="/orders?date={{ order.scheduled_date | date_param }}">予約の一覧へ</a></p>

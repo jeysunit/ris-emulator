@@ -36,3 +36,19 @@ class OrderNotFoundError(RisEmulatorError):
 
 class MwlServerError(RisEmulatorError):
     """MWL の SCP を起動できない."""
+
+
+class MppsError(RisEmulatorError):
+    """MPPS の N-CREATE・N-SET を受け付けられない."""
+
+
+class DuplicateMppsError(MppsError):
+    """同じ SOP Instance UID の MPPS がすでにある（0111H）."""
+
+
+class MppsNotFoundError(MppsError):
+    """N-SET の対象の MPPS が無い（0112H）."""
+
+
+class MppsNotInProgressError(MppsError):
+    """N-SET の対象の MPPS が IN PROGRESS でない（0110H、Error ID A710）."""

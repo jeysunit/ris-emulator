@@ -29,7 +29,7 @@ from app.core.patient_factory import make_patient, make_patient_id, make_person_
 
 from .config import AppConfig
 from .roster import load_roster
-from .store import OrderStore
+from .store import MppsRecord, OrderStore
 
 MAX_ORDERS_PER_REQUEST = 200
 MAX_INTERVAL_MINUTES = 24 * 60
@@ -258,6 +258,10 @@ class OrderService:
 
     def get(self, accession_number: str) -> Order:
         return self.store.get(accession_number)
+
+    def list_mpps(self, accession_number: str) -> list[MppsRecord]:
+        """予約に結び付いた MPPS（docs/spec/05_mpps_scp.md）."""
+        return self.store.list_mpps(accession_number)
 
     def set_status(self, accession_number: str, status: OrderStatus) -> Order:
         return self.store.set_status(accession_number, status)

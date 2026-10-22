@@ -22,8 +22,9 @@ MWL（Modality Worklist、C-FIND の SCP）で返す。モダリティがワー�
   氏名・受付番号などで絞り込んで応答する
 - 応答の文字コードを `ISO_IR 192`・`\ISO 2022 IR 87`・
   `ISO 2022 IR 13\ISO 2022 IR 87` から予約ごとに選ぶ
-- 予約の一覧と状態（予定・実施中・完了・取消）の Web 画面での確認と、手動での変更。
-  完了・取消の予約は MWL で返さない
+- 予約の一覧と状態（予定・実施中・完了・取消・中止）の Web 画面での確認と、手動での
+  変更。完了・取消・中止の予約は MWL で返さない
+- MPPS の SCP。モダリティの N-CREATE・N-SET を受け、予約を実施中・完了・中止にする
 - Docker イメージ
 
 対象外とするもの：
@@ -32,7 +33,7 @@ MWL（Modality Worklist、C-FIND の SCP）で返す。モダリティがワー�
 - Patient Demographics・帳票
 - 実在の患者のデータ。医療機関の RIS・PACS・モダリティへの接続
 
-未実装の機能（MPPS など）は [roadmap.md](roadmap.md) にある。
+未実装の機能は [roadmap.md](roadmap.md) にある。
 
 ## 3. 前提：DICOM と HL7 に違反しない
 

@@ -54,7 +54,7 @@ EPILOG = """\
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
-        description="ris-emulator: 開発・試験用の RIS エミュレーター（予約の作成と MWL の SCP）",
+        description="ris-emulator: 開発・試験用の RIS エミュレーター（予約の作成と MWL・MPPS の SCP）",
         epilog=EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -101,9 +101,11 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("status", choices=[status.value for status in OrderStatus])
     status.set_defaults(func=status_command)
 
-    mwl = sub.add_parser("mwl", help="MWL の SCP")
+    mwl = sub.add_parser("mwl", help="MWL・MPPS の SCP")
     mwl_sub = mwl.add_subparsers(dest="mwl_command", required=True)
-    serve = mwl_sub.add_parser("serve", parents=[common], help="MWL の SCP を起動する（Ctrl+C で止める）")
+    serve = mwl_sub.add_parser(
+        "serve", parents=[common], help="MWL・MPPS の SCP を起動する（Ctrl+C で止める）"
+    )
     serve.set_defaults(func=mwl_serve_command)
 
     version = sub.add_parser("version", help="版を出す")

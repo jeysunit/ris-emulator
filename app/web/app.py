@@ -234,6 +234,7 @@ def create_app(
             error=error,
             dataset=str(order_to_dataset(order)),
             character_set_labels=CHARACTER_SET_LABELS,
+            mpps_records=order_service.list_mpps(order.accession_number),
         )
 
     @app.post("/orders/{accession_number}/status")

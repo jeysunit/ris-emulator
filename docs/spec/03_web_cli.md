@@ -4,11 +4,11 @@
 
 | コマンド | 起動するもの |
 |----------|--------------|
-| `python -m app.web` | Web 画面と MWL の SCP（`web.start_mwl: true` のとき） |
-| `python -m app.cli mwl serve` | MWL の SCP だけ |
+| `python -m app.web` | Web 画面と MWL・MPPS の SCP（`web.start_mwl: true` のとき） |
+| `python -m app.cli mwl serve` | MWL・MPPS の SCP だけ |
 | `python -m app.cli create` など | 予約の操作（データベースを直接読み書きする） |
 
-画面と CLI と MWL は同じ SQLite のファイルを使う
+画面と CLI と MWL・MPPS の SCP は同じ SQLite のファイルを使う
 （[ADR-0002](../decisions/0002-sqlite-order-store.md)）。
 
 ## 2. CLI
@@ -18,8 +18,8 @@
 | `create CT=3 MR=1` | 予約を作成する。`--date`・`--start`・`--interval`・`--patients random/roster`・`--charset`・`--station-ae`・`--department`・`--seed`・`--json` |
 | `list` | 一覧。`--date`・`--status`・`--modality`・`--json` |
 | `show <受付番号>` | 予約の MWL の全属性 |
-| `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`）。変更できる向きは [01_orders.md](01_orders.md) の 5 章 |
-| `mwl serve` | MWL の SCP を起動する |
+| `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`・`discontinued`）。変更できる向きは [01_orders.md](01_orders.md) の 5 章 |
+| `mwl serve` | MWL・MPPS の SCP を起動する |
 | `version` | バージョン |
 
 終了コード：0=正常、1=予期しないエラー、2=設定・入力のエラー（変更できない向きへの
