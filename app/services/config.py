@@ -77,8 +77,11 @@ class Station(BaseModel):
     @field_validator("name")
     @classmethod
     def _check_name(cls, value: str) -> str:
-        if not value.strip() or has_control_chars(value):
-            raise ValueError("name must not be blank or contain control characters")
+        """空白だけ・前後の空白・制御文字は断る（画面のフォームと CLI で、名前をそのまま照らすため）."""
+        if not value.strip() or value != value.strip() or has_control_chars(value):
+            raise ValueError(
+                "name must not be blank, have leading or trailing spaces, or contain control characters"
+            )
         return value
 
     @field_validator("ae_title")

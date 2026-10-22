@@ -86,7 +86,7 @@
   `web.bind_address`・`mwl.bind_address` より優先する
 - 装置の台帳（`stations`）は、モダリティごとに1台以上を並べる。1台ごとに次の3つを持つ
   - `name`：画面と CLI で選ぶ運用上の名前（例 `CT1号機`）。MWL には入れない。
-    空白だけにせず 64 文字まで、台帳の全体で重ねない
+    空白だけにせず、前後に空白を付けず、64 文字まで。台帳の全体で重ねない
   - `ae_title`：Scheduled Station AE Title (0040,0001) に入れる。PS3.5 6.2 の AE の規則
     （16 文字まで、表示可能な ASCII 文字だけで `\` を含まない、空白だけにしない）で検証する
   - `station_name`：Scheduled Station Name (0040,0010) に入れる。SH の規則（16 文字まで、

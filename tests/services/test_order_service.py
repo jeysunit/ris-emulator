@@ -346,6 +346,7 @@ def test_station_registry_is_loaded(tmp_path: Path) -> None:
         ("      stations: [{name: CT1号機, ae_title: CT01, station_name: STATION_NAME_17CH}]\n", "station_name"),
         ("      stations: [{name: CT1号機, ae_title: CT01, station_name: 'A\\\\B'}]\n", "station_name"),
         ("      stations: [{name: ' ', ae_title: CT01}]\n", "name"),
+        ("      stations: [{name: 'CT1号機 ', ae_title: CT01}]\n", "leading or trailing spaces"),
         ("      stations: [{name: MR1号機, ae_title: CT01}]\n", "station names must be unique: MR1号機"),
         ("      stations: []\n", "stations"),
     ],
