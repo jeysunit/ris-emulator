@@ -24,10 +24,28 @@ DICOM の属性の日本語の名前を一覧にした。`git grep 紹介医` �
 | Requested Procedure Priority (0040,1003) | 優先度 | 文書 | 合う |
 | Specific Character Set (0008,0005) | 文字コード | 詳細・作成 | 合う |
 | Scheduled Performing Physician's Name (0040,0006) | （名前なし） | なし | 表に「実施予定医」を置く |
-| Requested Procedure ID・Scheduled Procedure Step ID・Study Instance UID | 英語のまま | 詳細 | 合う。日本語の決まった訳が無いので英語のままにする |
+| Requested Procedure ID・Scheduled Procedure Step ID・Study Instance UID | 英語のまま | 詳細 | 合う。Study Instance UID には「検査インスタンス UID」の訳もあるが、モダリティ・PACS の画面と照らしやすいように英語のままにする |
 
-「見立て」は、日本の病院の RIS・PACS の画面と DICOM の解説で普通に使う言葉と照らした
-ものである。JIRA の文書（JJ1017 の指針など）の用語との照合は、まだしていない
+「見立て」は、日本の病院の RIS・PACS の画面で普通に使う言葉と、次の2つの日本語の
+DICOM の用語の資料（2026-10-23 に参照）と照らしたものである。資料は訳語を決める参考に
+使い、表は写していない。
+
+- 標準DICOM画像タグセット一覧（リベルワークス）
+  <https://www.liberworks.co.jp/know/know_dicomTag.html>
+- DICOM用語集（SonicDICOM）<https://ja.sonicdicom.com/dicom-glossary/>
+
+資料と違う名前にしたもの：
+
+| 属性 | 資料の訳 | この RIS の名前 | 理由 |
+|------|----------|-----------------|------|
+| Referring Physician's Name (0008,0090) | 照会医師の名前（2つとも） | 紹介医 | 規格の英語を直訳した名前。日本の病院の RIS・PACS の画面では「紹介医」と呼ぶ |
+| Patient's Name (0010,0010) | 患者の名前・患者氏名 | 患者氏名 | 画面で普通に使う方 |
+| Patient's Birth Date (0010,0030) | 患者の誕生日・患者生年月日 | 生年月日 | 一覧では「患者」の列の中にあるので「患者」を付けない |
+| Specific Character Set (0008,0005) | 特定文字集合 | 文字コード | 画面の利用者に通じる言葉。予約の画面の項目には英語の属性名を添えている |
+
+Requesting Physician (0032,1032)・Requesting Service (0032,1033)・Requested Procedure
+Description (0032,1060) と Scheduled Procedure Step の属性は、2つの資料に無い（画像の属性の
+一覧のため）。JIRA の文書（JJ1017 の指針など）の用語との照合は、まだしていない
 （tasks.md の 1.1）。
 
 ## Goals / Non-Goals
