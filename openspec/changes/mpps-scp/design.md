@@ -85,9 +85,9 @@ Performed Procedure Step Status が Enumerated Values に無い、といった�
 
 ## Risks / Trade-offs
 
-- [中止を終わりの状態にすると、撮り直しの2つ目の MPPS で予約が戻らない] → 撮り直しは
-  新しい予約を作る運用にする。撮り直しの扱い（同じ予約の中で撮り直すか、新しい予約を
-  作るか）は、change `retake-orders` で設定で選べるようにする
+- [中止を終わりの状態にすると、撮り直しの2つ目の MPPS で予約が戻らない] → 2つ目の MPPS は
+  記録する（IHE の Append Case）。撮り直しの扱い（同じ予約の中で撮り直すか、新しい予約を
+  作るか）は、change `retake-order` で設定（`orders.retake_mode`）で選べるようにする
 - [1つの予約に MPPS が2つあり、1つ目が `COMPLETED`、2つ目がまだ `IN PROGRESS`] → 1つ目で
   予約は完了になる。予約の詳細に MPPS の一覧と状態を出して、食い違いを見えるようにする
 - [MPPS の表が増え続ける] → 試験の環境のツールなので消さない。データベースのファイルを

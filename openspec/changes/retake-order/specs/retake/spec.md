@@ -2,41 +2,42 @@
 
 ## Purpose
 
-撮影のやり直しを、同じ検査の中のシリーズの追加として扱うか、新しい検査として扱うかを
-設定で選べるようにし、新しい検査として扱うときの撮り直しの予約の作り方を定める。
+撮影のやり直しを、同じ予約の中の追加（IHE の Append Case）として扱うか、新しい予約として
+扱うかを設定で選べるようにし、新しい予約として扱うときの撮り直しの予約の作り方を定める。
 
 ## ADDED Requirements
 
 ### Requirement: 撮り直しの扱いは設定で選ぶ
 
-設定の `orders.retake_policy` は、`same_study` と `new_order` のどちらかでなければならない
-（SHALL）。既定は `same_study`。ほかの値の設定は読み込まない。
+設定の `orders.retake_mode` は、`append` と `new_order` のどちらかでなければならない（SHALL）。
+既定は `append`。ほかの値の設定は読み込まない。
 
 #### Scenario: 設定を書かずに起動する
 
-- **WHEN** `orders.retake_policy` を書かない設定で起動する
-- **THEN** 撮り直しの扱いは `same_study` になり、予約の詳細に撮り直しのボタンは出ない
+- **WHEN** `orders.retake_mode` を書かない設定で起動する
+- **THEN** 撮り直しの扱いは `append` になり、予約の詳細に撮り直しのボタンは出ない
 
 #### Scenario: 知らない値
 
-- **WHEN** `orders.retake_policy: copy` の設定で起動する
-- **THEN** 設定のエラーになり、`same_study` と `new_order` が示される
+- **WHEN** `orders.retake_mode: copy` の設定で起動する
+- **THEN** 設定のエラーになり、`append` と `new_order` が示される
 
-### Requirement: same_study では撮り直しの予約を作らない
+### Requirement: append では RIS は撮り直しで何もしない
 
-`same_study` のとき、撮り直しは同じ予約・同じ Study Instance UID の中のシリーズの追加として
-扱い（IHE RAD の Scheduled Workflow）、RIS は撮り直しの予約を作ってはならない（SHALL NOT）。
-CLI の `retake` は入力のエラー（終了コード 2）にし、画面は撮り直しのボタンを出さない。
+`append` のとき、撮り直しは同じ予約・同じ Study Instance UID の中の追加の MPPS とシリーズとして
+扱い（IHE RAD TF-2 4.6.4.1.2.3.3 Append Case）、RIS は撮り直しの予約を作ってはならない
+（SHALL NOT）。2つ目以降の MPPS は `mpps-scp` の規則のとおりに記録し、予約が終わりの状態なら
+状態を変えない。CLI の `retake` は入力のエラー（終了コード 2）にし、画面は撮り直しのボタンを出さない。
 
-#### Scenario: same_study で CLI の retake を使う
+#### Scenario: append で CLI の retake を使う
 
-- **WHEN** `same_study` の設定で、利用者が `retake <受付番号>` を実行する
-- **THEN** 予約は作られず、終了コードは 2 になり、設定が `same_study` であることが示される
+- **WHEN** `append` の設定で、利用者が `retake <受付番号>` を実行する
+- **THEN** 予約は作られず、終了コードは 2 になり、設定が `append` であることが示される
 
-#### Scenario: 完了の予約に追加のシリーズの MPPS が来る
+#### Scenario: 完了の予約に2つ目の MPPS が来る
 
-- **WHEN** `same_study` の設定で、完了の予約に結び付く新しい MPPS の N-CREATE と N-SET（COMPLETED）が届く
-- **THEN** どちらも 0000H になり、予約は完了のまま、予約の数も変わらない
+- **WHEN** `append` の設定で、完了の予約に結び付く2つ目の MPPS の N-CREATE（IN PROGRESS）と N-SET（COMPLETED）が届く
+- **THEN** どちらも 0000H になり、2つ目の MPPS は記録され、予約は完了のまま、予約の数も変わらない
 
 ### Requirement: new_order では撮り直しの予約を作る
 
@@ -89,8 +90,8 @@ Study Instance UID を、新しい予約と同じ規則（`docs/spec/04_identifi
 
 ### Requirement: 元の予約との関係を残す
 
-撮り直しの予約には元の受付番号を保存し、予約の詳細には、元の予約と、その予約から作った
-撮り直しの予約の受付番号を、互いにリンクで表示しなければならない（SHALL）。撮り直しの
+撮り直しの予約には元の受付番号（`retake_of`）を保存し、予約の詳細には、元の予約と、その予約から
+作った撮り直しの予約の受付番号を、互いにリンクで表示しなければならない（SHALL）。撮り直しの
 予約から、さらに撮り直しを作ってもよい。この関係は MWL の属性には入れない。
 
 #### Scenario: 詳細で関係をたどる
