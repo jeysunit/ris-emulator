@@ -8,3 +8,7 @@ config:
     line_length: 80
     code_blocks: false
     tables: false
+# openspec init・update が作るファイル。手で直すと次の update で上書きされる
+ignores:
+  - ".claude/commands/opsx/**"
+  - ".claude/skills/openspec-*/**"
