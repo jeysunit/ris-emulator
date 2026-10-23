@@ -13,7 +13,8 @@
     {% if roster_error %}
     <p class="error" role="alert">{{ roster_error }}</p>
     {% endif %}
-    <label><input type="radio" name="patient" value="roster"{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
+    {# 名簿を選んで送った後に名簿が読めなくなったときは、どちらも選ばずに出す（黙って新規に切り替えない） #}
+    <label><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
     <label>名簿の患者
       <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
         {% for p in roster %}
@@ -21,7 +22,7 @@
         {% endfor %}
       </select>
     </label>
-    <label><input type="radio" name="patient" value="new"{% if patient == 'new' or not roster %} checked{% endif %}> 新規（架空）</label>
+    <label><input type="radio" name="patient" value="new" required{% if patient == 'new' %} checked{% endif %}> 新規（架空）</label>
   </fieldset>
   <fieldset>
     <legend>検査</legend>

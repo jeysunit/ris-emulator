@@ -151,7 +151,36 @@ def test_entry_without_roster(config: AppConfig, store: OrderStore) -> None:
         page = client.get("/orders/new").text
     assert "名簿を読めません" in page
     assert re.search(r'value="roster"[^>]*disabled', page)
-    assert re.search(r'value="new" checked', page)
+    assert re.search(r'value="new" required checked', page)
+
+
+def test_roster_failure_after_choosing_does_not_switch_to_new(config: AppConfig, store: OrderStore) -> None:
+    orders = config.orders.model_copy(update={"roster_path": "/nonexistent/roster.yaml"})
+    changed = config.model_copy(update={"orders": orders})
+    service = OrderService(changed, store, today=lambda: TODAY)
+    with _client(changed, service) as client:
+        response = _post(client, "/orders", ENTRY)
+    assert response.status_code == 400
+    # 名簿を選んで送った後に名簿が読めなくなったら、どちらの患者の選択肢も選ばれていない
+    assert not re.search(r'name="patient" value="[a-z]+" required[^>]* checked', response.text)
+    assert service.list_orders() == []
+
+
+def test_rejected_form_post_shows_page(config: AppConfig, service: OrderService) -> None:
+    with _client(config, service) as client:
+        stale = client.post(
+            "/orders", data={**ENTRY, "csrf_token": "stale"}, headers={"Origin": ORIGIN}
+        )
+        htmx = client.post(
+            "/orders/x/status",
+            data={"status": "completed"},
+            headers={"Origin": ORIGIN, "HX-Request": "true", "X-CSRF-Token": "stale"},
+        )
+    assert stale.status_code == 403
+    assert "送信を受け付けませんでした。画面を開き直して、もう一度操作してください。" in stale.text
+    assert '<a href="/orders">予約一覧へ</a>' in stale.text
+    # htmx の要求は今までどおり（画面の上のエラーは app.js が出す）
+    assert htmx.status_code == 403 and "送信を受け付けませんでした" not in htmx.text
 
 
 def test_batch_page_words(config: AppConfig, service: OrderService) -> None:

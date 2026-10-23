@@ -11,9 +11,11 @@ from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.core.exceptions import (
@@ -56,6 +58,7 @@ from .auth import (
 BASE_DIR = Path(__file__).resolve().parent
 HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
+HTTP_FORBIDDEN = 403
 HTTP_NOT_FOUND = 404
 HTTP_SEE_OTHER = 303
 # 一覧の1頁の件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
@@ -136,6 +139,14 @@ def create_app(
             version=__version__,
         )
         return templates.TemplateResponse(request, name, context, status_code=status_code)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error(request: Request, exc: StarletteHTTPException) -> Response:
+        # フォームの送信を CSRF・origin の検査で断ったときは、何が起きてどうするかを画面で出す
+        # （画面を開いた後にサーバーが起動し直すと、token が変わって断られる）。htmx は app.js が扱う
+        if exc.status_code == HTTP_FORBIDDEN and not request.headers.get("hx-request"):
+            return render(request, "rejected.html", status_code=HTTP_FORBIDDEN)
+        return await http_exception_handler(request, exc)
 
     @app.middleware("http")
     async def guard(
