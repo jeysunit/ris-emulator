@@ -18,6 +18,11 @@
   }
   document.addEventListener("htmx:responseError", function (event) {
     var status = event.detail.xhr ? event.detail.xhr.status : 0;
+    if (status === 401) {
+      // Basic 認証が通らなくなった。読み直してブラウザに認証を求めさせる
+      window.location.reload();
+      return;
+    }
     fail(event, "（" + status + "）。画面を読み直してください");
   });
   document.addEventListener("htmx:sendError", function (event) {
