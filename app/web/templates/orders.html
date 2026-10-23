@@ -25,7 +25,7 @@
       {% endfor %}
     </select>
   </label>
-  <button type="submit" class="btn">表示</button>
+  <button type="submit" class="btn btn-primary">表示</button>
   <span class="day-nav">
     {% if prev_day %}<a href="{{ prev_day }}" class="btn">前日</a>{% endif %}
     <a href="/orders" class="btn">本日</a>
@@ -64,6 +64,7 @@
   {% if next_page %}<a href="{{ next_page }}">次の頁</a>{% endif %}
 </nav>
 {% else %}
-<p class="empty">条件に合う予約はありません。<a href="/orders/new">予約作成</a></p>
+<p class="empty">条件に合う予約はありません。</p>
+<p><a href="/orders/new">予約作成</a></p>
 {% endif %}
 {% endblock %}
