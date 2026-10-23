@@ -166,6 +166,18 @@ def test_roster_failure_after_choosing_does_not_switch_to_new(config: AppConfig,
     assert service.list_orders() == []
 
 
+def test_removed_roster_patient_is_not_replaced(config: AppConfig, service: OrderService) -> None:
+    with _client(config, service) as client:
+        response = _post(client, "/orders", {**ENTRY, "roster_patient_id": "P999999"})
+        again = _post(client, "/orders", {**ENTRY, "roster_patient_id": ""})
+    assert response.status_code == 400 and "名簿に無い患者 ID です: P999999" in response.text
+    # 先頭の患者に黙って替えず、空の選択肢を選んだ形で出す
+    assert _options(response.text, "roster_patient_id")[0] == ""
+    assert '<option value="" selected>選択してください</option>' in response.text
+    assert again.status_code == 400 and "名簿の患者を選んでください" in again.text
+    assert service.list_orders() == []
+
+
 def test_rejected_form_post_shows_page(config: AppConfig, service: OrderService) -> None:
     with _client(config, service) as client:
         stale = client.post(

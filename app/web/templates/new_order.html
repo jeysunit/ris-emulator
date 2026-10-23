@@ -17,6 +17,11 @@
     <label><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
     <label>名簿の患者
       <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
+        {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
+        {% set chosen = values.get('roster_patient_id', '') %}
+        {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}
+        <option value="" selected>選択してください</option>
+        {% endif %}
         {% for p in roster %}
         <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
         {% endfor %}
