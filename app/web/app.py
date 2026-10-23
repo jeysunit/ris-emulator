@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
@@ -194,7 +195,7 @@ def create_app(
         }
         total = order_service.count_orders(**where)
         pages = max(1, -(-total // LIST_PAGE_SIZE))
-        number = min(max(int(page) if page.isdigit() else 1, 1), pages)
+        number = min(max(_page_number(page), 1), pages)
         offset = (number - 1) * LIST_PAGE_SIZE
         orders = order_service.list_orders(**where, limit=LIST_PAGE_SIZE, offset=offset)
 
@@ -357,6 +358,11 @@ def _list_period(start_text: str, end_text: str, today: date) -> tuple[date, dat
     if (last - first).days + 1 > MAX_LIST_DAYS:
         raise ValidationError(f"予定日の期間は{MAX_LIST_DAYS}日までにしてください")
     return first, last
+
+
+def _page_number(text: str) -> int:
+    """頁の番号。ASCII の数字（6 桁まで）でなければ 1 頁目（範囲の外は呼ぶ側が最後の頁にする）."""
+    return int(text) if re.fullmatch(r"[0-9]{1,6}", text) else 1
 
 
 def _shifted_link(

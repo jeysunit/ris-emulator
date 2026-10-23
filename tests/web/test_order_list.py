@@ -120,6 +120,16 @@ def test_pages(config: AppConfig, service: OrderService) -> None:
     assert "201〜230 件目／全 230 件" in beyond
 
 
+def test_odd_page_numbers_fall_back_to_first_page(config: AppConfig, service: OrderService) -> None:
+    service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))
+    with _client(config, service) as client:
+        # 「²」は str.isdigit() では数字だが int() で読めない。桁の多すぎる数は int() の上限を超える
+        for page in ("%C2%B2", "9" * 5000, "-1", "abc", "0"):
+            response = client.get(f"/orders?page={page}")
+            assert response.status_code == 200, page
+            assert "1〜1 件目／全 1 件" in response.text
+
+
 def test_status_column_class(config: AppConfig, service: OrderService) -> None:
     orders = service.create_orders(OrderRequest(counts={"CT": 5}, scheduled_date=TODAY, seed=1))
     for order, status in zip(
