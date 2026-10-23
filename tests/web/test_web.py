@@ -119,24 +119,24 @@ def test_character_set_choices_use_labels(config: AppConfig, service: OrderServi
     assert "Specific Character Set              CS: ['', 'ISO 2022 IR 87']" in html.unescape(detail)
 
 
-def test_create_from_form(config: AppConfig, service: OrderService) -> None:
+def test_create_from_batch_form(config: AppConfig, service: OrderService) -> None:
     with _client(config, service) as client:
-        page = client.get("/orders/new")
+        page = client.get("/orders/batch")
         assert page.status_code == 200
         assert re.search(r'name="csrf_token" value="([^"]+)"', page.text)
         response = client.post(
-            "/orders",
+            "/orders/batch",
             data={
                 "csrf_token": _token(client),
                 "count_CT": "3",
                 "count_MR": "1",
                 "date": "2026-10-21",
-                "start": "10:00",
+                "hour": "10",
+                "minute": "00",
                 "interval": "20",
                 "patients": "random",
                 "charset": "jis",
                 "department": "外科",
-                "seed": "5",
                 "station_MR": "MR1号機",
                 # 件数の無いモダリティの装置の欄は使わない
                 "station_CR": "CR1号機",
@@ -146,7 +146,6 @@ def test_create_from_form(config: AppConfig, service: OrderService) -> None:
         )
     assert response.status_code == 303
     assert response.headers["location"] == "/orders?date_from=2026-10-21"
-    assert "順に使う" in page.text and "CT1号機（CT01）" in page.text
     assert 'name="station_ae"' not in page.text
     orders = service.list_orders()
     assert [o.modality for o in orders].count("CT") == 3
@@ -159,17 +158,18 @@ def test_create_from_form(config: AppConfig, service: OrderService) -> None:
 
 
 def test_create_errors_are_shown(config: AppConfig, service: OrderService) -> None:
+    start = {"date": "2026-10-21", "hour": "09", "minute": "00", "interval": "15"}
     with _client(config, service) as client:
         response = client.post(
-            "/orders",
-            data={"csrf_token": _token(client), "date": "2026-10-21", "start": "09:00"},
+            "/orders/batch",
+            data={"csrf_token": _token(client), **start},
             headers={"Origin": ORIGIN},
         )
         assert response.status_code == 400
         assert "1 以上の件数" in response.text
         response = client.post(
-            "/orders",
-            data={"csrf_token": _token(client), "count_CT": "1", "date": "2026-10-21", "start": "09:00", "station_CT": "MR1号機"},
+            "/orders/batch",
+            data={"csrf_token": _token(client), "count_CT": "1", **start, "station_CT": "MR1号機"},
             headers={"Origin": ORIGIN},
         )
         # 別のモダリティの装置が送られた

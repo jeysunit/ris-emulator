@@ -13,11 +13,11 @@
 | Study Instance UID | (0020,000D) | `2.25.` + UUID の整数 |
 | 患者 | Patient's Name・ID・Birth Date・Sex・Weight・Size | 3 章 |
 | モダリティ | Modality (0008,0060) | 指定 |
-| 装置 | （MWL には入れない） | モダリティごとに、設定の装置の台帳（`stations`）から名前で選ぶ。選ばなければ台帳の装置を予約ごとに順に使う |
+| 装置 | （MWL には入れない） | モダリティごとに、設定の装置の台帳（`stations`）から名前で選ぶ。予約作成の画面の既定は台帳の1台目。一括作成と CLI で選ばなければ、台帳の装置を予約ごとに順に使う（画面では「全装置に振り分け」） |
 | 予定の AE タイトル | Scheduled Station AE Title (0040,0001) | 選んだ装置の `ae_title` |
 | 予定の装置名 | Scheduled Station Name (0040,0010) | 選んだ装置の `station_name`（空なら空の値で返す。Return Key Type 2） |
 | 予定日時 | Scheduled Procedure Step Start Date・Time | 4 章 |
-| 検査名 | Requested Procedure Description・Scheduled Procedure Step Description | 設定の検査の種類から乱数で選ぶ |
+| 検査名 | Requested Procedure Description・Scheduled Procedure Step Description | 予約作成の画面では、モダリティの設定の検査の種類から選ぶ。一括作成と CLI では乱数で選ぶ |
 | 検査コード | Requested Procedure Code Sequence・Scheduled Protocol Code Sequence | 同じ検査の種類のコード（既定の Coding Scheme Designator は `99RISEMU`） |
 | 依頼科 | Requesting Service (0032,1033) | 指定。無ければ設定の `departments` から乱数で選ぶ |
 | 依頼医 | Requesting Physician (0032,1032) | 乱数で生成した氏名 |
@@ -53,13 +53,15 @@
   同じ作成要求で生成した ID とは重複させない
 - 性別は M・F、年齢は予定日の時点で 0〜95 歳。身長と体重は年齢と性別から
   概算の値を生成する（Patient's Size は m、Patient's Weight は kg）
-- シード（`seed`）を指定すると、同じシードで同じ患者を生成する
+- CLI でシード（`--seed`）を指定すると、同じシードで同じ患者を生成する（画面には無い）
 
 ### 3.2 名簿
 
 - 1人分の項目は `patient_id`・`patient_name.alphabetic/ideographic/phonetic`・
   `birth_date`・`sex`・`weight`（kg）・`size`（cm）。例は `data/patients_sample.yaml`
-- 予約ごとに名簿から乱数で選ぶ（同じ患者が何度選ばれてもよい）
+- 予約作成の画面では、名簿の患者を1人選ぶ（名簿が読めなければ選べない）
+- 一括作成（「名簿から無作為に」）と CLI（`--patients roster`）では、予約ごとに名簿から
+  乱数で選ぶ（同じ患者が何度選ばれてもよい）
 - 名簿のファイルは設定の `orders.roster_path` で指定する
 - 氏名の各コンポーネントグループは 64 文字まで。`=`・`\`・制御文字を含む名簿は
   読み込まない（PS3.5 6.2 の PN の規則）

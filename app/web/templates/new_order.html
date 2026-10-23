@@ -7,52 +7,66 @@
 {% endif %}
 <form method="post" action="/orders" class="form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+  {% set patient = values.get('patient', 'roster' if roster else 'new') %}
   <fieldset>
-    <legend>モダリティごとの件数（合わせて {{ max_orders }} 件まで）</legend>
-    <div class="counts">
-      {% for modality, entry in catalog.items() %}
-      <div>
-        <label>{{ modality }}
-          <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric">
-        </label>
-        <label>装置
-          <select name="station_{{ modality }}" aria-label="{{ modality }} の装置">
-            <option value="">順に使う</option>
-            {% for station in entry.stations %}
-            <option value="{{ station.name }}"{% if values.get('station_' ~ modality) == station.name %} selected{% endif %}>{{ station.name }}（{{ station.ae_title }}）</option>
-            {% endfor %}
-          </select>
-        </label>
-      </div>
-      {% endfor %}
-    </div>
+    <legend>患者</legend>
+    {% if roster_error %}
+    <p class="error" role="alert">{{ roster_error }}</p>
+    {% endif %}
+    <label><input type="radio" name="patient" value="roster"{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
+    <label>名簿の患者
+      <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
+        {% for p in roster %}
+        <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><input type="radio" name="patient" value="new"{% if patient == 'new' or not roster %} checked{% endif %}> 新規（架空）</label>
+  </fieldset>
+  <fieldset>
+    <legend>検査</legend>
+    <label>モダリティ
+      <select name="modality" hx-get="/orders/new/exam" hx-target="#exam-options" hx-swap="outerHTML">
+        {% for m in catalog %}
+        <option value="{{ m }}"{% if m == modality %} selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% include "_exam_options.html" %}
   </fieldset>
   <fieldset>
     <legend>予定</legend>
     <label>予定日 <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required></label>
-    <label>開始時刻 <input type="time" name="start" value="{{ values.get('start', '09:00') }}" required></label>
-    <label>間隔（分） <input type="number" name="interval" min="0" max="{{ max_interval }}" value="{{ values.get('interval', '15') }}"></label>  </fieldset>
+    <label>予定時刻
+      <span class="time-select">
+        <select name="hour" aria-label="時">
+          {% for h in hours %}
+          <option value="{{ h }}"{% if values.get('hour', '09') == h %} selected{% endif %}>{{ h }}</option>
+          {% endfor %}
+        </select>
+        :
+        {% set selected = values.get('minute', '00') %}
+        {% include "_minute_select.html" %}
+      </span>
+    </label>
+  </fieldset>
   <fieldset>
-    <legend>患者と依頼</legend>
-    <label><input type="radio" name="patients" value="random"{% if values.get('patients', 'random') == 'random' %} checked{% endif %}> 乱数で作る</label>
-    <label><input type="radio" name="patients" value="roster"{% if values.get('patients') == 'roster' %} checked{% endif %}> 名簿から選ぶ</label>
+    <legend>依頼</legend>
     <label>依頼科
-      <select name="department">
-        <option value="">乱数で選ぶ</option>
+      <select name="department" required>
         {% for d in departments %}
         <option value="{{ d }}"{% if values.get('department') == d %} selected{% endif %}>{{ d }}</option>
         {% endfor %}
       </select>
     </label>
-    <label>文字コード（Specific Character Set）
+    <label>文字コード
       <select name="charset">
         {% for c in character_sets %}
         <option value="{{ c.value }}"{% if values.get('charset', default_character_set.value) == c.value %} selected{% endif %}>{{ character_set_labels[c] }}</option>
         {% endfor %}
       </select>
     </label>
-    <label>シード <input type="number" name="seed" value="{{ values.get('seed', '') }}" placeholder="空なら毎回変わる"></label>
   </fieldset>
-  <button type="submit" class="btn btn-primary">予約を作る</button>
+  <button type="submit" class="btn btn-primary">登録</button>
 </form>
 {% endblock %}

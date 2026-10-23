@@ -1,0 +1,5 @@
+<select name="minute" id="minute-select" aria-label="分">
+  {% for m in minutes %}
+  <option value="{{ m }}"{% if selected == m %} selected{% endif %}>{{ m }}</option>
+  {% endfor %}
+</select>

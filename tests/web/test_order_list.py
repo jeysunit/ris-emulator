@@ -41,7 +41,7 @@ def test_titles_and_nav(config: AppConfig, service: OrderService) -> None:
         }
     for title, page in pages.items():
         nav = page.split('<nav class="nav"')[1].split("</nav>")[0]
-        assert re.findall(r">([^<]+)</a>", nav) == ["予約一覧", "予約作成"]
+        assert re.findall(r">([^<]+)</a>", nav) == ["予約一覧", "予約作成", "一括作成"]
         assert f"<title>{title} - ris-emulator</title>" in page
         head = page.split("</h1>")[0]
         assert "予約の一覧" not in head and "予約を作る" not in head

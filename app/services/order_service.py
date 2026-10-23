@@ -21,6 +21,7 @@ from app.core.models import (
     Order,
     OrderStatus,
     Patient,
+    Procedure,
     has_control_chars,
 )
 from app.core.mwl_dataset import order_to_dataset
@@ -67,6 +68,10 @@ class OrderRequest(BaseModel):
     stations: dict[str, str] = Field(default_factory=dict)
     department: str | None = None
     seed: int | None = None
+    # 検査の種類のコード。指定があれば乱数で選ばない（件数を入れたどのモダリティにも要る）
+    procedure_code: str | None = None
+    # 名簿の患者 ID。指定があれば、名簿のその患者で作る（patient_source は roster にする）
+    roster_patient_id: str | None = None
 
     @field_validator("scheduled_date")
     @classmethod
@@ -128,6 +133,10 @@ def _check_lo_text(label: str, value: str) -> None:
         raise ValidationError(f"{label}は {LO_MAX_LENGTH} 字までにしてください")
     if "\\" in value or has_control_chars(value):
         raise ValidationError(f"{label}に「\\」と制御文字は使えません")
+
+
+def _find_procedure(procedures: list[Procedure], code: str | None) -> Procedure | None:
+    return next((p for p in procedures if p.code == code), None) if code is not None else None
 
 
 def check_encodable(order: Order) -> None:
@@ -221,6 +230,12 @@ class OrderService:
             known = ", ".join(catalog)
             raise ValidationError(f"設定に無いモダリティです: {', '.join(unknown)}（設定: {known}）")
         self._check_stations(request)
+        if request.procedure_code is not None:
+            for modality in request.counts:
+                if _find_procedure(catalog[modality].procedures, request.procedure_code) is None:
+                    raise ValidationError(
+                        f"{modality} の検査の種類に無いコードです: {request.procedure_code}"
+                    )
         if request.department is not None:
             _check_lo_text("依頼科", request.department)
         check_scheduled_date(request.scheduled_date)
@@ -230,6 +245,10 @@ class OrderService:
             self._check_schedule_fits(request, count)
 
         roster = self._load_roster() if request.patient_source == "roster" else []
+        if request.roster_patient_id is not None:
+            roster = [p for p in self._load_roster() if p.patient_id == request.roster_patient_id]
+            if not roster:
+                raise ValidationError(f"名簿に無い患者 ID です: {request.roster_patient_id}")
         created = self.today()
 
         def build(numbers: list[int], patient_id_exists: Callable[[str], bool]) -> list[Order]:
@@ -314,7 +333,8 @@ class OrderService:
                         scheduled_station_label=station.name,
                         scheduled_date=start.strftime("%Y%m%d"),
                         scheduled_time=start.strftime("%H%M%S"),
-                        procedure=rng.choice(entry.procedures),
+                        procedure=_find_procedure(entry.procedures, request.procedure_code)
+                        or rng.choice(entry.procedures),
                         requesting_service=request.department
                         or rng.choice(self.config.orders.departments),
                         requesting_physician=physician,
@@ -380,6 +400,10 @@ class OrderService:
             raise ValidationError(
                 "予定の時刻がその日のうちに収まりません。開始の時刻か間隔を見直してください"
             )
+
+    def roster_patients(self) -> list[Patient]:
+        """名簿の患者（予約作成の画面の選択肢）。読めなければ ConfigurationError."""
+        return self._load_roster()
 
     def _load_roster(self) -> list[Patient]:
         path = Path(self.config.orders.roster_path)
