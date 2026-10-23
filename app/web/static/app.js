@@ -16,12 +16,7 @@
     var status = event.detail.xhr ? event.detail.xhr.status : 0;
     fail(event, "状態を変更できませんでした（" + status + "）。画面を読み直してください");
   });
-  document.addEventListener("htmx:afterRequest", function (event) {
-    var box = document.getElementById("request-error");
-    if (box && event.detail.successful) {
-      box.hidden = true;
-    }
-  });
+  // エラーは画面を読み直すまで残す（別の行の変更が成功しても、失敗した行の案内を消さない）
   document.addEventListener("htmx:sendError", function (event) {
     fail(event, "状態を変更できませんでした。接続を確かめて、画面を読み直してください");
   });
