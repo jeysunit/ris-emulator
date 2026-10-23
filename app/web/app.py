@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -38,6 +39,7 @@ from app.services.order_service import (
     RETAKE_FROM,
     OrderRequest,
     OrderService,
+    check_scheduled_date,
     parse_date_option,
     parse_time_option,
 )
@@ -56,6 +58,9 @@ HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 HTTP_NOT_FOUND = 404
 HTTP_SEE_OTHER = 303
+# 一覧の1頁の件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
+LIST_PAGE_SIZE = 100
+MAX_LIST_DAYS = 31
 CONTENT_SECURITY_POLICY = "; ".join(
     (
         "default-src 'self'",
@@ -157,28 +162,64 @@ def create_app(
 
     @app.get("/orders", response_class=HTMLResponse)
     def orders_page(
-        request: Request, date: str = "", status: str = "", modality: str = ""
+        request: Request,
+        date_from: str = "",
+        date_to: str = "",
+        date: str = "",
+        status: str = "",
+        modality: str = "",
+        page: str = "1",
     ) -> HTMLResponse:
-        today = order_service.today()
+        modality = modality.upper()
+        context: dict[str, Any] = {
+            "status": status,
+            "modality": modality,
+            "modalities": list(config.orders.modalities),
+            "statuses": list(OrderStatus),
+            "date_from": date_from or date,
+            "date_to": date_to,
+        }
         try:
-            day = parse_date_option(date, today) if date != "all" else None
-        except ValidationError:
-            day = today
+            first, last = _list_period(date_from or date, date_to, order_service.today())
+        except ValidationError as exc:
+            return render(
+                request, "orders.html", status_code=HTTP_BAD_REQUEST, error=exc.message, **context
+            )
         statuses = [OrderStatus(status)] if status in {s.value for s in OrderStatus} else None
-        stamp = day.strftime("%Y%m%d") if day else ""
-        orders = order_service.list_orders(
-            date_from=stamp, date_to=stamp, statuses=statuses, modality=modality.upper()
-        )
-        return render(
-            request,
-            "orders.html",
+        where = {
+            "date_from": first.strftime("%Y%m%d"),
+            "date_to": last.strftime("%Y%m%d"),
+            "statuses": statuses,
+            "modality": modality,
+        }
+        total = order_service.count_orders(**where)
+        pages = max(1, -(-total // LIST_PAGE_SIZE))
+        number = min(max(int(page) if page.isdigit() else 1, 1), pages)
+        offset = (number - 1) * LIST_PAGE_SIZE
+        orders = order_service.list_orders(**where, limit=LIST_PAGE_SIZE, offset=offset)
+
+        def link(start: date, end: date, page_number: int = 1) -> str:
+            query = {"date_from": start.isoformat(), "date_to": end.isoformat()}
+            for key, value in (("status", status), ("modality", modality)):
+                if value:
+                    query[key] = value
+            if page_number > 1:
+                query["page"] = str(page_number)
+            return f"/orders?{urlencode(query)}"
+
+        context.update(
+            date_from=first.isoformat(),
+            date_to=last.isoformat(),
             orders=orders,
-            day=day,
-            status=status,
-            modality=modality.upper(),
-            modalities=list(config.orders.modalities),
-            statuses=list(OrderStatus),
+            total=total,
+            first_index=offset + 1,
+            last_index=offset + len(orders),
+            prev_page=link(first, last, number - 1) if number > 1 else "",
+            next_page=link(first, last, number + 1) if number < pages else "",
+            prev_day=_shifted_link(link, first, last, -1),
+            next_day=_shifted_link(link, first, last, 1),
         )
+        return render(request, "orders.html", error="", **context)
 
     @app.get("/orders/new", response_class=HTMLResponse)
     def new_order_page(request: Request) -> HTMLResponse:
@@ -215,7 +256,7 @@ def create_app(
                 request, error=exc.message, values=values, status_code=HTTP_BAD_REQUEST
             )
         day = date_param(orders[0].scheduled_date) if orders else ""
-        return RedirectResponse(f"/orders?date={day}", status_code=HTTP_SEE_OTHER)
+        return RedirectResponse(f"/orders?date_from={day}", status_code=HTTP_SEE_OTHER)
 
     @app.get("/orders/{accession_number}", response_class=HTMLResponse)
     def order_detail(request: Request, accession_number: str) -> HTMLResponse:
@@ -303,6 +344,31 @@ def date_param(value: str | date) -> str:
     if isinstance(value, date):
         return value.isoformat()
     return f"{value[:4]}-{value[4:6]}-{value[6:]}"
+
+
+def _list_period(start_text: str, end_text: str, today: date) -> tuple[date, date]:
+    """一覧の予定日の期間（両端を含む）。開始日が空なら本日、終了日が空なら開始日の1日."""
+    if start_text == "all" or end_text == "all":
+        raise ValidationError(f"予定日は開始日と終了日で指定してください（{MAX_LIST_DAYS}日まで）")
+    first = parse_date_option(start_text.strip(), today)
+    last = parse_date_option(end_text.strip(), today) if end_text.strip() else first
+    if last < first:
+        raise ValidationError("終了日は開始日と同じ日か、後の日にしてください")
+    if (last - first).days + 1 > MAX_LIST_DAYS:
+        raise ValidationError(f"予定日の期間は{MAX_LIST_DAYS}日までにしてください")
+    return first, last
+
+
+def _shifted_link(
+    link: Callable[[date, date], str], first: date, last: date, days: int
+) -> str:
+    """期間を `days` 日動かした一覧の URL。予定日の範囲（1900〜9999 年）を出るなら空."""
+    try:
+        start = check_scheduled_date(first + timedelta(days=days))
+        end = check_scheduled_date(last + timedelta(days=days))
+    except (OverflowError, ValidationError):
+        return ""
+    return link(start, end)
 
 
 def _get_order(service: OrderService, accession_number: str):  # noqa: ANN202

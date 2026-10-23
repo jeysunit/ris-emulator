@@ -8,7 +8,7 @@
   <td>{{ order.procedure.name }}</td>
   <td>{{ order.requesting_service }}</td>
   <td>{% if order.scheduled_station_label %}{{ order.scheduled_station_label }}<br><span class="muted mono">{{ order.scheduled_station_ae_title }}</span>{% else %}<span class="mono">{{ order.scheduled_station_ae_title }}</span>{% endif %}</td>
-  <td>
+  <td class="col-status">
     {% if is_final(order.status) %}
     {{ status_labels[order.status] }}
     {% else %}

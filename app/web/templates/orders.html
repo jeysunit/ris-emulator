@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% block title %}予約の一覧{% endblock %}
+{% block title %}予約一覧{% endblock %}
 {% block content %}
-<h1>予約の一覧</h1>
+<h1>予約一覧</h1>
 <form method="get" action="/orders" class="filters">
-  <label>予定日
-    <input type="date" name="date" value="{{ day | date_param if day else '' }}">
+  <label>開始日
+    <input type="date" name="date_from" value="{{ date_from }}">
+  </label>
+  <label>終了日
+    <input type="date" name="date_to" value="{{ date_to }}">
   </label>
   <label>状態
     <select name="status">
@@ -23,9 +26,15 @@
     </select>
   </label>
   <button type="submit" class="btn">表示</button>
-  <a href="/orders?date=all" class="btn btn-ghost">全日付</a>
+  <span class="day-nav">
+    {% if prev_day %}<a href="{{ prev_day }}" class="btn">前日</a>{% endif %}
+    <a href="/orders" class="btn">本日</a>
+    {% if next_day %}<a href="{{ next_day }}" class="btn">翌日</a>{% endif %}
+  </span>
 </form>
-{% if orders %}
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% elif orders %}
 <div class="table-wrap">
 <table class="orders">
   <thead>
@@ -39,7 +48,7 @@
       <th>検査名</th>
       <th>依頼科</th>
       <th>装置</th>
-      <th>状態</th>
+      <th class="col-status">状態</th>
     </tr>
   </thead>
   <tbody>
@@ -49,8 +58,12 @@
   </tbody>
 </table>
 </div>
-<p class="muted">{{ orders | length }} 件</p>
+<nav class="pager" aria-label="頁">
+  {% if prev_page %}<a href="{{ prev_page }}">前の頁</a>{% endif %}
+  <span class="muted">{{ first_index }}〜{{ last_index }} 件目／全 {{ total }} 件</span>
+  {% if next_page %}<a href="{{ next_page }}">次の頁</a>{% endif %}
+</nav>
 {% else %}
-<p class="empty">条件に合う予約はありません。<a href="/orders/new">予約を作る</a></p>
+<p class="empty">条件に合う予約はありません。<a href="/orders/new">予約作成</a></p>
 {% endif %}
 {% endblock %}

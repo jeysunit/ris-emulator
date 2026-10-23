@@ -48,7 +48,9 @@ a { color: var(--accent); }
 
 .site-header { background: var(--surface); border-bottom: 1px solid var(--border); }
 .header-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding-top: 8px; padding-bottom: 8px; }
+.brand-row { margin: 0; }
 .brand { font-weight: 600; color: var(--text); text-decoration: none; }
+.version { color: var(--muted); font-size: 12px; }
 .nav { display: flex; gap: 4px; }
 .nav-link { padding: 4px 10px; border-radius: 6px; text-decoration: none; color: var(--text); }
 .nav-link:hover { background: var(--bg); }
@@ -81,7 +83,7 @@ input[type="number"] { width: 8em; }
 
 .btn { cursor: pointer; padding: 5px 14px; text-decoration: none; display: inline-block; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
-.btn-ghost { border-color: transparent; }
+a.btn { color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
 
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
 table { border-collapse: collapse; width: 100%; }
@@ -100,4 +102,9 @@ tr.status-completed td, tr.status-cancelled td { background: var(--done); color:
 .detail dd { margin: 0; overflow-wrap: anywhere; }
 .dataset { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12px; }
 
-.footer { color: var(--muted); font-size: 12px; padding-top: 24px; padding-bottom: 24px; }
+/* 状態の列は、選択肢の有無と状態の変更で幅を変えない（行の置き換えで表の列の幅が揺れないように） */
+.col-status { width: 7.5em; min-width: 7.5em; max-width: 7.5em; }
+.col-status select { width: 100%; }
+
+.day-nav { display: inline-flex; gap: 4px; }
+.pager { display: flex; gap: 16px; align-items: center; margin-top: 8px; }
