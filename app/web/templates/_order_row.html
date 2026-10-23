@@ -13,6 +13,7 @@
     {{ status_labels[order.status] }}
     {% else %}
     <select name="status" aria-label="{{ order.accession_number }} の状態"
+            data-current="{{ order.status.value }}" hx-disabled-elt="this"
             hx-post="/orders/{{ order.accession_number }}/status"
             hx-target="#order-{{ order.accession_number }}" hx-swap="outerHTML">
       {% for s in selectable_statuses(order.status) %}

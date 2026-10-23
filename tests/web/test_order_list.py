@@ -150,3 +150,27 @@ def test_status_column_class(config: AppConfig, service: OrderService) -> None:
     # すべての状態の行（予定・実施中・完了・取消・中止）で、状態のセルに同じ class が付く
     assert page.count('<td class="col-status">') == 5
     assert row.count('<td class="col-status">') == 1
+
+
+def test_status_select_guards_against_unsaved_values(config: AppConfig, service: OrderService) -> None:
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    with _client(config, service) as client:
+        page = client.get("/orders").text
+        script = client.get("/static/app.js")
+    # 送信中は選択を無効にし、失敗したら保存済みの状態（data-current）へ戻す
+    select = re.search(r"<select name=\"status\" aria-label=[^>]*>", page)
+    assert select is not None
+    assert 'hx-disabled-elt="this"' in select.group(0) and 'data-current="scheduled"' in select.group(0)
+    assert '<p id="request-error" class="error" role="alert" hidden></p>' in page
+    assert '<script src="/static/app.js" defer></script>' in page
+    assert script.status_code == 200
+    assert "htmx:responseError" in script.text and "htmx:sendError" in script.text
+    assert order.accession_number in page
+
+
+def test_unreadable_date_message_uses_screen_format(config: AppConfig, service: OrderService) -> None:
+    with _client(config, service) as client:
+        response = client.get("/orders?date_from=2026-13-40")
+    assert response.status_code == 400
+    assert "予定日は YYYY-MM-DD の日付で指定してください" in response.text
+    assert "tomorrow" not in response.text

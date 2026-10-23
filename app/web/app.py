@@ -351,8 +351,12 @@ def _list_period(start_text: str, end_text: str, today: date) -> tuple[date, dat
     """一覧の予定日の期間（両端を含む）。開始日が空なら本日、終了日が空なら開始日の1日."""
     if start_text == "all" or end_text == "all":
         raise ValidationError(f"予定日は開始日と終了日で指定してください（{MAX_LIST_DAYS}日まで）")
-    first = parse_date_option(start_text.strip(), today)
-    last = parse_date_option(end_text.strip(), today) if end_text.strip() else first
+    try:
+        first = parse_date_option(start_text.strip(), today)
+        last = parse_date_option(end_text.strip(), today) if end_text.strip() else first
+    except ValidationError as exc:
+        # parse_date_option の文は CLI の書き方（today・tomorrow）なので、画面の書き方で言い直す
+        raise ValidationError("予定日は YYYY-MM-DD の日付で指定してください") from exc
     if last < first:
         raise ValidationError("終了日は開始日と同じ日か、後の日にしてください")
     if (last - first).days + 1 > MAX_LIST_DAYS:
