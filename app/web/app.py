@@ -5,15 +5,17 @@ from __future__ import annotations
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.core.exceptions import (
@@ -33,9 +35,8 @@ from app.core.models import (
 )
 from app.core.mwl_dataset import order_to_dataset
 from app.mwl.server import MwlServer
-from app.services.config import AppConfig
+from app.services.config import MINUTE_STEPS, AppConfig
 from app.services.order_service import (
-    MAX_INTERVAL_MINUTES,
     MAX_ORDERS_PER_REQUEST,
     RETAKE_FROM,
     OrderRequest,
@@ -57,11 +58,14 @@ from .auth import (
 BASE_DIR = Path(__file__).resolve().parent
 HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
+HTTP_FORBIDDEN = 403
 HTTP_NOT_FOUND = 404
 HTTP_SEE_OTHER = 303
 # 一覧の1頁の件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
 LIST_PAGE_SIZE = 100
 MAX_LIST_DAYS = 31
+# 一括作成の間隔の既定（分）
+DEFAULT_INTERVAL = 15
 CONTENT_SECURITY_POLICY = "; ".join(
     (
         "default-src 'self'",
@@ -135,6 +139,14 @@ def create_app(
             version=__version__,
         )
         return templates.TemplateResponse(request, name, context, status_code=status_code)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error(request: Request, exc: StarletteHTTPException) -> Response:
+        # フォームの送信を CSRF・origin の検査で断ったときは、何が起きてどうするかを画面で出す
+        # （画面を開いた後にサーバーが起動し直すと、token が変わって断られる）。htmx は app.js が扱う
+        if exc.status_code == HTTP_FORBIDDEN and not request.headers.get("hx-request"):
+            return render(request, "rejected.html", status_code=HTTP_FORBIDDEN)
+        return await http_exception_handler(request, exc)
 
     @app.middleware("http")
     async def guard(
@@ -222,38 +234,105 @@ def create_app(
         )
         return render(request, "orders.html", error="", **context)
 
+    def _form_context() -> dict[str, Any]:
+        """予約作成と一括作成の画面に共通の選択肢."""
+        return {
+            "today": order_service.today(),
+            "catalog": config.orders.modalities,
+            "departments": config.orders.departments,
+            "character_sets": list(CharacterSet),
+            "character_set_labels": CHARACTER_SET_LABELS,
+            "default_character_set": config.orders.default_character_set,
+            "hours": [f"{hour:02d}" for hour in range(24)],
+        }
+
     @app.get("/orders/new", response_class=HTMLResponse)
     def new_order_page(request: Request) -> HTMLResponse:
-        return _render_form(request, error="", values={})
+        return _render_entry(request, error="", values={})
 
-    def _render_form(
+    def _render_entry(
         request: Request, *, error: str, values: dict[str, Any], status_code: int = 200
     ) -> HTMLResponse:
+        try:
+            roster = order_service.roster_patients()
+            roster_error = ""
+        except ConfigurationError as exc:
+            roster, roster_error = [], f"名簿を読めません（{exc.message}）"
+        modality = values.get("modality", "")
+        if modality not in config.orders.modalities:
+            modality = next(iter(config.orders.modalities))
         return render(
             request,
             "new_order.html",
             status_code=status_code,
             error=error,
             values=values,
-            today=order_service.today(),
-            catalog=config.orders.modalities,
-            departments=config.orders.departments,
-            character_sets=list(CharacterSet),
-            character_set_labels=CHARACTER_SET_LABELS,
-            default_character_set=config.orders.default_character_set,
-            max_orders=MAX_ORDERS_PER_REQUEST,
-            max_interval=MAX_INTERVAL_MINUTES,
+            roster=roster,
+            roster_error=roster_error,
+            modality=modality,
+            entry=config.orders.modalities[modality],
+            minutes=_minutes(config.orders.slot_minutes),
+            **_form_context(),
+        )
+
+    @app.get("/orders/new/exam", response_class=HTMLResponse)
+    def entry_exam_options(request: Request, modality: str = "") -> HTMLResponse:
+        """モダリティを変えたときの、検査名と装置の選択肢（htmx）."""
+        if modality not in config.orders.modalities:
+            raise HTTPException(HTTP_BAD_REQUEST, "Unknown modality")
+        return render(
+            request, "_exam_options.html", entry=config.orders.modalities[modality], values={}
         )
 
     @app.post("/orders")
-    async def create_orders(request: Request) -> Response:
+    async def create_order(request: Request) -> Response:
         form = await request.form()
         values = {key: value for key, value in form.items() if isinstance(value, str)}
         try:
-            order_request = _order_request(values, config, order_service.today())
+            order_request = _entry_request(values, config, order_service.today())
+            order = order_service.create_orders(order_request)[0]
+        except (ValidationError, ConfigurationError) as exc:
+            return _render_entry(
+                request, error=exc.message, values=values, status_code=HTTP_BAD_REQUEST
+            )
+        return RedirectResponse(f"/orders/{order.accession_number}", status_code=HTTP_SEE_OTHER)
+
+    @app.get("/orders/batch", response_class=HTMLResponse)
+    def batch_page(request: Request) -> HTMLResponse:
+        return _render_batch(request, error="", values={})
+
+    def _render_batch(
+        request: Request, *, error: str, values: dict[str, Any], status_code: int = 200
+    ) -> HTMLResponse:
+        interval = _choice(values.get("interval", ""), MINUTE_STEPS, DEFAULT_INTERVAL)
+        return render(
+            request,
+            "batch_order.html",
+            status_code=status_code,
+            error=error,
+            values=values,
+            max_orders=MAX_ORDERS_PER_REQUEST,
+            intervals=MINUTE_STEPS,
+            interval=interval,
+            minutes=_minutes(interval),
+            **_form_context(),
+        )
+
+    @app.get("/orders/batch/minutes", response_class=HTMLResponse)
+    def batch_minutes(request: Request, interval: str = "", minute: str = "") -> HTMLResponse:
+        """間隔を変えたときの、開始時刻の分の選択肢（htmx）。今の分が新しい間隔に合えば残す."""
+        step = _choice(interval, MINUTE_STEPS, DEFAULT_INTERVAL)
+        return render(request, "_minute_select.html", minutes=_minutes(step), selected=minute)
+
+    @app.post("/orders/batch")
+    async def create_batch(request: Request) -> Response:
+        form = await request.form()
+        values = {key: value for key, value in form.items() if isinstance(value, str)}
+        try:
+            order_request = _batch_request(values, config, order_service.today())
             orders = order_service.create_orders(order_request)
         except (ValidationError, ConfigurationError) as exc:
-            return _render_form(
+            return _render_batch(
                 request, error=exc.message, values=values, status_code=HTTP_BAD_REQUEST
             )
         day = date_param(orders[0].scheduled_date) if orders else ""
@@ -388,8 +467,81 @@ def _get_order(service: OrderService, accession_number: str):  # noqa: ANN202
         raise HTTPException(HTTP_NOT_FOUND, "Order not found") from exc
 
 
-def _order_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:
-    """画面のフォームの値を OrderRequest にする。誤りは ValidationError."""
+def _minutes(step: int) -> list[str]:
+    """分の選択肢（00 から `step` 分ごと）."""
+    return [f"{minute:02d}" for minute in range(0, 60, step)]
+
+
+def _choice(text: str, choices: tuple[int, ...], default: int) -> int:
+    """選択肢の数（`text` が選択肢に無ければ既定値）."""
+    return int(text) if text.isascii() and text.isdigit() and int(text) in choices else default
+
+
+def _form_date(values: dict[str, str], today: date) -> date:
+    try:
+        return parse_date_option(values.get("date", "").strip(), today)
+    except ValidationError as exc:
+        # parse_date_option の文は CLI の書き方（today・tomorrow）なので、画面の書き方で言い直す
+        raise ValidationError("予定日は YYYY-MM-DD の日付で指定してください") from exc
+
+
+def _form_time(values: dict[str, str], step: int, label: str) -> time:
+    """時と分の選択肢の値を時刻にする。分は `step` 分ごとだけを受ける."""
+    hour, minute = values.get("hour", "").strip(), values.get("minute", "").strip()
+    if not (re.fullmatch(r"[0-9]{2}", hour) and re.fullmatch(r"[0-9]{2}", minute)):
+        raise ValidationError(f"{label}の時と分を選んでください")
+    if int(hour) > 23 or int(minute) > 59:  # noqa: PLR2004 - 時刻の範囲
+        raise ValidationError(f"{label}の時と分を選び直してください")
+    if int(minute) % step:
+        raise ValidationError(f"{label}の分は {step} 分ごとにしてください")
+    return time(int(hour), int(minute))
+
+
+def _form_character_set(values: dict[str, str]) -> CharacterSet | None:
+    charset = values.get("charset", "")
+    try:
+        return CharacterSet(charset) if charset else None
+    except ValueError as exc:
+        raise ValidationError("文字コードを選び直してください") from exc
+
+
+def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:
+    """予約作成（1件）のフォームの値を OrderRequest にする。誤りは ValidationError."""
+    patient = values.get("patient", "")
+    roster_patient_id = values.get("roster_patient_id", "").strip()
+    if patient == "roster":
+        if not roster_patient_id:
+            raise ValidationError("名簿の患者を選んでください")
+    elif patient != "new":
+        raise ValidationError("患者を、名簿から選ぶか新規にするかを選んでください")
+    modality = values.get("modality", "")
+    if modality not in config.orders.modalities:
+        raise ValidationError("モダリティを選び直してください")
+    procedure = values.get("procedure", "").strip()
+    if not procedure:
+        raise ValidationError("検査名を選んでください")
+    station = values.get("station", "").strip()
+    if not station:
+        raise ValidationError("装置を選んでください")
+    department = values.get("department", "").strip()
+    if department not in config.orders.departments:
+        raise ValidationError("依頼科を選んでください")
+    return OrderRequest(
+        counts={modality: 1},
+        scheduled_date=_form_date(values, today),
+        start_time=_form_time(values, config.orders.slot_minutes, "予定時刻"),
+        interval_minutes=0,
+        patient_source="roster" if patient == "roster" else "random",
+        roster_patient_id=roster_patient_id if patient == "roster" else None,
+        procedure_code=procedure,
+        character_set=_form_character_set(values),
+        stations={modality: station},
+        department=department,
+    )
+
+
+def _batch_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:
+    """一括作成のフォームの値を OrderRequest にする。誤りは ValidationError."""
     counts: dict[str, int] = {}
     for modality in config.orders.modalities:
         text = values.get(f"count_{modality}", "").strip()
@@ -405,39 +557,25 @@ def _order_request(values: dict[str, str], config: AppConfig, today: date) -> Or
             counts[modality] = count
     if not counts:
         raise ValidationError("どれかのモダリティに 1 以上の件数を入れてください")
-    interval_text = values.get("interval", "15").strip() or "15"
-    try:
-        interval = int(interval_text)
-    except ValueError as exc:
-        raise ValidationError("間隔が数ではありません") from exc
-    if not 0 <= interval <= MAX_INTERVAL_MINUTES:
-        raise ValidationError(f"間隔は 0〜{MAX_INTERVAL_MINUTES} 分にしてください")
-    seed_text = values.get("seed", "").strip()
-    try:
-        seed = int(seed_text) if seed_text else None
-    except ValueError as exc:
-        raise ValidationError("シードが数ではありません") from exc
+    interval_text = values.get("interval", "").strip()
+    if not (interval_text.isascii() and interval_text.isdigit() and int(interval_text) in MINUTE_STEPS):
+        raise ValidationError(f"間隔は {'・'.join(map(str, MINUTE_STEPS))} 分から選んでください")
+    interval = int(interval_text)
     patients = values.get("patients", "random")
     if patients not in ("random", "roster"):
-        raise ValidationError("患者は乱数か名簿を選んでください")
-    charset = values.get("charset", "")
-    try:
-        character_set = CharacterSet(charset) if charset else None
-    except ValueError as exc:
-        raise ValidationError("文字コードを選び直してください") from exc
+        raise ValidationError("患者は新規（架空）か名簿から無作為にを選んでください")
     return OrderRequest(
         counts=counts,
-        scheduled_date=parse_date_option(values.get("date", "").strip(), today),
-        start_time=parse_time_option(values.get("start", "09:00").strip() or "09:00"),
+        scheduled_date=_form_date(values, today),
+        start_time=_form_time(values, interval, "開始時刻"),
         interval_minutes=interval,
         patient_source=patients,  # type: ignore[arg-type]
-        character_set=character_set,
-        # 件数を入れたモダリティの装置だけを使う。空は「順に使う」
+        character_set=_form_character_set(values),
+        # 件数を入れたモダリティの装置だけを使う。空は「全装置に振り分け」
         stations={
             modality: name
             for modality in counts
             if (name := values.get(f"station_{modality}", "").strip())
         },
         department=values.get("department", "").strip() or None,
-        seed=seed,
     )

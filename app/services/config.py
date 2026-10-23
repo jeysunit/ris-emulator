@@ -37,6 +37,8 @@ ISSUER_PATTERN = re.compile(r"[A-Za-z0-9_]{1,16}")
 WEB_BIND_ENV = "RIS_WEB_BIND_ADDRESS"
 MWL_BIND_ENV = "RIS_MWL_BIND_ADDRESS"
 RetakeMode = Literal["append", "new_order"]
+# 画面の時刻の刻み（予約枠の刻みと一括作成の間隔）。60 を割り切る値だけにして、時ごとに分の並びを変えない
+MINUTE_STEPS = (1, 5, 10, 15, 20, 30, 60)
 
 
 class MwlConfig(BaseModel):
@@ -137,6 +139,15 @@ class OrdersConfig(BaseModel):
     # 撮り直しの扱い（docs/spec/01_orders.md 7 章、ADR-0008）。append は IHE の Append Case で
     # RIS は何もしない。new_order は撮り直しの予約を作る（施設のローカルルール）
     retake_mode: RetakeMode = "append"
+    # 予約作成の画面の予定時刻の分の刻み（予約枠の刻み）。MINUTE_STEPS のどれか
+    slot_minutes: int = 15
+
+    @field_validator("slot_minutes")
+    @classmethod
+    def _check_slot_minutes(cls, value: int) -> int:
+        if value not in MINUTE_STEPS:
+            raise ValueError(f"slot_minutes must be one of {', '.join(map(str, MINUTE_STEPS))}")
+        return value
 
     @field_validator("accession_prefix", "patient_id_prefix")
     @classmethod
