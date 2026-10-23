@@ -7,14 +7,15 @@
   <title>{% block title %}{% endblock %} - ris-emulator</title>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
 </head>
 <body hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'>
   <header class="site-header">
     <div class="wrap header-row">
-      <a href="/orders" class="brand">ris-emulator</a>
+      <p class="brand-row"><a href="/orders" class="brand">ris-emulator</a> <span class="version">{{ version }}</span></p>
       <nav class="nav" aria-label="ページ">
-        <a href="/orders" class="nav-link">予約の一覧</a>
-        <a href="/orders/new" class="nav-link">予約を作る</a>
+        <a href="/orders" class="nav-link">予約一覧</a>
+        <a href="/orders/new" class="nav-link">予約作成</a>
       </nav>
       <p class="mwl-state">
         MWL：{{ mwl_config.ae_title }}
@@ -27,8 +28,8 @@
     </div>
   </header>
   <main class="wrap">
+    <p id="request-error" class="error" role="alert" hidden></p>
     {% block content %}{% endblock %}
   </main>
-  <footer class="wrap footer">ris-emulator {{ version }}・開発・試験用（本物の患者のデータは入れない）</footer>
 </body>
 </html>

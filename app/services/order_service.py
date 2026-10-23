@@ -336,8 +336,27 @@ class OrderService:
         date_to: str = "",
         statuses: list[OrderStatus] | None = None,
         modality: str = "",
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Order]:
         return self.store.list_orders(
+            date_from=date_from,
+            date_to=date_to,
+            statuses=statuses,
+            modality=modality,
+            limit=limit,
+            offset=offset,
+        )
+
+    def count_orders(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        statuses: list[OrderStatus] | None = None,
+        modality: str = "",
+    ) -> int:
+        return self.store.count_orders(
             date_from=date_from, date_to=date_to, statuses=statuses, modality=modality
         )
 

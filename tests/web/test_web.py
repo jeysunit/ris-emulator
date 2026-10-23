@@ -77,7 +77,7 @@ def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) 
     with _client(config, service) as client:
         listing = client.get("/orders?date=2026-10-21").text
         detail = client.get(f"/orders/{order.accession_number}").text
-    headers = re.findall(r"<th>([^<]+)</th>", listing.split("<tbody>")[0])
+    headers = re.findall(r"<th[^>]*>([^<]+)</th>", listing.split("<tbody>")[0])
     assert headers == [
         "予定日時", "受付番号", "患者 ID", "患者氏名", "生年月日・性別",
         "モダリティ", "検査名", "依頼科", "装置", "状態",
@@ -145,7 +145,7 @@ def test_create_from_form(config: AppConfig, service: OrderService) -> None:
             follow_redirects=False,
         )
     assert response.status_code == 303
-    assert response.headers["location"] == "/orders?date=2026-10-21"
+    assert response.headers["location"] == "/orders?date_from=2026-10-21"
     assert "順に使う" in page.text and "CT1号機（CT01）" in page.text
     assert 'name="station_ae"' not in page.text
     orders = service.list_orders()

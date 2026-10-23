@@ -228,30 +228,39 @@ class OrderStore:
         date_to: str = "",
         statuses: list[OrderStatus] | None = None,
         modality: str = "",
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Order]:
-        """予約を予定の日時の順に返す。空の条件は絞らない."""
-        clauses: list[str] = []
-        params: list[str] = []
-        if date_from:
-            clauses.append("scheduled_date >= ?")
-            params.append(date_from)
-        if date_to:
-            clauses.append("scheduled_date <= ?")
-            params.append(date_to)
-        if statuses:
-            clauses.append(f"status IN ({', '.join('?' for _ in statuses)})")
-            params.extend(status.value for status in statuses)
-        if modality:
-            clauses.append("modality = ?")
-            params.append(modality)
-        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        """予約を予定の日時の順に返す。空の条件は絞らない。`limit` があれば `offset` 件目から切る."""
+        where, params = _order_filter(date_from, date_to, statuses, modality)
+        page = ""
+        if limit is not None:
+            page = " LIMIT ? OFFSET ?"
+            params += [limit, offset]
         with self._connect() as conn:
             rows = conn.execute(
                 f"SELECT body FROM orders {where} "  # noqa: S608 - 列名と ? だけを組む
-                "ORDER BY scheduled_date, scheduled_time, id",
+                f"ORDER BY scheduled_date, scheduled_time, id{page}",
                 params,
             ).fetchall()
         return [Order.model_validate_json(row[0]) for row in rows]
+
+    def count_orders(
+        self,
+        *,
+        date_from: str = "",
+        date_to: str = "",
+        statuses: list[OrderStatus] | None = None,
+        modality: str = "",
+    ) -> int:
+        """`list_orders` と同じ条件に合う予約の件数."""
+        where, params = _order_filter(date_from, date_to, statuses, modality)
+        with self._connect() as conn:
+            row = conn.execute(
+                f"SELECT COUNT(*) FROM orders {where}",  # noqa: S608 - 列名と ? だけを組む
+                params,
+            ).fetchone()
+        return int(row[0])
 
     def set_status(self, accession_number: str, status: OrderStatus) -> Order:
         with self._connect() as conn:
@@ -395,6 +404,27 @@ class OrderStore:
             )
             for row in rows
         ]
+
+
+def _order_filter(
+    date_from: str, date_to: str, statuses: list[OrderStatus] | None, modality: str
+) -> tuple[str, list[str | int]]:
+    """一覧の条件の WHERE 句と値。空の条件は絞らない."""
+    clauses: list[str] = []
+    params: list[str | int] = []
+    if date_from:
+        clauses.append("scheduled_date >= ?")
+        params.append(date_from)
+    if date_to:
+        clauses.append("scheduled_date <= ?")
+        params.append(date_to)
+    if statuses:
+        clauses.append(f"status IN ({', '.join('?' for _ in statuses)})")
+        params.extend(status.value for status in statuses)
+    if modality:
+        clauses.append("modality = ?")
+        params.append(modality)
+    return (f"WHERE {' AND '.join(clauses)}" if clauses else ""), params
 
 
 def _insert_order(conn: sqlite3.Connection, order: Order) -> None:

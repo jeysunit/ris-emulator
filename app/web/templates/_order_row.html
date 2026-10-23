@@ -8,11 +8,12 @@
   <td>{{ order.procedure.name }}</td>
   <td>{{ order.requesting_service }}</td>
   <td>{% if order.scheduled_station_label %}{{ order.scheduled_station_label }}<br><span class="muted mono">{{ order.scheduled_station_ae_title }}</span>{% else %}<span class="mono">{{ order.scheduled_station_ae_title }}</span>{% endif %}</td>
-  <td>
+  <td class="col-status">
     {% if is_final(order.status) %}
     {{ status_labels[order.status] }}
     {% else %}
     <select name="status" aria-label="{{ order.accession_number }} の状態"
+            data-current="{{ order.status.value }}" hx-disabled-elt="this"
             hx-post="/orders/{{ order.accession_number }}/status"
             hx-target="#order-{{ order.accession_number }}" hx-swap="outerHTML">
       {% for s in selectable_statuses(order.status) %}

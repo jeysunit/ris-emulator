@@ -69,5 +69,5 @@
 {% endif %}
 <h2>MWL の属性</h2>
 <pre class="dataset">{{ dataset }}</pre>
-<p><a href="/orders?date={{ order.scheduled_date | date_param }}">予約の一覧へ</a></p>
+<p><a href="/orders?date_from={{ order.scheduled_date | date_param }}">予約一覧へ</a></p>
 {% endblock %}
