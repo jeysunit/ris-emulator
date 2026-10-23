@@ -259,4 +259,11 @@ def test_entry_station_default_is_first(config: AppConfig, store: OrderStore) ->
 def test_submit_buttons_are_guarded(config: AppConfig, service: OrderService) -> None:
     with _client(config, service) as client:
         script = client.get("/static/app.js").text
+        listing = client.get("/orders").text
     assert 'addEventListener("submit"' in script and "disabled = true" in script
+    # htmx の要求が 401 なら読み直して、ブラウザに認証を求めさせる
+    assert "status === 401" in script and "location.reload()" in script
+    # 一覧の主の操作（表示）を、ほかのボタン（前日・本日・翌日）と見分けられるようにする
+    assert '<button type="submit" class="btn btn-primary">表示</button>' in listing
+    # 0件の文と予約作成のリンクを分ける
+    assert '<p class="empty">条件に合う予約はありません。</p>' in listing
