@@ -15,7 +15,7 @@ from app.services.order_service import OrderRequest, OrderService
 from app.services.store import OrderStore
 from app.web.app import create_app
 from app.web.auth import PASSWORD_FILE_ENV, WebStartupError, startup_password
-from tests.conftest import TODAY, new_order_service
+from tests.conftest import TODAY, add_unscheduled_mpps, new_order_service
 
 ORIGIN = "http://127.0.0.1:8081"
 
@@ -61,9 +61,9 @@ def test_station_name_is_shown(config: AppConfig, service: OrderService) -> None
 
 # 用語の表（openspec/specs/screen-terms/spec.md）の、DICOM の属性の日本語の名前
 SCREEN_TERMS = {
-    "受付番号", "患者 ID", "患者氏名", "生年月日", "性別", "依頼科", "依頼医", "紹介医", "施設名",
+    "受付番号", "患者ID", "氏名", "生年月日", "性別", "依頼科", "依頼医", "紹介医", "施設名",
     "モダリティ", "検査名", "優先度", "文字コード",
-    "実施予定医", "予定の AE タイトル", "予定の装置名", "予定日時",
+    "実施予定医", "予定の AEタイトル", "予定の装置名", "予定日時",
 }  # fmt: skip
 # DICOM の属性名の訳ではない見出し（予約の状態、装置の台帳の名前、撮り直しの関係）と、英語のままの属性名
 OTHER_HEADINGS = {
@@ -79,17 +79,51 @@ def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) 
         detail = client.get(f"/orders/{order.accession_number}").text
     headers = re.findall(r"<th[^>]*>([^<]+)</th>", listing.split("<tbody>")[0])
     assert headers == [
-        "予定日時", "受付番号", "患者 ID", "患者氏名", "生年月日・性別",
+        "予定日時", "受付番号", "患者ID", "氏名", "生年月日・性別",
         "モダリティ", "検査名", "依頼科", "装置", "状態",
     ]  # fmt: skip
     for header in headers:
         assert all(part in SCREEN_TERMS | OTHER_HEADINGS for part in header.split("・")), header
     items = re.findall(r"<dt>([^<]+)</dt>", detail)
-    assert {"予定日時", "モダリティ", "予定の AE タイトル", "予定の装置名", "検査名", "依頼科",
-            "患者 ID", "患者氏名", "文字コード"} <= set(items)  # fmt: skip
+    assert {"予定日時", "モダリティ", "予定の AEタイトル", "予定の装置名", "検査名", "依頼科",
+            "患者ID", "氏名", "文字コード"} <= set(items)  # fmt: skip
     assert set(items) <= SCREEN_TERMS | OTHER_HEADINGS
     # 紹介医の訳を Requesting Physician に使わない
     assert "紹介医" not in listing and "紹介医" not in detail
+
+
+# 画面の言葉の決まりで外した言い方（openspec/specs/screen-terms/spec.md の「語の使い分け」）
+RETIRED_WORDS = ("患者 ID", "患者氏名", "AE タイトル", "頁", "既定", "送り先")
+
+
+def test_pages_avoid_retired_words(config: AppConfig, service: OrderService) -> None:
+    # 150 件で、1 ページ目に「次のページ」、2 ページ目に「前のページ」が出る
+    order = service.create_orders(
+        OrderRequest(counts={"CT": 150}, scheduled_date=TODAY, interval_minutes=1, seed=1)
+    )[0]
+    sop_uid, _ = add_unscheduled_mpps(service.store)
+    paths = [
+        "/orders",
+        "/orders?page=2",
+        f"/orders/{order.accession_number}",
+        "/orders/new",
+        "/orders/batch",
+        "/reconciliation",
+        f"/reconciliation/{sop_uid}",
+    ]
+    shown = {}
+    with _client(config, service) as client:
+        for path in paths:
+            response = client.get(path)
+            assert response.status_code == 200, path
+            shown[path] = response.text
+            text = html.unescape(re.sub(r"<[^>]+>", " ", response.text))
+            attributes = " ".join(re.findall(r'(?:aria-label|title|placeholder)="([^"]*)"', response.text))
+            for word in RETIRED_WORDS:
+                assert word not in text + attributes, f"{path}: {word}"
+    # 検査した画面に、ページ送りと未照合の一覧が出ている
+    assert "次のページ" in shown["/orders"] and "前のページ" in shown["/orders?page=2"]
+    assert sop_uid in shown["/reconciliation"]
 
 
 def test_root_redirects(config: AppConfig, service: OrderService) -> None:

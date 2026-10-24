@@ -106,9 +106,9 @@ def test_mpps_set_after_reconcile_reaches_the_order(config: AppConfig, store: Or
 @pytest.mark.parametrize(
     ("official", "expected"),
     [
-        # 患者 ID が同じで氏名が違う：属性の更新
+        # 患者ID が同じで氏名が違う：属性の更新
         (OFFICIAL.model_copy(update={"patient_id": "ER2026102400"}), ["ADT^A08", "ORM^O01"]),
-        # 患者 ID も氏名・生年月日・性別も同じ：予約の知らせだけ
+        # 患者ID も氏名・生年月日・性別も同じ：予約の知らせだけ
         (
             Patient(
                 patient_id="ER2026102400",
@@ -214,8 +214,8 @@ def test_modality_not_in_config_is_refused(config: AppConfig, store: OrderStore)
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [
-        ({"patient_id": ""}, "仮の患者 ID"),
-        ({"patient_id": "ER^1"}, "仮の患者 ID"),
+        ({"patient_id": ""}, "仮の患者ID"),
+        ({"patient_id": "ER^1"}, "仮の患者ID"),
     ],
 )
 def test_mpps_that_cannot_be_reconciled_says_why(
@@ -272,7 +272,7 @@ def test_default_procedure_and_department(config: AppConfig, store: OrderStore) 
         result = _service(config, store, receiver.port).reconcile(ReconcileRequest(sop_uid, OFFICIAL))
     order = store.get(result.accession_number)
     assert (order.procedure.code, order.requesting_service, order.priority) == ("CT0001", "救急科", "STAT")
-    # 台帳に無い AE タイトルは、撮影が名乗った値のまま持つ（装置の名前は付かない）
+    # 台帳に無い AEタイトルは、撮影が名乗った値のまま持つ（装置の名前は付かない）
     assert (order.scheduled_station_label, order.scheduled_station_ae_title) == ("", "DTG_CT01")
 
 

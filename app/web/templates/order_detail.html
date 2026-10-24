@@ -12,12 +12,12 @@
   {% if order.scheduled_station_label %}
   <dt>装置</dt><dd>{{ order.scheduled_station_label }}</dd>
   {% endif %}
-  <dt>予定の AE タイトル</dt><dd class="mono">{{ order.scheduled_station_ae_title }}</dd>
+  <dt>予定の AEタイトル</dt><dd class="mono">{{ order.scheduled_station_ae_title }}</dd>
   <dt>予定の装置名</dt><dd class="mono">{{ order.scheduled_station_name }}</dd>
   <dt>検査名</dt><dd>{{ order.procedure.name }}（{{ order.procedure.code }}）</dd>
   <dt>依頼科</dt><dd>{{ order.requesting_service }}</dd>
-  <dt>患者 ID</dt><dd class="mono">{{ order.patient.patient_id }}</dd>
-  <dt>患者氏名</dt><dd class="mono">{{ order.patient.name.to_dicom() }}</dd>
+  <dt>患者ID</dt><dd class="mono">{{ order.patient.patient_id }}</dd>
+  <dt>氏名</dt><dd class="mono">{{ order.patient.name.to_dicom() }}</dd>
   <dt>Requested Procedure ID</dt><dd class="mono">{{ order.requested_procedure_id }}</dd>
   <dt>Scheduled Procedure Step ID</dt><dd class="mono">{{ order.scheduled_procedure_step_id }}</dd>
   <dt>Study Instance UID</dt><dd class="mono">{{ order.study_instance_uid }}</dd>
@@ -29,8 +29,8 @@
   <dt>撮り直し</dt><dd class="mono">{% for r in retakes %}<a href="/orders/{{ r.accession_number }}">{{ r.accession_number }}</a>{% if not loop.last %} {% endif %}{% endfor %}</dd>
   {% endif %}
   {% if reconciliation %}
-  <dt>照合前の患者 ID</dt><dd class="mono">{{ reconciliation.temporary.patient_id }}</dd>
-  <dt>照合前の患者氏名</dt><dd class="mono">{{ temporary_name }}</dd>
+  <dt>照合前の患者ID</dt><dd class="mono">{{ reconciliation.temporary.patient_id }}</dd>
+  <dt>照合前の氏名</dt><dd class="mono">{{ temporary_name }}</dd>
   {% endif %}
 </dl>
 {% if not is_final(order.status) %}

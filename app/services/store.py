@@ -28,7 +28,7 @@ from app.core.exceptions import (
 from app.core.models import STATUS_LABELS, Order, OrderStatus, can_transition
 
 BUSY_TIMEOUT_SECONDS = 10.0
-# (連番, 患者 ID の有無を引く関数) → 保存する予約
+# (連番, 患者ID の有無を引く関数) → 保存する予約
 OrderBuilder = Callable[[list[int], Callable[[str], bool]], list[Order]]
 # (連番, 元の予約) → 撮り直しの予約
 RetakeBuilder = Callable[[int, Order], Order]
@@ -159,7 +159,7 @@ class OrderStore:
 
         連番の取得・予約の組み立て・保存を1つのトランザクションで行う。`build` が
         例外を出せば何も残さない（連番に欠番を作らない）。`build` には連番と、
-        同じトランザクションで患者 ID の有無を引く関数を渡す。
+        同じトランザクションで患者ID の有無を引く関数を渡す。
         """
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")

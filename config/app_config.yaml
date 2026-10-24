@@ -15,7 +15,7 @@ mwl:
 orders:
   institution_name: "TEST HOSPITAL"
   accession_prefix: "RE"          # 受付番号 = 接頭辞 + 作った日 + 4 桁の連番
-  patient_id_prefix: "RE"         # 乱数の患者 ID = 接頭辞 + 7 桁
+  patient_id_prefix: "RE"         # 乱数の患者ID = 接頭辞 + 7 桁
   issuer_namespace: "RIS_EMU"     # Issuer of Patient ID・Issuer of Accession Number Sequence。空なら返さない
   default_character_set: "utf8"   # utf8, jis, jis_kana
   roster_path: "data/patients_sample.yaml"
@@ -23,7 +23,7 @@ orders:
   retake_mode: "append"           # 撮り直し：append（同じ予約の中で追加。IHE）、new_order（撮り直しの予約を作る）
   slot_minutes: 15                # 予約作成の画面の予定時刻の分の刻み：1, 5, 10, 15, 20, 30, 60
   # stations は装置の台帳。name は画面と CLI で選ぶ名前（MWL には入れない）、
-  # ae_title は Scheduled Station AE Title（モダリティの側の AE タイトルとそろえる。16 字まで）、
+  # ae_title は Scheduled Station AE Title（モダリティの側の AEタイトルとそろえる。16 字まで）、
   # station_name は Scheduled Station Name（16 字まで）。予約で装置を選ばなければ、台帳の順に使う
   modalities:
     CT:

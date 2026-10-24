@@ -1,6 +1,6 @@
 # 07. 照合（Reconciliation）
 
-予約の無い撮影（緊急の飛び込みなど）は、モダリティが仮の患者 ID と氏名で撮影し、
+予約の無い撮影（緊急の飛び込みなど）は、モダリティが仮の患者ID と氏名で撮影し、
 MPPS だけが記録される（[05_mpps_scp.md](05_mpps_scp.md) の 2 章）。照合は、その撮影に
 正式な患者と新しい予約を結び、結果を HL7 v2.3.1 で PACS に知らせる。PACS 側の
 PIR（Patient Information Reconciliation）への対応を試す相手にするための機能で、
@@ -20,7 +20,7 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 
 | 値 | 読み取り元 |
 |----|------------|
-| 仮の患者 ID・氏名・生年月日・性別 | Patient ID (0010,0020)・Patient's Name (0010,0010)・Patient's Birth Date (0010,0030)・Patient's Sex (0010,0040) |
+| 仮の患者ID・氏名・生年月日・性別 | Patient ID (0010,0020)・Patient's Name (0010,0010)・Patient's Birth Date (0010,0030)・Patient's Sex (0010,0040) |
 | Study Instance UID | Scheduled Step Attributes Sequence (0040,0270) の項目のうち、最初の空でない Study Instance UID (0020,000D) |
 | モダリティ | Modality (0008,0060) |
 | 装置 | Performed Station AE Title (0040,0241)・Performed Station Name (0040,0242) |
@@ -28,7 +28,7 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 
 読めない値は空として扱う。生年月日と開始日時は、`YYYYMMDD`・`HHMMSS`
 （秒の小数は捨てる）の形のときだけ使う。性別は `M`・`F`・`O` のときだけ使う。
-装置の AE タイトルは AE の規則（[01_orders.md](01_orders.md) の台帳の `ae_title`）に
+装置の AEタイトルは AE の規則（[01_orders.md](01_orders.md) の台帳の `ae_title`）に
 合うときだけ使う。`\` で区切られた複数の値を持つ属性は、空として扱う。
 
 次のときは照合できない。一覧には出し、画面と CLI は理由を示す。
@@ -36,8 +36,8 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 | 理由 | 条件 |
 |------|------|
 | Study Instance UID が無い | Scheduled Step Attributes Sequence に空でない値が無い |
-| 仮の患者 ID が無い | Patient ID が空 |
-| 仮の患者 ID を HL7 に入れられない | 患者 ID の規則（[04_identifiers.md](04_identifiers.md)）に合わない |
+| 仮の患者ID が無い | Patient ID が空 |
+| 仮の患者ID を HL7 に入れられない | 患者ID の規則（[04_identifiers.md](04_identifiers.md)）に合わない |
 | 氏名を読めない | コンポーネントグループが 64 字を超えるなど |
 | モダリティが設定に無い | `orders.modalities` に Modality が無い（確定のときに断る） |
 
@@ -47,7 +47,7 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 
 | 項目 | 内容 |
 |------|------|
-| 正式な患者 | 名簿の患者を選ぶか、患者 ID・氏名（英字・漢字・かな）・生年月日・性別を入力する |
+| 正式な患者 | 名簿の患者を選ぶか、患者ID・氏名（英字・漢字・かな）・生年月日・性別を入力する |
 | 検査名 | MPPS のモダリティの `procedures` から選ぶ。省略するとその先頭 |
 | 依頼科 | `departments` から選ぶ（CLI は任意の LO）。省略すると「救急科」（無ければ先頭） |
 
@@ -61,7 +61,7 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 | Study Instance UID | **MPPS の値のまま。新しく発番しない**（PIR では Study Instance UID が撮影・画像・HL7 を結ぶ鍵になる。[ADR-0004](../decisions/0004-ris-issues-study-instance-uid.md) の例外） |
 | 患者 | 正式な患者 |
 | モダリティ | MPPS の Modality |
-| 予定の AE タイトル・装置名・装置 | MPPS の Performed Station AE Title が台帳にあれば、その台帳の装置。台帳に無ければ MPPS の値（装置の名前は空）。MPPS に無ければ台帳の先頭 |
+| 予定の AEタイトル・装置名・装置 | MPPS の Performed Station AE Title が台帳にあれば、その台帳の装置。台帳に無ければ MPPS の値（装置の名前は空）。MPPS に無ければ台帳の先頭 |
 | 予定日時 | MPPS の開始日時。読めなければ、照合した日時 |
 | 優先度 | `STAT`（予約の無い撮影は緊急の飛び込みとして扱う） |
 | 状態 | MPPS の状態に合わせる：`IN PROGRESS`=実施中、`COMPLETED`=完了、`DISCONTINUED`=中止 |
@@ -70,7 +70,7 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 予約の作成、MPPS の結び付け（記録の受付番号に新しい予約を足す）、照合の記録、
 送る HL7 の組み立てを、1 つのトランザクションで行う。仮の患者の値と、送る HL7 の種類は、
 トランザクションの中で読み直した MPPS から決める（確定の直前に N-SET が患者の値を変えても、
-旧い患者 ID と送る種類が予約と食い違わない）。どこかで誤りがあれば何も残さず、連番も
+旧い患者ID と送る種類が予約と食い違わない）。どこかで誤りがあれば何も残さず、連番も
 使わない。
 
 結び付けた後に届く N-SET は、新しい予約の状態を [05_mpps_scp.md](05_mpps_scp.md) の
@@ -90,8 +90,8 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 
 | 条件 | 送るもの（この順） |
 |------|--------------------|
-| 正式な患者 ID が仮の患者 ID と違う | ADT^A40（PID が正式な患者、MRG-1 が仮の患者 ID、MRG-7 が仮の氏名）、ORM^O01（NW） |
-| 患者 ID が同じで、氏名・生年月日・性別のどれかが違う | ADT^A08、ORM^O01（NW） |
+| 正式な患者ID が仮の患者ID と違う | ADT^A40（PID が正式な患者、MRG-1 が仮の患者ID、MRG-7 が仮の氏名）、ORM^O01（NW） |
+| 患者ID が同じで、氏名・生年月日・性別のどれかが違う | ADT^A08、ORM^O01（NW） |
 | すべて同じ | ORM^O01（NW）だけ |
 
 - 患者区分（PV1-2）は `E`（救急）。A08 と ORM の来院番号（PV1-19）は受付番号
@@ -128,16 +128,16 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 
 | パス | 内容 |
 |------|------|
-| `/reconciliation` | 未照合の撮影の一覧：受けた日時・状態（MPPS）・患者 ID・患者氏名・生年月日・性別・モダリティ・予定の AE タイトル・Study Instance UID。行ごとの「照合」で次の画面へ。無いときは「未照合の撮影はありません。」 |
+| `/reconciliation` | 未照合の撮影の一覧：受けた日時・状態（MPPS）・患者ID・氏名・生年月日・性別・モダリティ・予定の AEタイトル・Study Instance UID。行ごとの「照合」で次の画面へ。無いときは「未照合の撮影はありません。」 |
 | `/reconciliation/<SOP Instance UID>` | 照合：撮影の値と、正式な患者（名簿から選ぶ・入力する）・検査（検査名・依頼科）のフォーム。「照合・送信」で確定し、予約の詳細へ進む。誤りは同じ画面に示し、入力を残す。照合済みなら予約へのリンクを出す。照合できない撮影は理由を出し、フォームを出さない |
 | `/orders/<受付番号>/hl7/resend` | POST。再送信（4.2）して予約の詳細へ戻る |
 
 - ナビに「未照合」を足す
-- 照合で作った予約の詳細に、「照合前の患者 ID」「照合前の患者氏名」と、表「HL7 送信」
+- 照合で作った予約の詳細に、「照合前の患者ID」「照合前の氏名」と、表「HL7 送信」
   （メッセージ・状態・ACK・詳細・送信日時・回数）を出す。受理されていない通があれば
   「再送信」のボタンを出す。照合で作っていない予約には出さない
 - 画面の名前は [openspec の screen-terms](../../openspec/specs/screen-terms/spec.md) に従い、
-  「患者 ID」「患者氏名」を使う。画面に説明の文は置かない
+  「患者ID」「氏名」を使う。画面に説明の文は置かない
 - 書き込み（POST）は [03_web_cli.md](03_web_cli.md) の 3.3 の CSRF・origin の検査を受ける
 
 ## 6. CLI

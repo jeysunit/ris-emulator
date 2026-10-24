@@ -1,4 +1,4 @@
-"""一覧の頁と件数（OrderStore.list_orders の limit・offset と count_orders）."""
+"""一覧のページと件数（OrderStore.list_orders の limit・offset と count_orders）."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def test_limit_offset_and_count(service: OrderService) -> None:
     )
     everything = service.list_orders()
     assert service.count_orders() == len(everything) == 8
-    # 頁に切っても、並びは全件の並びと同じ
+    # ページに切っても、並びは全件の並びと同じ
     pages = [service.list_orders(limit=3, offset=offset) for offset in (0, 3, 6)]
     assert [len(page) for page in pages] == [3, 3, 2]
     assert [o.accession_number for page in pages for o in page] == [

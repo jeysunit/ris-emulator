@@ -10,17 +10,17 @@ ADT^A40・ADT^A08・ORM^O01 を組み立て、MLLP で設定した宛先へ送�
 ### Requirement: ADT^A40 は正式の患者を PID に、旧い患者を MRG に入れる
 
 統合のメッセージは ADT^A40^ADT_A39 とし、MSH・EVN・PID・MRG を持たなければならない
-（SHALL）。PID-3 に正式な患者 ID、MRG-1 に旧い患者 ID を入れる。旧い患者 ID が空か、
-正式な患者 ID と同じなら、組み立てずに断る（IHE RAD TF-2 4.12.4.4）。
+（SHALL）。PID-3 に正式な患者ID、MRG-1 に旧い患者ID を入れる。旧い患者ID が空か、
+正式な患者ID と同じなら、組み立てずに断る（IHE RAD TF-2 4.12.4.4）。
 
 #### Scenario: 仮 ID を正式な ID に統合する
 
-- **WHEN** 患者 ID `P000001`、旧い患者 ID `ER0001` で A40 を組み立てる
+- **WHEN** 患者ID `P000001`、旧い患者ID `ER0001` で A40 を組み立てる
 - **THEN** PID-3 は `P000001^^^RIS_EMU^PI`、MRG-1 は `ER0001^^^RIS_EMU^PI` で、MSH-9 は `ADT^A40^ADT_A39`、EVN-1 は `A40` になる
 
 #### Scenario: 旧い ID が正式な ID と同じ
 
-- **WHEN** 旧い患者 ID を正式な患者 ID と同じにして A40 を組み立てる
+- **WHEN** 旧い患者ID を正式な患者ID と同じにして A40 を組み立てる
 - **THEN** 入力の誤りで断り、属性の更新は A08 を使うよう示す
 
 ### Requirement: ADT^A08 は患者の属性を送り、来院番号か患者アカウント番号を持つ
@@ -78,9 +78,9 @@ MSH-18 に `UNICODE UTF-8` を入れ、ASCII だけなら MSH-18 を空にする
 - **WHEN** 英字だけの氏名と ASCII だけの値で組み立てる
 - **THEN** MSH-18 は空で、メッセージは ASCII だけになる
 
-### Requirement: PID-3 の患者 ID は発番元を持つ
+### Requirement: PID-3 の患者ID は発番元を持つ
 
-患者 ID・来院番号・患者アカウント番号の CX には、Assigning Authority の namespace ID を
+患者ID・来院番号・患者アカウント番号の CX には、Assigning Authority の namespace ID を
 入れなければならない（SHALL）。`orders.issuer_namespace` が空なら、組み立てずに断る
 （IHE RAD TF-2 4.1.4.1.2.1.3）。
 

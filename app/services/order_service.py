@@ -70,7 +70,7 @@ class OrderRequest(BaseModel):
     seed: int | None = None
     # 検査の種類のコード。指定があれば乱数で選ばない（件数を入れたどのモダリティにも要る）
     procedure_code: str | None = None
-    # 名簿の患者 ID。指定があれば、名簿のその患者で作る（patient_source は roster にする）
+    # 名簿の患者ID。指定があれば、名簿のその患者で作る（patient_source は roster にする）
     roster_patient_id: str | None = None
 
     @field_validator("scheduled_date")
@@ -151,7 +151,7 @@ def check_encodable(order: Order) -> None:
         unicode = CHARACTER_SET_LABELS[CharacterSet.UTF8]
         raise ValidationError(
             f"{attribute} の「{chars}」は{label}で書けません。文字コードを{unicode}にするか、"
-            f"値を直してください（患者 ID {order.patient.patient_id}）"
+            f"値を直してください（患者ID {order.patient.patient_id}）"
         )
 
 
@@ -248,7 +248,7 @@ class OrderService:
         if request.roster_patient_id is not None:
             roster = [p for p in self._load_roster() if p.patient_id == request.roster_patient_id]
             if not roster:
-                raise ValidationError(f"名簿に無い患者 ID です: {request.roster_patient_id}")
+                raise ValidationError(f"名簿に無い患者ID です: {request.roster_patient_id}")
         created = self.today()
 
         def build(numbers: list[int], patient_id_exists: Callable[[str], bool]) -> list[Order]:
@@ -420,7 +420,7 @@ class OrderService:
         used: set[str],
         patient_id_exists: Callable[[str], bool],
     ) -> Patient:
-        """名簿があれば名簿から選ぶ。無ければ、まだ使っていない患者 ID で乱数の患者を作る."""
+        """名簿があれば名簿から選ぶ。無ければ、まだ使っていない患者ID で乱数の患者を作る."""
         if roster:
             return rng.choice(roster)
         prefix = self.config.orders.patient_id_prefix
@@ -429,4 +429,4 @@ class OrderService:
             if patient_id not in used and not patient_id_exists(patient_id):
                 used.add(patient_id)
                 return make_patient(rng, patient_id=patient_id, reference_date=reference)
-        raise ValidationError("空いている患者 ID が見つかりません。patient_id_prefix を変えてください")
+        raise ValidationError("空いている患者ID が見つかりません。patient_id_prefix を変えてください")

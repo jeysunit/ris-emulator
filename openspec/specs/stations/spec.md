@@ -3,7 +3,7 @@
 ## Purpose
 
 予約の予定の装置を、運用上の名前で選べるようにする。装置の台帳を設定ファイルに持ち、
-選んだ装置の AE タイトル・装置名・モダリティを MWL の Scheduled Procedure Step に入れる。
+選んだ装置の AEタイトル・装置名・モダリティを MWL の Scheduled Procedure Step に入れる。
 
 ## Requirements
 
@@ -25,7 +25,7 @@
 制御文字を含まない）で検証しなければならない（SHALL）。`name` は空にせず、前後に空白を
 付けず、64 文字までとし、台帳の全体で重ねない。誤りがあれば、キーの位置を示して起動しない。
 
-#### Scenario: AE タイトルが長すぎる
+#### Scenario: AEタイトルが長すぎる
 
 - **WHEN** 台帳の `ae_title` に 17 文字の値を書いて起動する
 - **THEN** 設定のエラーになり、`orders.modalities.CT.stations.0.ae_title` の位置が示され、終了コードは 2 になる
@@ -54,7 +54,7 @@
 台帳の装置と「全装置に振り分け」（既定）の選択肢を出す。「全装置に振り分け」のときは、
 台帳の装置を予約ごとに並べた順に使う。台帳に装置が1台だけのモダリティは、その装置で作る。
 
-どちらの画面も、AE タイトルを文字で入れる欄は出さない。「順に使う」の言葉は出さない。
+どちらの画面も、AEタイトルを文字で入れる欄は出さない。「順に使う」の言葉は出さない。
 
 #### Scenario: 装置を選んで予約を作る
 
@@ -90,7 +90,7 @@ CLI の `create` は、`--station <装置の名前>` で装置を選べなけれ
 #### Scenario: 2つのモダリティの装置を選ぶ
 
 - **WHEN** 利用者が `create CT=1 MR=1 --station CT2号機 --station MR1号機` を実行する
-- **THEN** CT の予約は `CT02`、MR の予約は MR1号機の AE タイトルになり、終了コードは 0 になる
+- **THEN** CT の予約は `CT02`、MR の予約は MR1号機の AEタイトルになり、終了コードは 0 になる
 
 #### Scenario: 台帳に無い名前
 
@@ -105,7 +105,7 @@ Name (0040,0010)、台帳のモダリティを Modality (0008,0060) に入れな
 PS3.4 Table K.6-1）。`station_name` が空なら、Scheduled Station Name は空の値で返す
 （Return Key Type 2）。
 
-#### Scenario: モダリティが自分の AE タイトルで絞り込む
+#### Scenario: モダリティが自分の AEタイトルで絞り込む
 
 - **WHEN** CT2号機の予約を作り、モダリティが Scheduled Station AE Title `CT02` で C-FIND を送る
 - **THEN** その予約が返り、Modality は `CT`、Scheduled Station Name は `CT02` になる
@@ -113,7 +113,7 @@ PS3.4 Table K.6-1）。`station_name` が空なら、Scheduled Station Name は�
 ### Requirement: 装置の名前を予約に残して表示する
 
 予約に装置の `name` を保存し、予約の一覧と詳細に表示しなければならない（SHALL）。
-装置の名前は MWL の属性には入れない。名前を持たない保存済みの予約は、AE タイトルを表示する。
+装置の名前は MWL の属性には入れない。名前を持たない保存済みの予約は、AEタイトルを表示する。
 
 #### Scenario: 一覧に装置の名前が出る
 

@@ -73,7 +73,7 @@ def test_entry_sections_in_order(config: AppConfig, service: OrderService) -> No
     assert re.findall(r"<legend>([^<]+)</legend>", page) == ["患者", "検査", "予定", "依頼"]
     assert 'name="seed"' not in page and 'name="count_' not in page and "シード" not in page
     assert '<button type="submit" class="btn btn-primary">登録</button>' in page
-    # 名簿の患者（患者 ID・患者氏名・生年月日・性別）と新規（架空）
+    # 名簿の患者（患者ID・氏名・生年月日・性別）と新規（架空）
     assert "名簿から選ぶ" in page and "新規（架空）" in page
     assert "P000002 佐藤 由紀（サトウ ユキ） 1992-08-25 F" in page
     assert _options(page, "modality") == list(config.orders.modalities)
@@ -137,7 +137,7 @@ def test_entry_rejects_mismatched_choices(config: AppConfig, service: OrderServi
         "CT の台帳に無い装置です: MR1号機": {"station": "MR1号機"},
         "予定時刻の分は 15 分ごとにしてください": {"minute": "07"},
         "依頼科を選んでください": {"department": ""},
-        "名簿に無い患者 ID です: P999999": {"roster_patient_id": "P999999"},
+        "名簿に無い患者ID です: P999999": {"roster_patient_id": "P999999"},
         "予定日は YYYY-MM-DD の日付で指定してください": {"date": "2026-13-40"},
     }
     with _client(config, service) as client:
@@ -193,7 +193,7 @@ def test_removed_roster_patient_is_not_replaced(config: AppConfig, service: Orde
     with _client(config, service) as client:
         response = _post(client, "/orders", {**ENTRY, "roster_patient_id": "P999999"})
         again = _post(client, "/orders", {**ENTRY, "roster_patient_id": ""})
-    assert response.status_code == 400 and "名簿に無い患者 ID です: P999999" in response.text
+    assert response.status_code == 400 and "名簿に無い患者ID です: P999999" in response.text
     # 先頭の患者に黙って替えず、空の選択肢を選んだ形で出す
     assert _options(response.text, "roster_patient_id")[0] == ""
     assert '<option value="" selected>選択してください</option>' in response.text

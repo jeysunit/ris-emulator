@@ -33,7 +33,7 @@ def test_unknown_procedure_and_patient_are_rejected(service: OrderService) -> No
         service.create_orders(
             OrderRequest(counts={"MR": 1}, scheduled_date=TODAY, procedure_code="CT0001")
         )
-    with pytest.raises(ValidationError, match="名簿に無い患者 ID です: P999999"):
+    with pytest.raises(ValidationError, match="名簿に無い患者ID です: P999999"):
         service.create_orders(
             OrderRequest(
                 counts={"CT": 1},

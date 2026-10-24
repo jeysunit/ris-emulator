@@ -36,7 +36,7 @@ def test_generated_identifiers_fit_every_standard(service: OrderService) -> None
             assert SH_IDENTIFIER.fullmatch(value), value
             assert not HL7_V2_DELIMITERS & set(value)
         patient_id = order.patient.patient_id
-        # 乱数の患者 ID は 15 字まで（接頭辞 8 字＋7 桁）、英数字だけ
+        # 乱数の患者ID は 15 字まで（接頭辞 8 字＋7 桁）、英数字だけ
         assert len(patient_id) <= 15 and patient_id.isascii() and patient_id.isalnum()
 
         uid = order.study_instance_uid

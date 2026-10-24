@@ -126,7 +126,7 @@ def test_filter_by_station_and_date_range(server: MwlServer, service: OrderServi
 def test_chosen_station_is_in_the_worklist(
     server: MwlServer, config: AppConfig, store: OrderStore
 ) -> None:
-    """装置の台帳で選んだ装置の AE タイトル・装置名・モダリティが SPS に入る（PS3.4 Table K.6-1）."""
+    """装置の台帳で選んだ装置の AEタイトル・装置名・モダリティが SPS に入る（PS3.4 Table K.6-1）."""
     ct = config.orders.modalities["CT"].model_copy(
         update={
             "stations": [

@@ -160,19 +160,19 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[common],
         help="HL7 v2.3.1 のメッセージを組み立て、MLLP で送る",
         description=(
-            "a40=患者 ID の統合（ADT^A40）、a08=患者の属性の更新（ADT^A08）、"
+            "a40=患者ID の統合（ADT^A40）、a08=患者の属性の更新（ADT^A08）、"
             "orm=予約（ORM^O01、ORC-1 は NW）"
         ),
     )
     send.add_argument("--kind", required=True, choices=PIR_KINDS, help="メッセージの種類")
-    send.add_argument("--patient-id", help="a40・a08：患者 ID（a40 では統合の後の正式な ID）")
+    send.add_argument("--patient-id", help="a40・a08：患者ID（a40 では統合の後の正式な ID）")
     send.add_argument(
         "--name",
         help='a40・a08：氏名。DICOM の PN の形 "英字=漢字=かな"（各グループは 姓^名^ミドル^接頭辞^接尾辞）',
     )
     send.add_argument("--birth-date", default="", help="a40・a08：生年月日 YYYYMMDD")
     send.add_argument("--sex", default="", choices=("", "M", "F", "O"), help="a40・a08：性別")
-    send.add_argument("--prior-patient-id", help="a40：統合される旧い患者 ID（MRG-1）")
+    send.add_argument("--prior-patient-id", help="a40：統合される旧い患者ID（MRG-1）")
     send.add_argument("--prior-name", help="a40：旧い患者の氏名（MRG-7。--name と同じ形）")
     send.add_argument("--accession", help="orm：送る予約の受付番号")
     send.add_argument(
@@ -207,7 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("sop_instance_uid", help="撮影（MPPS）の SOP Instance UID（reconcile list で見る）")
     run.add_argument("--roster-patient-id", help="名簿の患者の ID")
-    run.add_argument("--patient-id", help="正式な患者 ID")
+    run.add_argument("--patient-id", help="正式な患者ID")
     run.add_argument("--name", help='正式な氏名。DICOM の PN の形 "英字=漢字=かな"')
     run.add_argument("--birth-date", default="", help="生年月日 YYYYMMDD")
     run.add_argument("--sex", default="", choices=("", "M", "F", "O"), help="性別")
@@ -455,7 +455,7 @@ def reconcile_run_command(args: argparse.Namespace) -> int:
             (p for p in service.roster_patients() if p.patient_id == args.roster_patient_id), None
         )
         if patient is None:
-            raise ValidationError(f"名簿に無い患者 ID です: {args.roster_patient_id}")
+            raise ValidationError(f"名簿に無い患者ID です: {args.roster_patient_id}")
     elif args.patient_id and args.name:
         patient = _patient_from_args(args)
     else:

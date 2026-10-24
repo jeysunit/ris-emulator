@@ -36,14 +36,14 @@
 
 | パス | 内容 |
 |------|------|
-| `/orders` | 予約一覧。予定日の期間（`date_from`・`date_to`、両端を含む 31日まで。指定が無ければ本日）・状態・モダリティで絞り込み、100 件ずつの頁（`page`）に分ける。「本日」「前日」「翌日」で予定日を動かす。行ごとに状態を選んで変更する（htmx） |
+| `/orders` | 予約一覧。予定日の期間（`date_from`・`date_to`、両端を含む 31日まで。指定が無ければ本日）・状態・モダリティで絞り込み、100 件ずつのページ（`page`）に分ける。「本日」「前日」「翌日」で予定日を動かす。行ごとに状態を選んで変更する（htmx） |
 | `/orders/new` | 予約作成（1件）：患者（名簿から選ぶ・新規（架空）。新規の間は名簿の患者の選択肢を選べない）→ 検査（モダリティ・検査名・装置。モダリティを変えると選択肢を出し直す。htmx）→ 予定（予定日・予定時刻。分は `orders.slot_minutes` ごと）→ 依頼（依頼科・文字コード）。「登録」で作り、予約の詳細へ進む |
 | `/orders/batch` | 一括作成：モダリティごとの件数（合わせて 200 件まで）と装置（台帳に2台以上あるときだけ。既定は「全装置に振り分け」）、予定日、開始時刻、間隔（1・5・10・15・20・30・60 分。開始時刻の分は間隔ごと。htmx で出し直す）、患者（新規（架空）・名簿から無作為に）、依頼科（既定は「ランダム」）、文字コード |
 | `/orders/<受付番号>` | 予約の詳細と MWL の全属性。状態を変更する。`orders.retake_mode` が `new_order` なら、実施中・完了・中止の予約から撮り直しの予約を作る。照合で作った予約には、照合前の患者と HL7 の送信の記録、再送信のボタンを出す |
 | `/reconciliation` | 未照合の撮影の一覧（予約に結び付いていない MPPS）。行ごとの「照合」で次の画面へ |
 | `/reconciliation/<SOP Instance UID>` | 照合：撮影の値、正式な患者、検査名、依頼科。「照合・送信」で予約を作り、HL7 を送る。詳細は [07_reconciliation.md](07_reconciliation.md) の 5 章 |
 
-- 画面上部のバーに、製品名と版、ナビ（予約一覧・予約作成・一括作成・未照合）、MWL の AE タイトル、待ち受けの状態、
+- 画面上部のバーに、製品名と版、ナビ（予約一覧・予約作成・一括作成・未照合）、MWL の AEタイトル、待ち受けの状態、
   アドレスとポートを表示する。画面の下に帯は置かない
 - 予定日の期間が逆順のとき、31日を超えるとき、日付として読めないときは、一覧を出さずに
   理由を表示する（400）。`date=all`（すべての日）は受け付けない
@@ -56,7 +56,7 @@
 ### 3.2 画面の文言
 
 画面の文言は RIS・PACS で一般的な用語にする（予約、受付番号、
-モダリティ、AE タイトル、依頼科、装置、予定、実施中、完了、取消、中止）。説明文は置かない。
+モダリティ、AEタイトル、依頼科、装置、予定、実施中、完了、取消、中止）。説明文は置かない。
 
 DICOM の属性に付ける日本語の名前は、用語の表（`openspec/specs/screen-terms/spec.md`）に
 従う。依頼医は Requesting Physician (0032,1032)、紹介医は Referring Physician's Name
@@ -82,14 +82,14 @@ Scheduled Procedure Step ID・Study Instance UID など）は英語の属性名�
 | キー | 既定値 | 内容 |
 |------|--------|------|
 | `database` | `state/ris.sqlite3` | 予約のデータベース |
-| `mwl.ae_title` | `RIS_EMU` | MWL の AE タイトル |
+| `mwl.ae_title` | `RIS_EMU` | MWL の AEタイトル |
 | `mwl.bind_address`・`mwl.port` | `127.0.0.1`・`11112` | MWL の待ち受けアドレスとポート |
 | `mwl.statuses` | `[scheduled, in_progress]` | MWL で返す状態 |
 | `mwl.max_results` | 1000 | 一致件数の上限 |
 | `mwl.require_called_ae_title` | true | Called AE Title を検証する |
 | `orders.institution_name` | `TEST HOSPITAL` | 施設名 |
 | `orders.accession_prefix` | `RE` | 受付番号の接頭辞（英数字 4 文字まで） |
-| `orders.patient_id_prefix` | `RE` | 乱数で生成する患者 ID の接頭辞（英数字 8 文字まで） |
+| `orders.patient_id_prefix` | `RE` | 乱数で生成する患者ID の接頭辞（英数字 8 文字まで） |
 | `orders.issuer_namespace` | `RIS_EMU` | Issuer of Patient ID・Issuer of Accession Number Sequence（英数字と `_` で 16 文字まで。空なら返さない。ADR-0005） |
 | `orders.default_character_set` | `utf8` | 文字コードの既定値 |
 | `orders.roster_path` | `data/patients_sample.yaml` | 名簿 |
@@ -117,8 +117,8 @@ Scheduled Procedure Step ID・Study Instance UID など）は英語の属性名�
     `\` と制御文字を含まない。PS3.5 6.2）で検証する。省略すると空
 - 台帳の既定値は、モダリティごとに1台（`CT1号機`・`CT01`・`CT01` など、モダリティ名に
   `1号機`・`01` を付けたもの）。特定の施設の装置を指さない一般的な名前にしている
-- 利用者は、`ae_title` をモダリティ側の AE タイトルに変更する。異なると、モダリティが
-  自分の AE タイトルで絞り込んだときに予約が返らない
+- 利用者は、`ae_title` をモダリティ側の AEタイトルに変更する。異なると、モダリティが
+  自分の AEタイトルで絞り込んだときに予約が返らない
 - 古い形のキー（モダリティの直下の `station_ae_titles`・`station_name`）がある設定は、
   `stations` の形を示すエラーで読み込まない（終了コード 2）。古い値から推測して変換しない
   （名前を推測で決めると、画面に出る名前が利用者の意図と違うため）

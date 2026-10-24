@@ -96,7 +96,7 @@ class ReconciliationService:
             sequence: int, record: MppsRecord
         ) -> tuple[Order, list[Delivery], dict[str, str]]:
             # 結び付ける MPPS をトランザクションの中で読み直した値から、予約・送る HL7・仮の患者を
-            # 作る（N-SET が間に入っても、旧い患者 ID と送る種類が予約と食い違わない）
+            # 作る（N-SET が間に入っても、旧い患者ID と送る種類が予約と食い違わない）
             current = read_unreconciled(**_fields(record))
             self._check(current, request.patient)
             temporary = {
