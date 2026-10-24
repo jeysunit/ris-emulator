@@ -41,8 +41,8 @@
     <tr>
       <th>予定日時</th>
       <th>受付番号</th>
-      <th>患者 ID</th>
-      <th>患者氏名</th>
+      <th>患者ID</th>
+      <th>氏名</th>
       <th>生年月日・性別</th>
       <th>モダリティ</th>
       <th>検査名</th>
@@ -58,10 +58,10 @@
   </tbody>
 </table>
 </div>
-<nav class="pager" aria-label="頁">
-  {% if prev_page %}<a href="{{ prev_page }}">前の頁</a>{% endif %}
+<nav class="pager" aria-label="ページ送り">
+  {% if prev_page %}<a href="{{ prev_page }}">前のページ</a>{% endif %}
   <span class="muted">{{ first_index }}〜{{ last_index }} 件目／全 {{ total }} 件</span>
-  {% if next_page %}<a href="{{ next_page }}">次の頁</a>{% endif %}
+  {% if next_page %}<a href="{{ next_page }}">次のページ</a>{% endif %}
 </nav>
 {% else %}
 <p class="empty">条件に合う予約はありません。</p>

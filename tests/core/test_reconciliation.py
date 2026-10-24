@@ -61,7 +61,7 @@ def test_reads_the_first_study_uid_that_is_not_empty() -> None:
     ("overrides", "problem"),
     [
         ({"ScheduledStepAttributesSequence": []}, "Study Instance UID"),
-        ({"PatientID": ""}, "仮の患者 ID がありません"),
+        ({"PatientID": ""}, "仮の患者ID がありません"),
         ({"PatientID": "A|B"}, "HL7 に入れられません"),
         ({"PatientName": "A" * 70}, "氏名を読めません"),
     ],

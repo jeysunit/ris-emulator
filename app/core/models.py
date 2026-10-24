@@ -124,7 +124,7 @@ def has_control_chars(value: str) -> bool:
 
 
 def validate_ae_title(value: str) -> str:
-    """AE タイトル：16 文字以内・空白だけは不可・表示できる ASCII で `\\` 無し（PS3.5 AE）."""
+    """AEタイトル：16 文字以内・空白だけは不可・表示できる ASCII で `\\` 無し（PS3.5 AE）."""
     if not value.strip():
         raise ValueError("AE title must not be empty or spaces only")
     if len(value) > AE_TITLE_MAX_LENGTH:
@@ -170,7 +170,7 @@ class PersonName(BaseModel):
 def validate_patient_id(value: str) -> str:
     """Patient ID：LO（64 字、`\\` と制御文字なし。PS3.5 6.2）。HL7 v2 の区切りの字
     （`^~&|`）と前後の空白も断る（HL7 v2 の PID-3 と FHIR の Identifier.value に
-    エスケープなしで入れるため。docs/spec/04_identifiers.md）。統合の旧い患者 ID にも使う."""
+    エスケープなしで入れるため。docs/spec/04_identifiers.md）。統合の旧い患者ID にも使う."""
     if not value or len(value) > LO_MAX_LENGTH:
         raise ValueError(f"patient_id must be 1-{LO_MAX_LENGTH} characters")
     if "\\" in value or has_control_chars(value):

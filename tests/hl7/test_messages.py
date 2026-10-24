@@ -101,7 +101,7 @@ def test_a40_has_pid_for_the_correct_patient_and_mrg_for_the_old_one() -> None:
 
 
 def test_a40_requires_a_different_old_id() -> None:
-    with pytest.raises(ValidationError, match="旧い患者 ID"):
+    with pytest.raises(ValidationError, match="旧い患者ID"):
         build_adt_a40(HEADER, PATIENT, namespace=NAMESPACE, prior_patient_id="", now=NOW)
     with pytest.raises(ValidationError, match="A08"):
         build_adt_a40(HEADER, PATIENT, namespace=NAMESPACE, prior_patient_id="RE0000001", now=NOW)
@@ -109,8 +109,8 @@ def test_a40_requires_a_different_old_id() -> None:
 
 @pytest.mark.parametrize("prior", [" ", " ER1", "ER1 ", "ER|1", "ER^1", "ER\\1", "ER\n1", "x" * 65])
 def test_a40_applies_the_patient_id_rules_to_the_old_id(prior: str) -> None:
-    """旧い患者 ID も、正式な患者 ID と同じ規則（ADR-0003、Patient のモデル）で断る."""
-    with pytest.raises(ValidationError, match="旧い患者 ID"):
+    """旧い患者ID も、正式な患者ID と同じ規則（ADR-0003、Patient のモデル）で断る."""
+    with pytest.raises(ValidationError, match="旧い患者ID"):
         build_adt_a40(HEADER, PATIENT, namespace=NAMESPACE, prior_patient_id=prior, now=NOW)
 
 

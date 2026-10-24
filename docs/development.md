@@ -10,7 +10,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Python で直接起動すると、Web 画面（<http://127.0.0.1:8081/>）と MWL（AE タイトル
+Python で直接起動すると、Web 画面（<http://127.0.0.1:8081/>）と MWL（AEタイトル
 `RIS_EMU`、`127.0.0.1:11112`）が 127.0.0.1 で待ち受けます。MWL だけを起動するときは
 `python -m app.cli mwl serve` を使います
 （[spec/03_web_cli.md](spec/03_web_cli.md) の 1 章）。

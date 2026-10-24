@@ -70,7 +70,7 @@ HTTP_FORBIDDEN = 403
 HTTP_NOT_FOUND = 404
 HTTP_CONFLICT = 409
 HTTP_SEE_OTHER = 303
-# 一覧の1頁の件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
+# 一覧の1ページの件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
 LIST_PAGE_SIZE = 100
 MAX_LIST_DAYS = 31
 # 一括作成の間隔の既定（分）
@@ -546,7 +546,7 @@ def _list_period(start_text: str, end_text: str, today: date) -> tuple[date, dat
 
 
 def _page_number(text: str) -> int:
-    """頁の番号。ASCII の数字（6 桁まで）でなければ 1 頁目（範囲の外は呼ぶ側が最後の頁にする）."""
+    """ページの番号。ASCII の数字（6 桁まで）でなければ 1 ページ目（範囲の外は呼ぶ側が最後のページにする）."""
     return int(text) if re.fullmatch(r"[0-9]{1,6}", text) else 1
 
 
@@ -616,20 +616,20 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
             raise ValidationError("名簿の患者を選んでください")
         patient = next((p for p in service.roster_patients() if p.patient_id == patient_id), None)
         if patient is None:
-            raise ValidationError(f"名簿に無い患者 ID です: {patient_id}")
+            raise ValidationError(f"名簿に無い患者ID です: {patient_id}")
         return patient
     if source != "manual":
         raise ValidationError("患者を、名簿から選ぶか入力するかを選んでください")
     patient_id = values.get("patient_id", "").strip()
     if not patient_id:
-        raise ValidationError("患者 ID を入力してください")
+        raise ValidationError("患者ID を入力してください")
     groups = {}
     for script in ("alphabetic", "ideographic", "phonetic"):
         family = values.get(f"{script}_family", "").strip()
         given = values.get(f"{script}_given", "").strip()
         groups[script] = f"{family}^{given}".rstrip("^") if family or given else ""
     if not any(groups.values()):
-        raise ValidationError("患者氏名を入力してください")
+        raise ValidationError("氏名を入力してください")
     birth_date = values.get("birth_date", "").strip().replace("-", "")
     try:
         return Patient(

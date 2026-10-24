@@ -70,8 +70,8 @@ def test_list_shows_unreconciled_only_and_links_to_the_form(config: AppConfig, s
     assert f'href="/reconciliation/{sop_uid}"' in page
     headers = [h.strip() for h in re.findall(r"<th[^>]*>(?:<span[^>]*>)?([^<]*)", page) if h.strip()]
     assert headers == [
-        "受けた日時", "状態", "患者 ID", "患者氏名", "生年月日・性別",
-        "モダリティ", "予定の AE タイトル", "Study Instance UID", "操作",
+        "受けた日時", "状態", "患者ID", "氏名", "生年月日・性別",
+        "モダリティ", "予定の AEタイトル", "Study Instance UID", "操作",
     ]  # fmt: skip
 
 
@@ -100,7 +100,7 @@ def test_form_says_why_it_cannot_reconcile(config: AppConfig, store: OrderStore)
     with _client(config, store) as (client, _):
         first = client.get(f"/reconciliation/{no_id}").text
         second = client.get(f"/reconciliation/{unknown_modality}").text
-    assert "仮の患者 ID がありません" in first and "<form" not in first
+    assert "仮の患者ID がありません" in first and "<form" not in first
     assert "モダリティ XA が設定に無い" in second and "<form" not in second
 
 
@@ -121,7 +121,7 @@ def test_reconcile_with_roster_patient_sends_and_shows_the_result(config: AppCon
     assert (order.procedure.code, order.requesting_service) == ("CT0002", "外科")
     assert "<h2>HL7 送信</h2>" in detail
     assert re.findall(r"<td>(送信完了|送信待ち|拒否|送信失敗)</td>", detail) == ["送信完了", "送信完了"]
-    assert "<dt>照合前の患者 ID</dt><dd class=\"mono\">ER2026102400</dd>" in detail
+    assert "<dt>照合前の患者ID</dt><dd class=\"mono\">ER2026102400</dd>" in detail
     assert "UNKNOWN^MALE=不明^男性=フメイ^ダンセイ" in detail
     assert "再送信" not in detail
     assert "未照合の撮影はありません。" in listing
@@ -159,9 +159,9 @@ def test_input_errors_are_shown_and_nothing_is_created(config: AppConfig, store:
     cases = [
         ({}, "患者を、名簿から選ぶか入力するかを選んでください"),
         ({"patient": "roster", "roster_patient_id": ""}, "名簿の患者を選んでください"),
-        ({"patient": "roster", "roster_patient_id": "NOPE"}, "名簿に無い患者 ID です"),
-        ({"patient": "manual", "patient_id": ""}, "患者 ID を入力してください"),
-        ({"patient": "manual", "patient_id": "X1"}, "患者氏名を入力してください"),
+        ({"patient": "roster", "roster_patient_id": "NOPE"}, "名簿に無い患者ID です"),
+        ({"patient": "manual", "patient_id": ""}, "患者ID を入力してください"),
+        ({"patient": "manual", "patient_id": "X1"}, "氏名を入力してください"),
         (
             {"patient": "manual", "patient_id": "X1", "alphabetic_family": "A", "birth_date": "1975-13-45"},
             "生年月日",
@@ -264,7 +264,7 @@ def test_detail_terms_for_reconciled_order(config: AppConfig, store: OrderStore)
         location = _post(client, f"/reconciliation/{sop_uid}", **_roster()).headers["location"]
         page = client.get(location).text
     items = set(re.findall(r"<dt>([^<]+)</dt>", page))
-    assert {"照合前の患者 ID", "照合前の患者氏名"} <= items
+    assert {"照合前の患者ID", "照合前の氏名"} <= items
     assert re.findall(r"<th>([^<]+)</th>", page.split("<h2>HL7 送信</h2>")[1].split("</thead>")[0]) == [
         "メッセージ", "状態", "ACK", "詳細", "送信日時", "回数",
     ]  # fmt: skip

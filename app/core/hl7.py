@@ -120,7 +120,7 @@ def build_adt_a08(
 ) -> Hl7Message:
     """ADT^A08^ADT_A08（患者の属性の更新。IHE RAD TF-2 4.12.4.3）.
 
-    PID-3 の患者 ID は更新できない（A40 を使う）。PID-18 か PV1-19 のどちらかが要る。
+    PID-3 の患者ID は更新できない（A40 を使う）。PID-18 か PV1-19 のどちらかが要る。
     """
     _require_visit_or_account(visit_number, account_number)
     when = now or datetime.now()
@@ -142,18 +142,18 @@ def build_adt_a40(
     now: datetime | None = None,
     control_id: str | None = None,
 ) -> Hl7Message:
-    """ADT^A40^ADT_A39（患者 ID の統合。PID が正式の患者、MRG が旧い患者。TF-2 4.12.4.4）.
+    """ADT^A40^ADT_A39（患者ID の統合。PID が正式の患者、MRG が旧い患者。TF-2 4.12.4.4）.
 
     PV1 は任意なので付けない。旧い患者の氏名（MRG-7）は、渡されたときだけ付ける。
     """
     if not prior_patient_id:
-        raise ValidationError("統合する旧い患者 ID が要ります")
+        raise ValidationError("統合する旧い患者ID が要ります")
     try:
         validate_patient_id(prior_patient_id)
     except ValueError as exc:
-        raise ValidationError(f"旧い患者 ID が使えません：{exc}", {"value": prior_patient_id}) from exc
+        raise ValidationError(f"旧い患者ID が使えません：{exc}", {"value": prior_patient_id}) from exc
     if prior_patient_id == patient.patient_id:
-        raise ValidationError("旧い患者 ID が正式の患者 ID と同じです。属性の更新は A08 を使います")
+        raise ValidationError("旧い患者ID が正式の患者ID と同じです。属性の更新は A08 を使います")
     when = now or datetime.now()
     body = [
         segment("EVN", {1: "A40", 2: hl7_timestamp(when)}),

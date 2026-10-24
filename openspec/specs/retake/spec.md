@@ -65,11 +65,11 @@ Study Instance UID を、新しい予約と同じ規則（`docs/spec/04_identifi
 #### Scenario: 番号がすべて変わる
 
 - **WHEN** `new_order` の設定で、受付番号 `RE202610230001` の予約から撮り直しを作る
-- **THEN** 新しい予約の受付番号・Requested Procedure ID・Scheduled Procedure Step ID・Study Instance UID はどれも元と違い、患者 ID と検査名は元と同じになる
+- **THEN** 新しい予約の受付番号・Requested Procedure ID・Scheduled Procedure Step ID・Study Instance UID はどれも元と違い、患者ID と検査名は元と同じになる
 
 #### Scenario: MWL で撮り直しの予約を取得する
 
-- **WHEN** 撮り直しの予約を作った後に、モダリティが自分の AE タイトルと今日の日付で C-FIND を送る
+- **WHEN** 撮り直しの予約を作った後に、モダリティが自分の AEタイトルと今日の日付で C-FIND を送る
 - **THEN** 撮り直しの予約が新しい Study Instance UID で返る
 
 ### Requirement: 元の予約の状態を合わせる

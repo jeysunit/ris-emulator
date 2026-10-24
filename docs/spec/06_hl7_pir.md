@@ -10,8 +10,8 @@ PACS の PIR（Patient Information Reconciliation）への対応を試すため�
 
 | メッセージ | IHE RAD TF-2 | 使う場面 | セグメント |
 |------------|--------------|----------|------------|
-| ADT^A40^ADT_A39 | 4.12.4.4（Patient Update [RAD-12]） | 仮の患者 ID で撮った検査を、正式な患者 ID に統合する。PID が正式の患者、MRG が旧い患者 | MSH・EVN・PID・MRG |
-| ADT^A08^ADT_A08 | 4.12.4.3（RAD-12） | 患者の氏名・生年月日・性別を更新する。患者 ID は更新できない（A40 を使う） | MSH・EVN・PID・PV1 |
+| ADT^A40^ADT_A39 | 4.12.4.4（Patient Update [RAD-12]） | 仮の患者ID で撮った検査を、正式な患者ID に統合する。PID が正式の患者、MRG が旧い患者 | MSH・EVN・PID・MRG |
+| ADT^A08^ADT_A08 | 4.12.4.3（RAD-12） | 患者の氏名・生年月日・性別を更新する。患者ID は更新できない（A40 を使う） | MSH・EVN・PID・PV1 |
 | ORM^O01^ORM_O01 | 4.4.4.1.2.1（Procedure Scheduled [RAD-4]） | 予約を知らせる。ORC-1 は `NW` | MSH・PID・PV1・ORC・OBR・ZDS |
 
 どれも HL7 のオリジナルモードで確認を求める（MSH-15・MSH-16 は空。IHE RAD TF-2 2.4.1.2）。
@@ -43,9 +43,9 @@ HL7 のコンポーネントの区切りとして扱う。
 
 ### 2.3 識別子
 
-- 患者 ID・来院番号・患者アカウント番号は CX にする：`<ID>^^^<発番元>^<種類>`。発番元は
+- 患者ID・来院番号・患者アカウント番号は CX にする：`<ID>^^^<発番元>^<種類>`。発番元は
   `orders.issuer_namespace`（Assigning Authority の namespace ID。IHE RAD TF-2
-  4.1.4.1.2.1.3 が必須とするので、空なら断る）。種類は患者 ID が `PI`、来院番号が `VN`、
+  4.1.4.1.2.1.3 が必須とするので、空なら断る）。種類は患者ID が `PI`、来院番号が `VN`、
   患者アカウント番号が `AN`
 - ORM の受付番号は OBR-18、Requested Procedure ID は OBR-19、
   Scheduled Procedure Step ID は OBR-20 に、発番した値のまま入れる（英数字だけなので、エスケープは何も変えない。
@@ -60,7 +60,7 @@ HL7 のコンポーネントの区切りとして扱う。
 空のグループは送らない。DICOM の PN の `姓^名^ミドル^接頭辞^接尾辞` は、XPN の
 `姓^名^ミドル^接尾辞^接頭辞` の順に入れ替える。どの成分にも空白以外の文字が無ければ（`^^^^` や空白だけを含む）断る（PID-5 は必須）。
 生年月日（PID-7）は空か、実在する日付の ASCII の `YYYYMMDD` に限り、それ以外は断る。
-旧い患者 ID（MRG-1）にも、正式な患者 ID と同じ規則（64 文字まで、`\`・制御文字・
+旧い患者ID（MRG-1）にも、正式な患者ID と同じ規則（64 文字まで、`\`・制御文字・
 `^~&|`・前後の空白なし）を使う。
 
 ### 2.5 PV1 と来院番号
@@ -89,7 +89,7 @@ ORM の PV1-8 には、紹介医を英字（無ければ漢字、かな）の 1 
 患者 `P000001`（名簿の例）。MSH-10 と時刻は例のために固定した。受け手と共有する
 ために、実際に組み立てた出力をそのまま載せている（セグメントごとに改行）。
 
-ADT^A40（旧い患者 ID `ER2026102400` を `P000001` に統合する）：
+ADT^A40（旧い患者ID `ER2026102400` を `P000001` に統合する）：
 
 ```text
 MSH|^~\&|RIS_EMU|TEST_HOSPITAL|PACS|PACS|20261024201530||ADT^A40^ADT_A39|20261024201530A40A|P|2.3.1||||||UNICODE UTF-8
@@ -155,8 +155,8 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
 | オプション | 内容 |
 |------------|------|
 | `--kind` | `a40`・`a08`・`orm`（必須） |
-| `--patient-id`・`--name` | a40・a08：患者 ID と氏名（`英字=漢字=かな`、各グループは `姓^名^ミドル^接頭辞^接尾辞`）。`--birth-date`・`--sex` を足せる |
-| `--prior-patient-id`・`--prior-name` | a40：旧い患者 ID（必須）と氏名 |
+| `--patient-id`・`--name` | a40・a08：患者ID と氏名（`英字=漢字=かな`、各グループは `姓^名^ミドル^接頭辞^接尾辞`）。`--birth-date`・`--sex` を足せる |
+| `--prior-patient-id`・`--prior-name` | a40：旧い患者ID（必須）と氏名 |
 | `--accession` | orm：保存済みの予約の受付番号（患者・検査・UID は予約から取る） |
 | `--visit-number`・`--account-number`・`--patient-class` | PV1-19、PID-18（a08）、PV1-2 |
 | `--host`・`--port` | 設定の `hl7.host`・`hl7.port` を上書きする |
@@ -166,7 +166,7 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
 （`2575`）・`sending_application`（`RIS_EMU`）・`sending_facility`（`TEST_HOSPITAL`）・
 `receiving_application`・`receiving_facility`（どちらも `PACS`）・`processing_id`（`P`）・
 `timeout_seconds`（`10`。接続と ACK の待ち時間）。MSH-3〜6 は 1〜180 文字で、制御文字を含めない。
-終了コードは 2=入力・設定の誤り（患者 ID の区切り文字、旧い ID が正式の ID と同じ、
+終了コードは 2=入力・設定の誤り（患者ID の区切り文字、旧い ID が正式の ID と同じ、
 `issuer_namespace` が空など）、3=予約が無い。
 
 ## 6. 原典と、確認していないこと
@@ -185,4 +185,4 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
     （v2.5.1 向け）が例に挙げている
   - IHE の v2.3.1 の表にある欄の長さ（PID-3 は 20、PID-5 は 48 など）は守っていない。
     `<ID>^^^<発番元>^PI` はそれを超えうる。IHE の v2.5.1 の表は 250
-- 患者 ID の長さは ADR-0003 のとおり、LO の 64 文字まで受け付ける
+- 患者ID の長さは ADR-0003 のとおり、LO の 64 文字まで受け付ける

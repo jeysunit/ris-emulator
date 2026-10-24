@@ -30,7 +30,7 @@
   });
 
   // 予約作成：「新規（架空）」を選んでいる間は、名簿の患者の選択肢を選べなくする。
-  // 見た目だけの補助で、サーバーは患者が新規なら名簿の患者 ID を使わない
+  // 見た目だけの補助で、サーバーは患者が新規なら名簿の患者ID を使わない
   function syncRosterSelect() {
     var select = document.querySelector("select[data-roster-select]");
     var fresh = document.querySelector("input[name=patient][value=new]");

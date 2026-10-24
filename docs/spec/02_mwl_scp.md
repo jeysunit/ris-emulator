@@ -11,7 +11,7 @@
 | Verification | 1.2.840.10008.1.1 | SCP |
 | Modality Performed Procedure Step | 1.2.840.10008.3.1.2.3.3 | SCP（[05_mpps_scp.md](05_mpps_scp.md)） |
 
-- AE タイトルは設定の `mwl.ae_title`（既定 `RIS_EMU`）。相手の Called AE
+- AEタイトルは設定の `mwl.ae_title`（既定 `RIS_EMU`）。相手の Called AE
   Title が異なれば Association を拒否する（`mwl.require_called_ae_title`）
 - 相手の Calling AE Title は検証しない（開発・テスト用）
 

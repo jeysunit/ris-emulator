@@ -109,14 +109,14 @@ def test_pages(config: AppConfig, service: OrderService) -> None:
         )
     with _client(config, service) as client:
         first = client.get("/orders").text
-        last = client.get(_links(client.get(_links(first)["次の頁"]).text)["次の頁"]).text
+        last = client.get(_links(client.get(_links(first)["次のページ"]).text)["次のページ"]).text
         beyond = client.get("/orders?page=99").text
     assert "1〜100 件目／全 230 件" in first
     assert len(re.findall(r'<tr id="order-', first)) == 100
-    assert "前の頁" not in _links(first)
+    assert "前のページ" not in _links(first)
     assert "201〜230 件目／全 230 件" in last
     assert len(re.findall(r'<tr id="order-', last)) == 30
-    assert "次の頁" not in _links(last) and _links(last)["前の頁"].endswith("page=2")
+    assert "次のページ" not in _links(last) and _links(last)["前のページ"].endswith("page=2")
     assert "201〜230 件目／全 230 件" in beyond
 
 

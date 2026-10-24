@@ -10,12 +10,12 @@ PS3.4 F.7 の SCP として応答し、撮影の開始・完了・中止を予�
 ### Requirement: MPPS の SOP Class を MWL と同じ AE で受ける
 
 MWL の SCP は、Modality Performed Procedure Step SOP Class（1.2.840.10008.3.1.2.3.3）の
-SCP として、N-CREATE と N-SET を受けなければならない（SHALL。PS3.4 F.7.2）。AE タイトル・
+SCP として、N-CREATE と N-SET を受けなければならない（SHALL。PS3.4 F.7.2）。AEタイトル・
 ポート・Called AE Title の検証は MWL と同じ設定を使う。
 
 #### Scenario: MPPS の Association を受ける
 
-- **WHEN** モダリティが、MWL の AE タイトルとポートへ、MPPS の SOP Class の Presentation Context を提案する
+- **WHEN** モダリティが、MWL の AEタイトルとポートへ、MPPS の SOP Class の Presentation Context を提案する
 - **THEN** その Presentation Context は受け入れられる
 
 ### Requirement: N-CREATE は IN PROGRESS だけを受ける

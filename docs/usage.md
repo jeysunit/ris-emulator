@@ -31,7 +31,7 @@ Docker イメージは `0.0.0.0` で待ち受けるため、HTTP Basic 認証の
      ghcr.io/jeysunit/ris-emulator:latest
    ```
 
-Web 画面（<http://127.0.0.1:8081/>、ユーザー名 `ris`）と MWL（AE タイトル `RIS_EMU`、
+Web 画面（<http://127.0.0.1:8081/>、ユーザー名 `ris`）と MWL（AEタイトル `RIS_EMU`、
 `127.0.0.1:11112`）が起動します。
 
 `TZ` はモダリティ側と合わせます。予定日（`today`）と時刻はコンテナのローカル時刻で
@@ -105,8 +105,8 @@ docker build -t ris-emulator .
 | ホスト | ris-emulator を実行しているホスト（ローカルなら `127.0.0.1`） |
 | ポート | `11112` |
 
-モダリティが自分の AE タイトルで絞り込んで問い合わせる場合は、設定の装置の台帳
-`orders.modalities.<モダリティ>.stations` の `ae_title` をモダリティの AE タイトルに
+モダリティが自分の AEタイトルで絞り込んで問い合わせる場合は、設定の装置の台帳
+`orders.modalities.<モダリティ>.stations` の `ae_title` をモダリティの AEタイトルに
 変更します。装置が複数あれば、台帳に並べます（既定値と規則は
 [spec/03_web_cli.md](spec/03_web_cli.md) の 4 章）。
 
@@ -178,7 +178,7 @@ PACS の PIR（Patient Information Reconciliation）への対応を試すため�
 先に `--dry-run` で、組み立てたメッセージを確認できます。
 
 ```bash
-# 仮の患者 ID ER0001 を、正式な患者 ID RE0000001 に統合する（ADT^A40）
+# 仮の患者ID ER0001 を、正式な患者ID RE0000001 に統合する（ADT^A40）
 docker exec ris-emulator python -m app.cli pir send --kind a40 \
   --patient-id RE0000001 --prior-patient-id ER0001 --name "YAMADA^TARO=山田^太郎=ヤマダ^タロウ"
 
@@ -193,10 +193,10 @@ IP アドレスを書きます（`127.0.0.1` はコンテナ自身です）。
 
 ## 8. 予約の無い撮影を照合する
 
-モダリティが予約なしで撮影すると（緊急の飛び込みなど）、仮の患者 ID と氏名の撮影が
+モダリティが予約なしで撮影すると（緊急の飛び込みなど）、仮の患者ID と氏名の撮影が
 MPPS として記録されます。画面の「未照合」（`/reconciliation`）に出るので、「照合」で
 正式な患者（名簿から選ぶか、入力）と検査名、依頼科を決めます。「照合・送信」で、
-撮影の Study Instance UID を持つ新しい予約を作り、PACS へ HL7 を送ります。患者 ID が
+撮影の Study Instance UID を持つ新しい予約を作り、PACS へ HL7 を送ります。患者ID が
 変わるときは ADT^A40 と ORM^O01、氏名などだけが変わるときは ADT^A08 と ORM^O01 です。
 
 結果は予約の詳細の「HL7 送信」に残ります。PACS が断ったり、つながらなかったりしても

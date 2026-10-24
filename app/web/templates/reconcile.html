@@ -8,12 +8,12 @@
 <dl class="detail">
   <dt>受けた日時</dt><dd>{{ item.received_at }}</dd>
   <dt>状態</dt><dd class="mono">{{ item.status }}</dd>
-  <dt>患者 ID</dt><dd class="mono">{{ item.patient.patient_id }}</dd>
-  <dt>患者氏名</dt><dd class="mono">{{ item.patient.name.to_dicom() }}</dd>
+  <dt>患者ID</dt><dd class="mono">{{ item.patient.patient_id }}</dd>
+  <dt>氏名</dt><dd class="mono">{{ item.patient.name.to_dicom() }}</dd>
   <dt>生年月日</dt><dd>{{ item.patient.birth_date | ymd }}</dd>
   <dt>性別</dt><dd>{{ item.patient.sex }}</dd>
   <dt>モダリティ</dt><dd>{{ item.modality }}</dd>
-  <dt>予定の AE タイトル</dt><dd class="mono">{{ item.station_ae_title }}</dd>
+  <dt>予定の AEタイトル</dt><dd class="mono">{{ item.station_ae_title }}</dd>
   <dt>Study Instance UID</dt><dd class="mono">{{ item.study_instance_uid }}</dd>
 </dl>
 {% if linked %}
@@ -40,10 +40,10 @@
       </select>
     </label>
     <label><input type="radio" name="patient" value="manual" required{% if patient == 'manual' %} checked{% endif %}> 入力する</label>
-    <label>患者 ID <input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}"></label>
+    <label>患者ID <input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}"></label>
     {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
-    <label>患者氏名（{{ label }}）の姓 <input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}"></label>
-    <label>患者氏名（{{ label }}）の名 <input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}"></label>
+    <label>氏名（{{ label }}）の姓 <input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}"></label>
+    <label>氏名（{{ label }}）の名 <input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}"></label>
     {% endfor %}
     <label>生年月日 <input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}"></label>
     <label>性別

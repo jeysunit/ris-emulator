@@ -70,12 +70,12 @@ def read_unreconciled(
     if not study_uid:
         problem = "MPPS に Study Instance UID がありません"
     elif not patient_id:
-        problem = "MPPS に仮の患者 ID がありません"
+        problem = "MPPS に仮の患者ID がありません"
     else:
         try:
             validate_patient_id(patient_id)
         except ValueError:
-            problem = "仮の患者 ID を HL7 に入れられません"
+            problem = "仮の患者ID を HL7 に入れられません"
     try:
         name = _person_name(dataset)
     except ValueError:
@@ -106,7 +106,7 @@ def plan_deliveries(
 ) -> list[DeliveryKind]:
     """送る HL7 の種類を順に返す（docs/spec/07_reconciliation.md 3 章）.
 
-    患者 ID が違えば A40、同じで氏名・生年月日・性別が違えば A08、すべて同じなら送らない。
+    患者ID が違えば A40、同じで氏名・生年月日・性別が違えば A08、すべて同じなら送らない。
     どの場合も最後に、予約を知らせる ORM（NW）を送る。
     """
     if temporary.patient_id != official_id:

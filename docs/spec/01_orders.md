@@ -14,7 +14,7 @@
 | 患者 | Patient's Name・ID・Birth Date・Sex・Weight・Size | 3 章 |
 | モダリティ | Modality (0008,0060) | 指定 |
 | 装置 | （MWL には入れない） | モダリティごとに、設定の装置の台帳（`stations`）から名前で選ぶ。予約作成の画面の既定は台帳の1台目。一括作成と CLI で選ばなければ、台帳の装置を予約ごとに順に使う（画面では「全装置に振り分け」） |
-| 予定の AE タイトル | Scheduled Station AE Title (0040,0001) | 選んだ装置の `ae_title` |
+| 予定の AEタイトル | Scheduled Station AE Title (0040,0001) | 選んだ装置の `ae_title` |
 | 予定の装置名 | Scheduled Station Name (0040,0010) | 選んだ装置の `station_name`（空なら空の値で返す。Return Key Type 2） |
 | 予定日時 | Scheduled Procedure Step Start Date・Time | 4 章 |
 | 検査名 | Requested Procedure Description・Scheduled Procedure Step Description | 予約作成の画面では、モダリティの設定の検査の種類から選ぶ。一括作成と CLI では乱数で選ぶ |
@@ -49,7 +49,7 @@
 - 姓（30）と名（男 15・女 15）の表から選んだ架空の氏名を、
   英字（ヘボン式、長音を表記しない）・漢字・カナの3つのコンポーネントグループで保持する
   （例 `TANAKA^HIROSHI=田中^博=タナカ^ヒロシ`）
-- 患者 ID：`<patient_id_prefix><7 桁の乱数>`。データベースにある ID と、
+- 患者ID：`<patient_id_prefix><7 桁の乱数>`。データベースにある ID と、
   同じ作成要求で生成した ID とは重複させない
 - 性別は M・F、年齢は予定日の時点で 0〜95 歳。身長と体重は年齢と性別から
   概算の値を生成する（Patient's Size は m、Patient's Weight は kg）
@@ -138,7 +138,7 @@ Specific Character Set で表せるかを検証する。表せない文字があ
   （CLI は終了コード 2、画面はボタンを出さない）
 - 元の予約が実施中・完了・中止のときだけ作れる。予定の予約はまだ撮っていない、
   取消の予約は検査そのものを取り消したので、撮り直しを作らない（終了コード 2・400）
-- 患者・モダリティ・予定の AE タイトルと装置名・検査・依頼科・依頼医・紹介医・施設名・
+- 患者・モダリティ・予定の AEタイトルと装置名・検査・依頼科・依頼医・紹介医・施設名・
   優先度・文字コードを元の予約から写す
 - 受付番号・Requested Procedure ID・Scheduled Procedure Step ID・Study Instance UID は、
   新しい予約と同じ規則（2 章）で発番する。状態は予定

@@ -11,7 +11,7 @@
 |-----------|-----|------|
 | Modality Performed Procedure Step | 1.2.840.10008.3.1.2.3.3 | SCP（N-CREATE・N-SET） |
 
-- MWL の SCP と同じ AE タイトル・ポートで受ける。Called AE Title の検証も MWL と
+- MWL の SCP と同じ AEタイトル・ポートで受ける。Called AE Title の検証も MWL と
   同じ設定（`mwl.ae_title`・`mwl.require_called_ae_title`）を使う
 - N-GET（Modality Performed Procedure Step Retrieve）と N-EVENT-REPORT
   （Modality Performed Procedure Step Notification）には対応しない
