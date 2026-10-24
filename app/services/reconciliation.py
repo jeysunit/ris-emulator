@@ -245,7 +245,7 @@ class ReconciliationService:
         except pydantic.ValidationError as exc:
             first = exc.errors()[0]
             location = ".".join(str(part) for part in first["loc"])
-            raise ValidationError(f"予約の値が正しくありません: {location}: {first['msg']}") from exc
+            raise ValidationError(f"予約の値を受け付けられません: {location}: {first['msg']}") from exc
         check_encodable(order)
         return order
 

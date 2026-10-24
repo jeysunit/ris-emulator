@@ -23,9 +23,8 @@
   --color-warning: #9A6700;
   --color-dev-band: #6B4A00;
   --color-dev-band-foreground: #FFE8A3;
-  --color-chrome: #333333;
   --color-mod-ct: #0969DA;
-  --color-mod-mr: #8250DF;
+  --color-mod-mr: #9333EA;
   --color-mod-crdx: #1A7F37;
   --color-mod-us: #BC4C00;
   --color-mod-es: #BF3989;
@@ -59,7 +58,6 @@
     --color-warning: #D29922;
     --color-dev-band: #6B4A00;
     --color-dev-band-foreground: #FFE8A3;
-    --color-chrome: #121212;
     --color-mod-ct: #4493F8;
     --color-mod-mr: #C084FC;
     --color-mod-crdx: #3FB950;
