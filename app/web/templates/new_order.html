@@ -16,7 +16,7 @@
     {# 名簿を選んで送った後に名簿が読めなくなったときは、どちらも選ばずに出す（黙って新規に切り替えない） #}
     <label><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
     <label>名簿の患者
-      <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
+      <select name="roster_patient_id" data-roster-select{% if not roster %} data-no-roster disabled{% endif %}>
         {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
         {% set chosen = values.get('roster_patient_id', '') %}
         {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}

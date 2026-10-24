@@ -108,6 +108,29 @@ def test_register_new_fictitious_patient(config: AppConfig, service: OrderServic
     assert order.patient.patient_id.startswith(config.orders.patient_id_prefix)
 
 
+def test_new_patient_ignores_roster_choice_whether_or_not_it_is_sent(
+    config: AppConfig, service: OrderService
+) -> None:
+    # 画面は「新規（架空）」の間、名簿の患者の選択肢を無効にする。無効な欄はブラウザが送らない。
+    # 送られても送られなくても、新規は名簿の患者を使わない
+    with _client(config, service) as client:
+        omitted = {key: value for key, value in ENTRY.items() if key != "roster_patient_id"}
+        assert _post(client, "/orders", {**omitted, "patient": "new"}).status_code == 303
+        assert _post(client, "/orders", {**ENTRY, "patient": "new"}).status_code == 303
+    patients = {order.patient.patient_id for order in service.list_orders()}
+    assert len(patients) == 2 and "P000002" not in patients
+
+
+def test_roster_select_follows_the_patient_choice(config: AppConfig, service: OrderService) -> None:
+    with _client(config, service) as client:
+        page = client.get("/orders/new").text
+        script = client.get("/static/app.js").text
+    assert re.search(r'<select name="roster_patient_id" data-roster-select>', page)
+    # 患者の選択が変わったとき、読み込んだとき、戻るボタンで戻ったときに、無効かどうかを合わせる
+    assert "input[name=patient][value=new]" in script
+    assert 'name === "patient"' in script and '"pageshow", syncRosterSelect' in script
+
+
 def test_entry_rejects_mismatched_choices(config: AppConfig, service: OrderService) -> None:
     cases = {
         "MR の検査の種類に無いコードです: CT0001": {"modality": "MR", "station": "MR1号機"},
