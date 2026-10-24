@@ -21,7 +21,7 @@
 ## 4. ドキュメント
 
 - [x] 4.1 `docs/spec/06_hl7_pir.md`（3 つの例を含む）・ADR-0010・`docs/spec/03_web_cli.md`・`docs/usage.md`・`docs/architecture.md`・`docs/project_charter.md` を直し、markdownlint が合格することを確かめる
-- [ ] 4.2 `python -m pytest -q` がすべて合格し、CI が緑であることを確かめる
+- [x] 4.2 `python -m pytest -q` がすべて合格し、CI が緑であることを確かめる
 
 ## Workflow follow-up
 
