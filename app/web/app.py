@@ -476,12 +476,15 @@ def create_app(
         values = {key: value for key, value in form.items() if isinstance(value, str)}
         try:
             patient = _reconcile_patient(values, order_service)
+            department = values.get("department", "").strip()
+            if department and department not in config.orders.departments:
+                raise ValidationError("依頼科を選び直してください")
             result = reconciliation_service.reconcile(
                 ReconcileRequest(
                     sop_instance_uid=sop_instance_uid,
                     patient=patient,
                     procedure_code=values.get("procedure", "").strip() or None,
-                    department=values.get("department", "").strip() or None,
+                    department=department or None,
                 )
             )
         except MppsNotFoundError as exc:

@@ -137,7 +137,7 @@ def _text(dataset: Dataset, keyword: str) -> str:
 
 def _person_name(dataset: Dataset) -> PersonName:
     value = dataset.get("PatientName", None)
-    if value is None or not str(value):
+    if value is None or isinstance(value, MultiValue) or not str(value):
         return PersonName()
     # pydicom の PersonName は、グループ内の `^` をそのまま持つ
     return PersonName(

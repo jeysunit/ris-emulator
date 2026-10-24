@@ -427,18 +427,21 @@ def reconcile_list_command(args: argparse.Namespace) -> int:
         return EXIT_OK
     for item in items:
         patient = item.patient
+        # MPPS はモダリティが送った値なので、端末に出す前に制御文字を見える形にする
         print(
-            "  ".join(
-                (
-                    item.sop_instance_uid,
-                    item.status,
-                    item.modality,
-                    patient.patient_id,
-                    patient.name.to_dicom(),
-                    item.study_instance_uid,
-                    f"（照合できません：{item.problem}）" if item.problem else "",
-                )
-            ).rstrip()
+            visible(
+                "  ".join(
+                    (
+                        item.sop_instance_uid,
+                        item.status,
+                        item.modality,
+                        patient.patient_id,
+                        patient.name.to_dicom(),
+                        item.study_instance_uid,
+                        f"（照合できません：{item.problem}）" if item.problem else "",
+                    )
+                ).rstrip()
+            )
         )
     return EXIT_OK
 

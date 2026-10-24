@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -38,6 +39,8 @@ from .store import Delivery, MppsRecord, Reconciliation
 PATIENT_CLASS_EMERGENCY = "E"
 PRIORITY_EMERGENCY = "STAT"
 DEFAULT_DEPARTMENT = "救急科"
+# 送信の権利（claim_delivery）の有効な時間は、送信の時間切れの 2 倍にこの秒数を足したもの
+CLAIM_MARGIN_SECONDS = 5.0
 
 Sender = Callable[[Hl7Message, str, int, float], DeliveryResult]
 
@@ -84,56 +87,70 @@ class ReconciliationService:
                 "この撮影はすでに予約に結び付いています",
                 {"sop_instance_uid": request.sop_instance_uid, "accession_number": linked[0]},
             )
+        self._check(unreconciled, request.patient)
+        procedure = self._procedure(unreconciled.modality, request.procedure_code)
+        department = self._department(request.department)
+        created = self.orders.today()
+
+        def build(
+            sequence: int, record: MppsRecord
+        ) -> tuple[Order, list[Delivery], dict[str, str]]:
+            # 結び付ける MPPS をトランザクションの中で読み直した値から、予約・送る HL7・仮の患者を
+            # 作る（N-SET が間に入っても、旧い患者 ID と送る種類が予約と食い違わない）
+            current = read_unreconciled(**_fields(record))
+            self._check(current, request.patient)
+            temporary = {
+                "patient_id": current.patient.patient_id,
+                "alphabetic": current.patient.name.alphabetic,
+                "ideographic": current.patient.name.ideographic,
+                "phonetic": current.patient.name.phonetic,
+                "birth_date": current.patient.birth_date,
+                "sex": current.patient.sex,
+            }
+            kinds = plan_deliveries(
+                current.patient,
+                request.patient.patient_id,
+                request.patient.name,
+                request.patient.birth_date,
+                request.patient.sex,
+            )
+            order = self._build_order(sequence, current, request.patient, procedure, department)
+            deliveries = [self._build_delivery(kind, order, temporary) for kind in kinds]
+            return order, deliveries, temporary
+
+        order = self.store.reconcile_mpps(
+            f"accession:{created:%Y%m%d}", request.sop_instance_uid, build
+        )
+        return self.send_pending(order.accession_number)
+
+    def _check(self, unreconciled: UnreconciledMpps, patient: Patient) -> None:
+        """照合できる撮影と患者か。できなければ ValidationError."""
         if unreconciled.problem:
             raise ValidationError(f"照合できません：{unreconciled.problem}")
-        if request.patient.birth_date:
+        if patient.birth_date:
             try:
-                datetime.strptime(request.patient.birth_date, "%Y%m%d")
+                datetime.strptime(patient.birth_date, "%Y%m%d")
             except ValueError as exc:
                 raise ValidationError(
-                    f"生年月日が実在する日付ではありません: {request.patient.birth_date}"
+                    f"生年月日が実在する日付ではありません: {patient.birth_date}"
                 ) from exc
         if unreconciled.modality not in self.config.orders.modalities:
             raise ValidationError(
                 f"MPPS のモダリティ {unreconciled.modality or '（空）'} が設定に無いので、照合できません"
             )
-        kinds = plan_deliveries(
-            unreconciled.patient,
-            request.patient.patient_id,
-            request.patient.name,
-            request.patient.birth_date,
-            request.patient.sex,
-        )
-        procedure = self._procedure(unreconciled.modality, request.procedure_code)
-        department = self._department(request.department)
-        created = self.orders.today()
-        temporary = {
-            "patient_id": unreconciled.patient.patient_id,
-            "alphabetic": unreconciled.patient.name.alphabetic,
-            "ideographic": unreconciled.patient.name.ideographic,
-            "phonetic": unreconciled.patient.name.phonetic,
-            "birth_date": unreconciled.patient.birth_date,
-            "sex": unreconciled.patient.sex,
-        }
-
-        def build(sequence: int, record: MppsRecord) -> tuple[Order, list[Delivery]]:
-            order = self._build_order(
-                sequence, read_unreconciled(**_fields(record)), request.patient, procedure, department
-            )
-            return order, [self._build_delivery(kind, order, temporary) for kind in kinds]
-
-        order = self.store.reconcile_mpps(
-            f"accession:{created:%Y%m%d}", request.sop_instance_uid, build, temporary
-        )
-        return self.send_pending(order.accession_number)
 
     def send_pending(self, accession_number: str) -> Reconciliation:
-        """未送信・失敗・拒否の HL7 を順に送る。受理されなかった1通で止める（次の通は送らない）."""
+        """未送信・失敗・拒否の HL7 を順に送る。受理されなかった1通で止める（次の通は送らない）.
+
+        他のプロセスが同じ通を送っている間は、その通を送らずに止める。
+        """
         reconciliation = self._get(accession_number)
+        lease = self.config.hl7.timeout_seconds * 2 + CLAIM_MARGIN_SECONDS
         for index, delivery in enumerate(reconciliation.deliveries):
             if delivery.outcome == "accepted":
                 continue
-            if self._deliver(accession_number, index, delivery) != "accepted":
+            claimed = self.store.claim_delivery(accession_number, index, time.time(), lease)
+            if claimed is None or self._deliver(accession_number, index, claimed) != "accepted":
                 break
         return self._get(accession_number)
 
@@ -152,8 +169,8 @@ class ReconciliationService:
             outcome=result.outcome,
             ack_code=visible(result.ack_code),
             detail=visible(detail),
-            attempts=delivery.attempts + 1,
             sent_at=sent_at,
+            claimed_at=0.0,
         )
         return result.outcome
 

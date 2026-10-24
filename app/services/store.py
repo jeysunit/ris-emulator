@@ -117,6 +117,8 @@ class Delivery:
     detail: str = ""
     attempts: int = 0
     sent_at: str = ""
+    # 送信の途中（他のプロセスが同じ通を同時に送らないための印。UNIX 秒。空なら途中ではない）
+    claimed_at: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -131,8 +133,9 @@ class Reconciliation:
     updated_at: str
 
 
-# 予約と送る HL7 の組み立て：(連番, MPPS の記録) → (予約, 送る HL7)。予約の状態は store が MPPS に合わせて決める
-ReconcileBuilder = Callable[[int, MppsRecord], tuple[Order, list[Delivery]]]
+# 予約と送る HL7 の組み立て：(連番, MPPS の記録) → (予約, 送る HL7, 仮の患者の値)。
+# 同じトランザクションで読んだ MPPS から作る。予約の状態は store が MPPS に合わせて決める
+ReconcileBuilder = Callable[[int, MppsRecord], tuple[Order, list[Delivery], dict[str, str]]]
 
 
 class OrderStore:
@@ -462,7 +465,6 @@ class OrderStore:
         counter: str,
         sop_instance_uid: str,
         build: ReconcileBuilder,
-        temporary: dict[str, str],
     ) -> Order:
         """予約に結び付いていない MPPS に、新しい予約を結ぶ.
 
@@ -493,7 +495,7 @@ class OrderStore:
                 ).fetchone()
                 number = (counter_row[0] if counter_row else 0) + 1
                 now = _now()
-                built, deliveries = build(number, record)
+                built, deliveries, temporary = build(number, record)
                 order = built.model_copy(
                     update={
                         "status": _ORDER_STATUS_FOR_PPS[record.status],
@@ -551,6 +553,42 @@ class OrderStore:
             created_at=row[3],
             updated_at=row[4],
         )
+
+    def claim_delivery(
+        self, accession_number: str, index: int, now: float, lease_seconds: float
+    ) -> Delivery | None:
+        """`index` 番めの通を送る権利を取り、送った回数を 1 つ増やす.
+
+        すでに受理されている、または他のプロセスが `lease_seconds` 以内に取っていれば None
+        （同じ通を同時に送らない）。取った印は `update_delivery` で結果を書くときに外れる。
+        """
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT body FROM reconciliations WHERE accession_number = ?",
+                    (accession_number,),
+                ).fetchone()
+                if row is None:
+                    raise ReconciliationNotFoundError(
+                        "Reconciliation not found", {"accession_number": accession_number}
+                    )
+                body = json.loads(row[0])
+                current = Delivery(**body["deliveries"][index])
+                if current.outcome == "accepted" or now - current.claimed_at < lease_seconds:
+                    conn.execute("ROLLBACK")
+                    return None
+                claimed = replace(current, attempts=current.attempts + 1, claimed_at=now)
+                body["deliveries"][index] = asdict(claimed)
+                conn.execute(
+                    "UPDATE reconciliations SET body = ? WHERE accession_number = ?",
+                    (json.dumps(body, ensure_ascii=False), accession_number),
+                )
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return claimed
 
     def update_delivery(self, accession_number: str, index: int, **changes: Any) -> Delivery:
         """照合の `index` 番めの送信の記録を変える（組み立てた本文、送信の結果）.
