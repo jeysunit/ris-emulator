@@ -15,7 +15,7 @@ from app.services.order_service import OrderRequest, OrderService
 from app.services.store import OrderStore
 from app.web.app import create_app
 from app.web.auth import PASSWORD_FILE_ENV, WebStartupError, startup_password
-from tests.conftest import TODAY, new_order_service
+from tests.conftest import TODAY, add_unscheduled_mpps, new_order_service
 
 ORIGIN = "http://127.0.0.1:8081"
 
@@ -97,22 +97,33 @@ RETIRED_WORDS = ("患者 ID", "患者氏名", "AE タイトル", "頁", "既定"
 
 
 def test_pages_avoid_retired_words(config: AppConfig, service: OrderService) -> None:
-    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    # 150 件で、1 ページ目に「次のページ」、2 ページ目に「前のページ」が出る
+    order = service.create_orders(
+        OrderRequest(counts={"CT": 150}, scheduled_date=TODAY, interval_minutes=1, seed=1)
+    )[0]
+    sop_uid, _ = add_unscheduled_mpps(service.store)
     paths = [
-        "/orders?date=2026-10-21",
+        "/orders",
+        "/orders?page=2",
         f"/orders/{order.accession_number}",
         "/orders/new",
         "/orders/batch",
         "/reconciliation",
+        f"/reconciliation/{sop_uid}",
     ]
+    shown = {}
     with _client(config, service) as client:
         for path in paths:
             response = client.get(path)
             assert response.status_code == 200, path
+            shown[path] = response.text
             text = html.unescape(re.sub(r"<[^>]+>", " ", response.text))
             attributes = " ".join(re.findall(r'(?:aria-label|title|placeholder)="([^"]*)"', response.text))
             for word in RETIRED_WORDS:
                 assert word not in text + attributes, f"{path}: {word}"
+    # 検査した画面に、ページ送りと未照合の一覧が出ている
+    assert "次のページ" in shown["/orders"] and "前のページ" in shown["/orders?page=2"]
+    assert sop_uid in shown["/reconciliation"]
 
 
 def test_root_redirects(config: AppConfig, service: OrderService) -> None:

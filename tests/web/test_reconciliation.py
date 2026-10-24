@@ -265,6 +265,8 @@ def test_detail_terms_for_reconciled_order(config: AppConfig, store: OrderStore)
         page = client.get(location).text
     items = set(re.findall(r"<dt>([^<]+)</dt>", page))
     assert {"照合前の患者ID", "照合前の氏名"} <= items
+    # 画面の言葉の決まり（openspec/specs/screen-terms/spec.md）で外した言い方が出ない
+    assert not [w for w in ("患者 ID", "患者氏名", "AE タイトル", "頁", "既定") if w in page]
     assert re.findall(r"<th>([^<]+)</th>", page.split("<h2>HL7 送信</h2>")[1].split("</thead>")[0]) == [
         "メッセージ", "状態", "ACK", "詳細", "送信日時", "回数",
     ]  # fmt: skip
