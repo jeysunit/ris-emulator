@@ -130,8 +130,9 @@ class ReconciliationService:
     ) -> tuple[Order, Reconciliation | None]:
         """画面・CLI の状態の変更。照合で作った予約を取消・中止したら、ORM（CA・DC）を足して送る.
 
-        状態の変更と送る通の追加は 1 つのトランザクションで行う。前の通が受理されていなければ、
-        `send_pending` の規則どおり、そこで止まる（予約を知らせる前に取消を送らない）。
+        状態の変更と送る通の追加は 1 つのトランザクションで行う。前の通が受理されていなければ
+        何も送らず、足した通は送信待ちで残る（予約を知らせる前に取消を送らない。前の通の送り直しは
+        再送信の操作で行う）。
         MPPS（N-SET）による中止では送らない（モダリティの MPPS は PACS も受けるため）。
         通を足さなかったときの 2 つめの値は None。
         """
@@ -146,7 +147,13 @@ class ReconciliationService:
             return self._build_delivery(kind, order, {})
 
         order = self.store.set_status(accession_number, status, build)
-        return order, self.send_pending(accession_number) if added else None
+        if not added:
+            return order, None
+        reconciliation = self._get(accession_number)
+        if any(d.outcome != "accepted" for d in reconciliation.deliveries[:-1]):
+            # 前の通の送り直しは、再送信の操作に任せる（足した通は送信待ちで残す）
+            return order, reconciliation
+        return order, self.send_pending(accession_number)
 
     def _check(self, unreconciled: UnreconciledMpps, patient: Patient) -> None:
         """照合できる撮影と患者か。できなければ ValidationError."""

@@ -336,15 +336,17 @@ def test_manual_status_sends_rad13_and_same_status_does_nothing(config, store, s
 
 def test_rejected_nw_blocks_ca_until_resend(config, store):
     uid, _ = add_unscheduled_mpps(store)
-    answers = iter(["AA", "AE", "AE", "AA", "AA"])
+    # 次に NW を送り直せば受理される相手でも、取消の操作では送り直さない
+    answers = iter(["AA", "AE", "AA", "AA"])
     with stub_receiver(lambda text: ack(next(answers), text)) as receiver:
         service = _service(config, store, receiver.port)
         result = service.reconcile(ReconcileRequest(uid, OFFICIAL))
         _, updated = service.set_status(result.accession_number, OrderStatus.CANCELLED)
         assert [d.outcome for d in updated.deliveries] == ["accepted", "rejected", "pending"]
+        assert len(receiver.received) == 2
         final = service.send_pending(result.accession_number)
     controls = [line.split("|")[1] for text in receiver.received for line in text.split("\r") if line.startswith("ORC|")]
-    assert controls == ["NW", "NW", "NW", "CA"]
+    assert controls == ["NW", "NW", "CA"]
     assert all(d.outcome == "accepted" for d in final.deliveries)
 
 
