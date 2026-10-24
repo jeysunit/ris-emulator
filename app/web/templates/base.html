@@ -10,15 +10,9 @@
   <script src="/static/app.js" defer></script>
 </head>
 <body hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'>
-  <header class="site-header">
-    <div class="wrap header-row">
+  <div class="shell">
+  <header class="topbar">
       <p class="brand-row"><a href="/orders" class="brand">ris-emulator</a> <span class="version">{{ version }}</span></p>
-      <nav class="nav" aria-label="ページ">
-        <a href="/orders" class="nav-link">予約一覧</a>
-        <a href="/orders/new" class="nav-link">予約作成</a>
-        <a href="/orders/batch" class="nav-link">一括作成</a>
-        <a href="/reconciliation" class="nav-link">未照合</a>
-      </nav>
       <p class="mwl-state">
         MWL：{{ mwl_config.ae_title }}
         {% if mwl.running %}
@@ -27,11 +21,17 @@
         <span class="badge badge-off">停止</span>
         {% endif %}
       </p>
-    </div>
   </header>
-  <main class="wrap">
+  <nav class="sidenav" aria-label="ページ">
+    <p class="nav-g">業務</p>
+    {% for key, url, label in [("orders", "/orders", "予約"), ("new", "/orders/new", "予約作成"), ("batch", "/orders/batch", "一括作成"), ("reconciliation", "/reconciliation", "未照合")] %}
+    <a href="{{ url }}" class="nav-i"{% if nav_current == key %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <main class="main">
     <p id="request-error" class="error" role="alert" hidden></p>
     {% block content %}{% endblock %}
   </main>
+  </div>
 </body>
 </html>

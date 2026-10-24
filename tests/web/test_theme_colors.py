@@ -6,24 +6,29 @@ import re
 from pathlib import Path
 
 CSS = Path(__file__).resolve().parents[2] / "app" / "web" / "static" / "app.css"
-_DECLARATION = re.compile(r"(--[a-z-]+):\s*(#[0-9a-f]{6});")
+_DECLARATION = re.compile(r"(--[a-z-]+):\s*(#[0-9a-fA-F]{6});")
 
-# 文字の色と、その文字が乗る地。状態のバッジ（白い字と --ok・--off）は、状態の色を前の値のまま
-# にする方針のため対象外（前から明るい地の --off は 3.04:1、暗い地の --ok は 2.54:1 で AA に届かない）
+# 文字の色と、その文字が乗る地（変数の名前は 3 製品の画面の決まりのトークンと同じ）。状態のバッジ
+# （白い字と --color-success・--color-label）は、状態の色を前の値のまま にする方針のため対象外
+# （暗い地の --color-success は白い字で AA に届かない）
 _TEXT_PAIRS = [
-    ("--text", "--bg"),
-    ("--text", "--surface"),
-    ("--text", "--done"),
-    ("--muted", "--bg"),
-    ("--muted", "--surface"),
-    ("--muted", "--done"),
-    ("--accent", "--bg"),
-    ("--accent", "--surface"),
-    ("--accent", "--done"),
-    ("--accent-text", "--accent"),
-    ("--error-text", "--error-bg"),
+    ("--color-foreground", "--color-background"),
+    ("--color-foreground", "--color-surface"),
+    ("--color-foreground", "--color-muted"),
+    ("--color-foreground", "--color-selected"),
+    ("--color-label", "--color-background"),
+    ("--color-label", "--color-surface"),
+    ("--color-label", "--color-muted"),
+    ("--color-link", "--color-background"),
+    ("--color-link", "--color-surface"),
+    ("--color-link", "--color-muted"),
+    ("--color-primary-foreground", "--color-primary"),
+    ("--color-danger", "--color-surface"),
 ]
-_NEUTRAL = ("--bg", "--surface", "--text", "--muted", "--border", "--done")
+_NEUTRAL = (
+    "--color-background", "--color-surface", "--color-foreground", "--color-label",
+    "--color-border", "--color-muted",
+)  # fmt: skip
 
 
 def _themes() -> dict[str, dict[str, str]]:
@@ -55,11 +60,11 @@ def test_text_contrast_is_at_least_aa() -> None:
 def test_greys_are_neutral() -> None:
     for theme, tokens in _themes().items():
         for name in _NEUTRAL:
-            value = tokens[name]
+            value = tokens[name].lower()
             assert value[1:3] == value[3:5] == value[5:7], (theme, name, value)
 
 
 def test_accent_values() -> None:
     themes = _themes()
-    assert themes["light"]["--accent"] == "#4b4fbf"
-    assert themes["dark"]["--accent"] == "#a5a8ff"
+    assert themes["light"]["--color-primary"].lower() == "#4b4fbf"
+    assert themes["dark"]["--color-link"].lower() == "#a5a8ff"

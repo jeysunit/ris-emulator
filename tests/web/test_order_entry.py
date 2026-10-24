@@ -213,7 +213,7 @@ def test_rejected_form_post_shows_page(config: AppConfig, service: OrderService)
         )
     assert stale.status_code == 403
     assert "送信を受け付けませんでした。画面を開き直して、もう一度操作してください。" in stale.text
-    assert '<a href="/orders">予約一覧へ</a>' in stale.text
+    assert '<a href="/orders">予約へ戻る</a>' in stale.text
     # htmx の要求は今までどおり（画面の上のエラーは app.js が出す）
     assert htmx.status_code == 403 and "送信を受け付けませんでした" not in htmx.text
 

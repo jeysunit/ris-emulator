@@ -1,25 +1,8 @@
-<tr id="order-{{ order.accession_number }}" class="status-{{ order.status.value }}">
-  <td class="nowrap">{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</td>
-  <td class="mono"><a href="/orders/{{ order.accession_number }}">{{ order.accession_number }}</a></td>
-  <td class="mono">{{ order.patient.patient_id }}</td>
-  <td>{{ order.patient.name.ideographic | pn }}<br><span class="muted">{{ order.patient.name.phonetic | pn }} / {{ order.patient.name.alphabetic | pn }}</span></td>
-  <td class="nowrap">{{ order.patient.birth_date | ymd }} {{ order.patient.sex }}</td>
-  <td>{{ order.modality }}</td>
+<tr id="order-{{ order.accession_number }}" data-selected="{{ 'true' if order == selected_order else 'false' }}">
+  <td class="nowrap">{{ order.scheduled_date | md }} {{ order.scheduled_time | hhmm }}</td>
+  <td class="mono"><a class="row-link" href="{{ selection_links[order.accession_number] }}"{% if order == selected_order %} aria-current="true"{% endif %}>{{ order.accession_number }}</a></td>
+  <td class="main-c">{{ order.patient.name.ideographic | pn }}<span class="sub">{{ order.patient.name.phonetic | pn }} / {{ order.patient.name.alphabetic | pn }}</span></td>
+  <td><span class="mod" data-mod="{{ order.modality }}">{{ order.modality }}</span></td>
   <td>{{ order.procedure.name }}</td>
-  <td>{{ order.requesting_service }}</td>
-  <td>{% if order.scheduled_station_label %}{{ order.scheduled_station_label }}<br><span class="muted mono">{{ order.scheduled_station_ae_title }}</span>{% else %}<span class="mono">{{ order.scheduled_station_ae_title }}</span>{% endif %}</td>
-  <td class="col-status">
-    {% if is_final(order.status) %}
-    {{ status_labels[order.status] }}
-    {% else %}
-    <select name="status" aria-label="{{ order.accession_number }} の状態"
-            data-current="{{ order.status.value }}" hx-disabled-elt="this"
-            hx-post="/orders/{{ order.accession_number }}/status"
-            hx-target="#order-{{ order.accession_number }}" hx-swap="outerHTML">
-      {% for s in selectable_statuses(order.status) %}
-      <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
-      {% endfor %}
-    </select>
-    {% endif %}
-  </td>
+  <td>{% include "_status_badge.html" %}</td>
 </tr>

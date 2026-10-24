@@ -356,6 +356,7 @@ class OrderService:
         date_to: str = "",
         statuses: list[OrderStatus] | None = None,
         modality: str = "",
+        query: str = "",
         limit: int | None = None,
         offset: int = 0,
     ) -> list[Order]:
@@ -364,6 +365,7 @@ class OrderService:
             date_to=date_to,
             statuses=statuses,
             modality=modality,
+            query=query,
             limit=limit,
             offset=offset,
         )
@@ -375,9 +377,17 @@ class OrderService:
         date_to: str = "",
         statuses: list[OrderStatus] | None = None,
         modality: str = "",
+        query: str = "",
     ) -> int:
         return self.store.count_orders(
-            date_from=date_from, date_to=date_to, statuses=statuses, modality=modality
+            date_from=date_from, date_to=date_to, statuses=statuses, modality=modality, query=query
+        )
+
+    def count_orders_by_status(
+        self, *, date_from: str = "", date_to: str = "", modality: str = "", query: str = ""
+    ) -> dict[OrderStatus, int]:
+        return self.store.count_orders_by_status(
+            date_from=date_from, date_to=date_to, modality=modality, query=query
         )
 
     def get(self, accession_number: str) -> Order:
