@@ -106,6 +106,34 @@ def test_a40_requires_a_different_old_id() -> None:
         build_adt_a40(HEADER, PATIENT, namespace=NAMESPACE, prior_patient_id="RE0000001", now=NOW)
 
 
+@pytest.mark.parametrize("prior", [" ", " ER1", "ER1 ", "ER|1", "ER^1", "ER\\1", "ER\n1", "x" * 65])
+def test_a40_applies_the_patient_id_rules_to_the_old_id(prior: str) -> None:
+    """旧い患者 ID も、正式な患者 ID と同じ規則（ADR-0003、Patient のモデル）で断る."""
+    with pytest.raises(ValidationError, match="旧い患者 ID"):
+        build_adt_a40(HEADER, PATIENT, namespace=NAMESPACE, prior_patient_id=prior, now=NOW)
+
+
+@pytest.mark.parametrize("name", ["^^^^", " ", " ^ ", "= ="])
+def test_name_without_any_component_text_is_refused(name: str) -> None:
+    patient = Patient(patient_id="RE0000006", name=PersonName(alphabetic=name.split("=")[0]))
+    with pytest.raises(ValidationError, match="PID-5"):
+        build_adt_a08(HEADER, patient, namespace=NAMESPACE, visit_number="V1", now=NOW)
+
+
+@pytest.mark.parametrize("birth", ["20260231", "２０２６０１０１", "20261301", "2026-01-01", "1980"])
+def test_birth_date_must_be_a_real_ascii_date(birth: str) -> None:
+    patient = PATIENT.model_copy(update={"birth_date": birth})
+    with pytest.raises(ValidationError, match="生年月日"):
+        build_adt_a08(HEADER, patient, namespace=NAMESPACE, visit_number="V1", now=NOW)
+
+
+def test_birth_date_with_trailing_line_feed_is_refused() -> None:
+    """モデルの検証（`$` で終わる正規表現）は末尾の LF を通すので、組み立ての側で断る."""
+    patient = PATIENT.model_copy(update={"birth_date": "19800101\n"})
+    with pytest.raises(ValidationError, match="生年月日"):
+        build_adt_a08(HEADER, patient, namespace=NAMESPACE, visit_number="V1", now=NOW)
+
+
 def test_a40_without_old_name_leaves_mrg_7_empty() -> None:
     message = build_adt_a40(HEADER, PATIENT, namespace=NAMESPACE, prior_patient_id="ER0001", now=NOW)
     mrg = _segments(message.text)["MRG"]
@@ -285,7 +313,15 @@ def test_parse_ack_accepts_lf_separators() -> None:
 
 @pytest.mark.parametrize(
     "raw",
-    ["", "PID|1\r", "MSH|^~\\&|A|B|C|D|20261024||ACK|1|P|2.3.1\r", "MSH|ab|A\rMSA|AA|1\r"],
+    [
+        "",
+        "PID|1\r",
+        "MSH|^~\\&|A|B|C|D|20261024||ACK|1|P|2.3.1\r",
+        "MSH|ab|A\rMSA|AA|1\r",
+        "MSH|aaaa|\rMSA|AA|CTRL1\r",
+        "MSH#^~\\&#A\rMSA#AA#1\r",
+        "MSH|^~&\\|A|B\rMSA|AA|1\r",
+    ],
 )
 def test_parse_ack_refuses_bad_input(raw: str) -> None:
     with pytest.raises(AckParseError):

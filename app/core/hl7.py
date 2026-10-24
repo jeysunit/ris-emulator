@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.core.exceptions import AckParseError, ValidationError
-from app.core.models import Order, Patient, PersonName, has_control_chars
+from app.core.models import Order, Patient, PersonName, has_control_chars, validate_patient_id
 
 SEGMENT_SEPARATOR = "\r"
 FIELD_SEPARATOR = "|"
@@ -147,6 +147,10 @@ def build_adt_a40(
     """
     if not prior_patient_id:
         raise ValidationError("統合する旧い患者 ID が要ります")
+    try:
+        validate_patient_id(prior_patient_id)
+    except ValueError as exc:
+        raise ValidationError(f"旧い患者 ID が使えません：{exc}", {"value": prior_patient_id}) from exc
     if prior_patient_id == patient.patient_id:
         raise ValidationError("旧い患者 ID が正式の患者 ID と同じです。属性の更新は A08 を使います")
     when = now or datetime.now()
@@ -258,10 +262,11 @@ def parse_ack(data: bytes | str) -> Ack:
     segments = [part for part in _SEGMENT_SPLIT.split(text) if part]
     if not segments or not segments[0].startswith("MSH") or len(segments[0]) < 8:
         raise AckParseError("ACK の先頭が MSH ではありません")
-    separator = segments[0][3]
-    encoding_characters = segments[0][4 : segments[0].find(separator, 4)]
-    if len(encoding_characters) < 4:
-        raise AckParseError("ACK の MSH-2 が読めません")
+    # IHE RAD TF-2 2.4.2.2：MSH-1・MSH-2 は HL7 の推奨値。違う定義の ACK は読まない
+    separator = FIELD_SEPARATOR
+    encoding_characters = ENCODING_CHARACTERS
+    if not segments[0].startswith("MSH" + separator + encoding_characters + separator):
+        raise AckParseError("ACK の MSH-1・MSH-2 が推奨値（|^~\\&）ではありません")
     msa = _find_segment(segments, "MSA", separator)
     if msa is None:
         raise AckParseError("ACK に MSA がありません")
@@ -338,7 +343,7 @@ def _pid(patient: Patient, namespace: str, account_number: str) -> str:
         1: "1",
         3: _cx(patient.patient_id, namespace, "PI"),
         5: _xpn_list(patient.name),
-        7: patient.birth_date,
+        7: _birth_date(patient.birth_date),
         8: patient.sex,
     }
     if account_number:
@@ -369,7 +374,22 @@ def _cx(identifier: str, namespace: str, identifier_type: str) -> str:
 
 
 def _has_name(name: PersonName) -> bool:
-    return bool(name.alphabetic or name.ideographic or name.phonetic)
+    """氏名の成分のどれかに、空白以外の文字があるか（`^^^^` や空白だけは氏名にならない）."""
+    groups = (name.alphabetic, name.ideographic, name.phonetic)
+    return any(part.strip() for group in groups for part in group.split("^"))
+
+
+def _birth_date(value: str) -> str:
+    """PID-7：空か、実在する日付の `YYYYMMDD`（ASCII の数字 8 桁）."""
+    if not value:
+        return ""
+    if not re.fullmatch(r"[0-9]{8}", value):
+        raise ValidationError("生年月日は YYYYMMDD にしてください", {"value": repr(value)})
+    try:
+        datetime.strptime(value, "%Y%m%d")
+    except ValueError as exc:
+        raise ValidationError("生年月日が実在する日付ではありません", {"value": value}) from exc
+    return value
 
 
 def _pn_components(group: str) -> list[str]:

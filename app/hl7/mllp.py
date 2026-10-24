@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import socket
+import time
 from dataclasses import dataclass
 from typing import Literal
 
@@ -47,7 +48,7 @@ def send_message(message: Hl7Message, host: str, port: int, timeout: float) -> D
         with socket.create_connection((host, port), timeout=timeout) as connection:
             connection.settimeout(timeout)
             connection.sendall(frame(message.to_bytes()))
-            raw = _receive_frame(connection)
+            raw = _receive_frame(connection, timeout)
     except OSError as exc:
         return DeliveryResult("failed", detail=f"{host}:{port} と通信できません：{exc}")
     except _FrameError as exc:
@@ -75,16 +76,27 @@ class _FrameError(Exception):
     """MLLP の枠が壊れている."""
 
 
-def _receive_frame(connection: socket.socket) -> bytes:
-    """`<VT>` で始まり `<FS><CR>` で終わる 1 通を受け取り、枠を外した本文を返す."""
+def _receive_frame(connection: socket.socket, timeout: float) -> bytes:
+    """`<VT>` で始まり `<FS><CR>` で終わる 1 通を受け取り、枠を外した本文を返す.
+
+    `timeout` は ACK を受け取り終えるまでの全体の秒数。少しずつ返す相手でも超えたら失敗にする。
+    """
+    deadline = time.monotonic() + timeout
     buffer = b""
     while END_BLOCK not in buffer:
         if len(buffer) > MAX_ACK_BYTES:
             raise _FrameError("ACK が大きすぎます")
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("ACK を待つ時間が過ぎました")
+        connection.settimeout(remaining)
         chunk = connection.recv(_RECEIVE_SIZE)
         if not chunk:
             raise _FrameError("ACK の枠が終わる前に、相手が接続を閉じました")
         buffer += chunk
     if not buffer.startswith(START_BLOCK):
         raise _FrameError("ACK が MLLP の開始（0x0B）で始まっていません")
-    return buffer[len(START_BLOCK) : buffer.index(END_BLOCK)]
+    body = buffer[len(START_BLOCK) : buffer.index(END_BLOCK)]
+    if len(body) > MAX_ACK_BYTES:
+        raise _FrameError("ACK が大きすぎます")
+    return body

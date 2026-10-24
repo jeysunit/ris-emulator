@@ -167,6 +167,21 @@ class PersonName(BaseModel):
         return "=".join(groups)
 
 
+def validate_patient_id(value: str) -> str:
+    """Patient ID：LO（64 字、`\\` と制御文字なし。PS3.5 6.2）。HL7 v2 の区切りの字
+    （`^~&|`）と前後の空白も断る（HL7 v2 の PID-3 と FHIR の Identifier.value に
+    エスケープなしで入れるため。docs/spec/04_identifiers.md）。統合の旧い患者 ID にも使う."""
+    if not value or len(value) > LO_MAX_LENGTH:
+        raise ValueError(f"patient_id must be 1-{LO_MAX_LENGTH} characters")
+    if "\\" in value or has_control_chars(value):
+        raise ValueError("patient_id must not contain backslash or control characters")
+    if any(char in HL7_V2_DELIMITERS for char in value):
+        raise ValueError("patient_id must not contain HL7 v2 delimiters (^ ~ & |)")
+    if value != value.strip():
+        raise ValueError("patient_id must not have leading or trailing spaces")
+    return value
+
+
 class Patient(BaseModel):
     model_config = {"frozen": True}
 
@@ -180,16 +195,7 @@ class Patient(BaseModel):
     @field_validator("patient_id")
     @classmethod
     def _check_patient_id(cls, value: str) -> str:
-        """Patient ID：LO（64 字、`\\` と制御文字なし。PS3.5 6.2）。HL7 v2 の区切りの字
-        （`^~&|`）と前後の空白も断る（HL7 v2 の PID-3 と FHIR の Identifier.value に
-        エスケープなしで入れるため。docs/spec/04_identifiers.md）."""
-        if "\\" in value or has_control_chars(value):
-            raise ValueError("patient_id must not contain backslash or control characters")
-        if any(char in HL7_V2_DELIMITERS for char in value):
-            raise ValueError("patient_id must not contain HL7 v2 delimiters (^ ~ & |)")
-        if value != value.strip():
-            raise ValueError("patient_id must not have leading or trailing spaces")
-        return value
+        return validate_patient_id(value)
 
     @field_validator("birth_date")
     @classmethod

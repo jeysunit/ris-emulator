@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import socket
 import threading
+import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -161,6 +162,46 @@ def test_silent_receiver_times_out() -> None:
         result = send_message(_message(), "127.0.0.1", receiver.port, 0.3)
         release.set()
     assert result.outcome == "failed" and "通信できません" in result.detail
+
+
+def test_slowly_dripping_ack_hits_the_overall_deadline() -> None:
+    """各 recv の待ちは短くても、ACK を受け終えるまでの全体で timeout を超えたら失敗にする."""
+    release = threading.Event()
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    port = server.getsockname()[1]
+
+    def serve() -> None:
+        connection, _ = server.accept()
+        with connection:
+            connection.recv(4096)
+            connection.sendall(START_BLOCK)
+            while not release.is_set():
+                try:
+                    connection.sendall(b"x")
+                except OSError:
+                    return
+                release.wait(0.05)
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    started = time.monotonic()
+    result = send_message(_message(), "127.0.0.1", port, 0.5)
+    elapsed = time.monotonic() - started
+    release.set()
+    server.close()
+    thread.join(timeout=TIMEOUT)
+    assert result.outcome == "failed" and "通信できません" in result.detail
+    assert elapsed < 1.5
+
+
+def test_complete_oversized_ack_is_a_failure() -> None:
+    """上限を超える本文が、終端を含む 1 回の受信で届いても失敗にする."""
+    oversized = START_BLOCK + b"x" * (MAX_ACK_BYTES + 10) + END_BLOCK
+    with stub_receiver(lambda _: oversized) as receiver:
+        result = send_message(_message(), "127.0.0.1", receiver.port, TIMEOUT)
+    assert result.outcome == "failed" and "大きすぎます" in result.detail
 
 
 def test_oversized_ack_is_a_failure() -> None:
