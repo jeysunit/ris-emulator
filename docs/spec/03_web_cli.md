@@ -21,10 +21,12 @@
 | `retake <受付番号>` | 撮り直しの予約を作る（`orders.retake_mode` が `new_order` のとき）。`--date`・`--start`・`--json` |
 | `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`・`discontinued`）。変更できる向きは [01_orders.md](01_orders.md) の 5 章 |
 | `mwl serve` | MWL・MPPS の SCP を起動する |
+| `pir send --kind a40/a08/orm` | HL7 v2.3.1 のメッセージを組み立て、MLLP で送る。`--dry-run` は組み立てて出すだけ。オプションは [06_hl7_pir.md](06_hl7_pir.md) の 5 章 |
 | `version` | バージョン |
 
 終了コード：0=正常、1=予期しないエラー、2=設定・入力のエラー（変更できない向きへの
-状態の変更を含む）、3=予約が無い、4=MWL のポートで待ち受けられない。
+状態の変更を含む）、3=予約が無い、4=MWL のポートで待ち受けられない、
+5=HL7 の送信先が AE・AR で断った、6=HL7 の送信先と通信できない・ACK を読めない。
 
 ## 3. Web 画面
 
@@ -93,6 +95,11 @@ Scheduled Procedure Step ID・Study Instance UID など）は英語の属性名�
 | `orders.modalities.<モダリティ>` | CT・MR・CR・DX・US・MG | `stations`（装置の台帳。`name`・`ae_title`・`station_name`）・`procedures`（`code`・`name`） |
 | `web.bind_address`・`web.port` | `127.0.0.1`・`8081` | 画面の待ち受けアドレスとポート |
 | `web.start_mwl` | true | 画面のプロセスで MWL も起動する |
+| `hl7.host`・`hl7.port` | `127.0.0.1`・`2575` | HL7 の送信先（MLLP）。`pir send` だけが使う |
+| `hl7.sending_application`・`hl7.sending_facility` | `RIS_EMU`・`TEST_HOSPITAL` | MSH-3・MSH-4 |
+| `hl7.receiving_application`・`hl7.receiving_facility` | `PACS`・`PACS` | MSH-5・MSH-6 |
+| `hl7.processing_id` | `P` | MSH-11：`P`・`T`・`D` |
+| `hl7.timeout_seconds` | 10 | 接続と ACK を待つ秒数（0 より大きく 300 まで） |
 
 - 相対パスは、プロセスの作業ディレクトリを基準に解決する
 - 環境変数 `RIS_WEB_BIND_ADDRESS`・`RIS_MWL_BIND_ADDRESS` があれば、

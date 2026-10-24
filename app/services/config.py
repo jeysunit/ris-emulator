@@ -16,6 +16,7 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from app.core.exceptions import ConfigurationError
+from app.core.hl7 import Hl7Header
 from app.core.models import (
     LO_MAX_LENGTH,
     SH_MAX_LENGTH,
@@ -36,6 +37,8 @@ PATIENT_ID_PREFIX_MAX_LENGTH = 8
 ISSUER_PATTERN = re.compile(r"[A-Za-z0-9_]{1,16}")
 WEB_BIND_ENV = "RIS_WEB_BIND_ADDRESS"
 MWL_BIND_ENV = "RIS_MWL_BIND_ADDRESS"
+HL7_NAME_MAX_LENGTH = 180  # MSH-3〜6 の長さ（IHE RAD TF-2 Table 2.4-2）
+HL7_TIMEOUT_MAX_SECONDS = 300
 RetakeMode = Literal["append", "new_order"]
 # 画面の時刻の刻み（予約枠の刻みと一括作成の間隔）。60 を割り切る値だけにして、時ごとに分の並びを変えない
 MINUTE_STEPS = (1, 5, 10, 15, 20, 30, 60)
@@ -184,6 +187,46 @@ class WebConfig(BaseModel):
     start_mwl: bool = True  # 画面のプロセスで MWL の SCP も立てる
 
 
+class Hl7Config(BaseModel):
+    """HL7 v2 の送信先と MSH の名前（docs/spec/06_hl7_pir.md 5 章）.
+
+    名前は HD の namespace ID として MSH-3〜6 に入れる。区切り文字はエスケープして送る。
+    """
+
+    model_config = {"frozen": True}
+
+    host: str = Field("127.0.0.1", min_length=1)
+    port: int = Field(2575, ge=PORT_MIN, le=PORT_MAX)
+    sending_application: str = "RIS_EMU"
+    sending_facility: str = "TEST_HOSPITAL"
+    receiving_application: str = "PACS"
+    receiving_facility: str = "PACS"
+    # HL7 Table 0103：P=本番、T=教育、D=デバッグ
+    processing_id: Literal["P", "T", "D"] = "P"
+    timeout_seconds: float = Field(10.0, gt=0, le=HL7_TIMEOUT_MAX_SECONDS)
+
+    @field_validator(
+        "sending_application", "sending_facility", "receiving_application", "receiving_facility"
+    )
+    @classmethod
+    def _check_name(cls, value: str) -> str:
+        """MSH-3〜6 は 1〜180 文字で、制御文字なし（IHE RAD TF-2 Table 2.4-2。R+ なので空は不可）."""
+        if not value.strip() or len(value) > HL7_NAME_MAX_LENGTH or has_control_chars(value):
+            raise ValueError(
+                f"must be 1-{HL7_NAME_MAX_LENGTH} characters without control characters"
+            )
+        return value
+
+    def header(self) -> Hl7Header:
+        return Hl7Header(
+            sending_application=self.sending_application,
+            sending_facility=self.sending_facility,
+            receiving_application=self.receiving_application,
+            receiving_facility=self.receiving_facility,
+            processing_id=self.processing_id,
+        )
+
+
 class AppConfig(BaseModel):
     model_config = {"frozen": True}
 
@@ -191,6 +234,7 @@ class AppConfig(BaseModel):
     mwl: MwlConfig = Field(default_factory=MwlConfig)
     orders: OrdersConfig
     web: WebConfig = Field(default_factory=WebConfig)
+    hl7: Hl7Config = Field(default_factory=Hl7Config)
 
     @model_validator(mode="after")
     def _check_statuses(self) -> AppConfig:

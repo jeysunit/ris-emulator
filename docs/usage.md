@@ -170,3 +170,23 @@ docker exec ris-emulator python -m app.cli retake RE202610210001
 
 撮り直しを作れるのは、実施中・完了・中止の予約です。実施中の予約から作ると、元の予約は
 中止になります（[spec/01_orders.md](spec/01_orders.md) の 7 章）。
+
+## 7. HL7 のメッセージを送る
+
+PACS の PIR（Patient Information Reconciliation）への対応を試すために、HL7 v2.3.1 の
+メッセージを MLLP で送れます。送り先は設定の `hl7.host`・`hl7.port` です。
+先に `--dry-run` で、組み立てたメッセージを確認できます。
+
+```bash
+# 仮の患者 ID ER0001 を、正式な患者 ID RE0000001 に統合する（ADT^A40）
+docker exec ris-emulator python -m app.cli pir send --kind a40 \
+  --patient-id RE0000001 --prior-patient-id ER0001 --name "YAMADA^TARO=山田^太郎=ヤマダ^タロウ"
+
+# 保存済みの予約を知らせる（ORM^O01、ORC-1 は NW）
+docker exec ris-emulator python -m app.cli pir send --kind orm --accession RE202610210001
+```
+
+PACS が受理すると終了コード 0、AE・AR で断ると 5、通信できないと 6 になります。
+メッセージの中身と例は [spec/06_hl7_pir.md](spec/06_hl7_pir.md) にあります。
+Docker から同じマシンの受け口へ送るときは、`hl7.host` にそのマシンのホスト名か
+IP アドレスを書きます（`127.0.0.1` はコンテナ自身です）。

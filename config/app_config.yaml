@@ -69,3 +69,14 @@ web:
   bind_address: "127.0.0.1"       # Docker では "0.0.0.0"（パスワードのファイルが要る）
   port: 8081
   start_mwl: true                 # 画面のプロセスで MWL の SCP も立てる
+
+# HL7 v2.3.1 の送信（pir send）。送り先は MLLP で待ち受ける PACS の受け口
+hl7:
+  host: "127.0.0.1"               # Docker から同じマシンの相手へは、その相手のホスト名か IP アドレス
+  port: 2575
+  sending_application: "RIS_EMU"  # MSH-3
+  sending_facility: "TEST_HOSPITAL"  # MSH-4
+  receiving_application: "PACS"   # MSH-5
+  receiving_facility: "PACS"      # MSH-6
+  processing_id: "P"              # MSH-11：P=本番、T=教育、D=デバッグ
+  timeout_seconds: 10             # 接続と ACK の待ち時間

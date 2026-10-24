@@ -32,11 +32,12 @@ flowchart LR
 ```text
 Web (app/web/) ─┐
 CLI (app/cli/) ─┤→ Service (app/services/) → Core (app/core/)
-MWL (app/mwl/) ─┘
+MWL (app/mwl/) ─┤
+HL7 (app/hl7/) ─┘
 ```
 
-- Core：予約のモデル、患者の生成、照合、応答の組み立て、文字コードの検証。
-  ファイル・通信・ログを使わない
+- Core：予約のモデル、患者の生成、照合、応答の組み立て、文字コードの検証、
+  HL7 v2 のメッセージの組み立てと ACK の読み取り。ファイル・通信・ログを使わない
 - Service：設定・名簿の読み込み、予約と MPPS の記録の保存（SQLite）、予約の作成
 - Web・CLI・MWL：外部からの操作を受け付ける。予約の保存と作成は Service を経由し、
   Core のモデルと、照合・応答の組み立ての関数は直接呼び出す
@@ -51,6 +52,7 @@ MWL (app/mwl/) ─┘
 | `app/core/` | 予約のモデル、患者の生成、MWL の照合と応答の組み立て、文字コードの検証 |
 | `app/services/` | 設定・名簿の読み込み、予約の保存（SQLite）、予約の作成 |
 | `app/mwl/` | MWL と MPPS の SCP（pynetdicom） |
+| `app/hl7/` | HL7 v2 の MLLP での送信（ソケット。待ち受けはしない） |
 | `app/cli/` | CLI |
 | `app/web/` | Web 画面（テンプレート・CSS・htmx を含む） |
 | `config/` | 設定の例（`app_config.yaml`） |
