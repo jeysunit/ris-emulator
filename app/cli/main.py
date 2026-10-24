@@ -11,6 +11,7 @@ import json
 import logging
 import sys
 from collections.abc import Sequence
+from dataclasses import asdict
 from datetime import date, datetime
 from pathlib import Path
 
@@ -19,8 +20,10 @@ import pydantic
 from app import __version__
 from app.core.exceptions import (
     ConfigurationError,
+    MppsNotFoundError,
     MwlServerError,
     OrderNotFoundError,
+    ReconciliationNotFoundError,
     ValidationError,
 )
 from app.core.hl7 import Hl7Message, build_adt_a08, build_adt_a40, build_orm_o01, visible
@@ -34,6 +37,7 @@ from app.core.models import (
     PersonName,
 )
 from app.core.mwl_dataset import order_to_dataset
+from app.core.reconciliation import DELIVERY_LABELS
 from app.hl7.mllp import send_message
 from app.mwl.server import MwlServer
 from app.services.config import AppConfig, load_config
@@ -45,6 +49,8 @@ from app.services.order_service import (
     parse_date_option,
     parse_time_option,
 )
+from app.services.reconciliation import ReconcileRequest, ReconciliationService
+from app.services.store import Reconciliation
 
 DEFAULT_CONFIG = "config/app_config.yaml"
 EXIT_OK = 0
@@ -183,6 +189,38 @@ def build_parser() -> argparse.ArgumentParser:
     send.add_argument("--port", type=int, help="送り先のポート（default: 設定の hl7.port）")
     send.add_argument("--dry-run", action="store_true", help="組み立てたメッセージを出すだけで、送らない")
     send.set_defaults(func=pir_send_command)
+
+    reconcile = sub.add_parser(
+        "reconcile", help="照合：予約の無い撮影に、正式な患者と予約を結び、HL7 で知らせる"
+    )
+    reconcile_sub = reconcile.add_subparsers(dest="reconcile_command", required=True)
+    reconcile_list = reconcile_sub.add_parser(
+        "list", parents=[common], help="予約に結び付かなかった撮影（MPPS）の一覧"
+    )
+    reconcile_list.add_argument("--json", action="store_true", help="JSON で出す")
+    reconcile_list.set_defaults(func=reconcile_list_command)
+    run = reconcile_sub.add_parser(
+        "run",
+        parents=[common],
+        help="撮影に正式な患者と新しい予約を結び、HL7 を送る",
+        description="正式な患者は --roster-patient-id（名簿）か、--patient-id と --name（入力）で指定する",
+    )
+    run.add_argument("sop_instance_uid", help="撮影（MPPS）の SOP Instance UID（reconcile list で見る）")
+    run.add_argument("--roster-patient-id", help="名簿の患者の ID")
+    run.add_argument("--patient-id", help="正式な患者 ID")
+    run.add_argument("--name", help='正式な氏名。DICOM の PN の形 "英字=漢字=かな"')
+    run.add_argument("--birth-date", default="", help="生年月日 YYYYMMDD")
+    run.add_argument("--sex", default="", choices=("", "M", "F", "O"), help="性別")
+    run.add_argument("--procedure", help="検査の種類のコード（default: モダリティの先頭）")
+    run.add_argument("--department", help="依頼科（default: 救急科。設定に無ければ先頭）")
+    run.add_argument("--json", action="store_true", help="JSON で出す")
+    run.set_defaults(func=reconcile_run_command)
+    resend = reconcile_sub.add_parser(
+        "resend", parents=[common], help="受理されていない HL7 を、同じ本文で順に送り直す"
+    )
+    resend.add_argument("accession_number", help="照合で作った予約の受付番号")
+    resend.add_argument("--json", action="store_true", help="JSON で出す")
+    resend.set_defaults(func=reconcile_resend_command)
 
     version = sub.add_parser("version", help="版を出す")
     version.set_defaults(func=version_command)
@@ -363,6 +401,95 @@ def _first_error(exc: pydantic.ValidationError) -> str:
     return f"{'.'.join(str(part) for part in first['loc'])}: {first['msg']}"
 
 
+def reconcile_list_command(args: argparse.Namespace) -> int:
+    items = ReconciliationService(_service(args)).list_unreconciled()
+    if args.json:
+        rows = [
+            {
+                "sop_instance_uid": item.sop_instance_uid,
+                "status": item.status,
+                "received_at": item.received_at,
+                "patient_id": item.patient.patient_id,
+                "patient_name": item.patient.name.to_dicom(),
+                "birth_date": item.patient.birth_date,
+                "sex": item.patient.sex,
+                "study_instance_uid": item.study_instance_uid,
+                "modality": item.modality,
+                "station_ae_title": item.station_ae_title,
+                "problem": item.problem,
+            }
+            for item in items
+        ]
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
+        return EXIT_OK
+    if not items:
+        print("未照合の撮影はありません")
+        return EXIT_OK
+    for item in items:
+        patient = item.patient
+        print(
+            "  ".join(
+                (
+                    item.sop_instance_uid,
+                    item.status,
+                    item.modality,
+                    patient.patient_id,
+                    patient.name.to_dicom(),
+                    item.study_instance_uid,
+                    f"（照合できません：{item.problem}）" if item.problem else "",
+                )
+            ).rstrip()
+        )
+    return EXIT_OK
+
+
+def reconcile_run_command(args: argparse.Namespace) -> int:
+    service = _service(args)
+    if args.roster_patient_id:
+        if args.patient_id or args.name:
+            raise ValidationError("--roster-patient-id と --patient-id・--name は同時に指定できません")
+        patient = next(
+            (p for p in service.roster_patients() if p.patient_id == args.roster_patient_id), None
+        )
+        if patient is None:
+            raise ValidationError(f"名簿に無い患者 ID です: {args.roster_patient_id}")
+    elif args.patient_id and args.name:
+        patient = _patient_from_args(args)
+    else:
+        raise ValidationError("--roster-patient-id か、--patient-id と --name のどちらかが要ります")
+    result = ReconciliationService(service).reconcile(
+        ReconcileRequest(
+            sop_instance_uid=args.sop_instance_uid,
+            patient=patient,
+            procedure_code=args.procedure,
+            department=args.department,
+        )
+    )
+    return _print_reconciliation(result, as_json=args.json)
+
+
+def reconcile_resend_command(args: argparse.Namespace) -> int:
+    result = ReconciliationService(_service(args)).send_pending(args.accession_number)
+    return _print_reconciliation(result, as_json=args.json)
+
+
+def _print_reconciliation(result: Reconciliation, *, as_json: bool) -> int:
+    """照合の記録を出し、HL7 が受理されていなければ終了コード 5（拒否）・6（失敗）を返す."""
+    if as_json:
+        print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+    else:
+        print(f"{result.accession_number}: 照合しました（MPPS {result.sop_instance_uid}）")
+        for delivery in result.deliveries:
+            reason = f"：{delivery.ack_code} {delivery.detail}".rstrip() if delivery.ack_code or delivery.detail else ""
+            print(f"  {delivery.message_type}  {DELIVERY_LABELS[delivery.outcome]}{reason}")
+    outcomes = {delivery.outcome for delivery in result.deliveries}
+    if "rejected" in outcomes:
+        return EXIT_HL7_REJECTED
+    if "failed" in outcomes:
+        return EXIT_HL7_FAILED
+    return EXIT_OK
+
+
 def _service(args: argparse.Namespace) -> OrderService:
     config = load_config(Path(args.config))
     return OrderService(config, today=date.today)
@@ -403,7 +530,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (ConfigurationError, ValidationError) as exc:
         print(f"[ERROR] {visible(str(exc))}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
-    except OrderNotFoundError as exc:
+    except (OrderNotFoundError, MppsNotFoundError, ReconciliationNotFoundError) as exc:
         print(f"[ERROR] {visible(str(exc))}", file=sys.stderr)
         return EXIT_NOT_FOUND
     except MwlServerError as exc:

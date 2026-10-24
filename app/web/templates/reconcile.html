@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}照合{% endblock %}
+{% block content %}
+<h1>照合</h1>
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% endif %}
+<dl class="detail">
+  <dt>受けた日時</dt><dd>{{ item.received_at }}</dd>
+  <dt>状態</dt><dd class="mono">{{ item.status }}</dd>
+  <dt>患者 ID</dt><dd class="mono">{{ item.patient.patient_id }}</dd>
+  <dt>患者氏名</dt><dd class="mono">{{ item.patient.name.to_dicom() }}</dd>
+  <dt>生年月日</dt><dd>{{ item.patient.birth_date | ymd }}</dd>
+  <dt>性別</dt><dd>{{ item.patient.sex }}</dd>
+  <dt>モダリティ</dt><dd>{{ item.modality }}</dd>
+  <dt>予定の AE タイトル</dt><dd class="mono">{{ item.station_ae_title }}</dd>
+  <dt>Study Instance UID</dt><dd class="mono">{{ item.study_instance_uid }}</dd>
+</dl>
+{% if linked %}
+<p>予約 <a href="/orders/{{ linked }}" class="mono">{{ linked }}</a> に結び付いています。</p>
+{% elif item.problem %}
+<p class="error" role="alert">{{ item.problem }}。</p>
+{% elif not procedures %}
+<p class="error" role="alert">モダリティ {{ item.modality or '（空）' }} が設定に無いので、照合できません。</p>
+{% else %}
+<form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="form">
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+  {% set patient = values.get('patient', 'roster' if roster else 'manual') %}
+  <fieldset>
+    <legend>正式な患者</legend>
+    {% if roster_error %}
+    <p class="error" role="alert">{{ roster_error }}</p>
+    {% endif %}
+    <label><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
+    <label>名簿の患者
+      <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
+        {% for p in roster %}
+        <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><input type="radio" name="patient" value="manual" required{% if patient == 'manual' %} checked{% endif %}> 入力する</label>
+    <label>患者 ID <input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}"></label>
+    {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
+    <label>患者氏名（{{ label }}）の姓 <input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}"></label>
+    <label>患者氏名（{{ label }}）の名 <input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}"></label>
+    {% endfor %}
+    <label>生年月日 <input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}"></label>
+    <label>性別
+      <select name="sex">
+        {% for value in ('', 'M', 'F', 'O') %}
+        <option value="{{ value }}"{% if values.get('sex', '') == value %} selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </fieldset>
+  <fieldset>
+    <legend>検査</legend>
+    <label>検査名
+      <select name="procedure">
+        {% for p in procedures %}
+        <option value="{{ p.code }}"{% if values.get('procedure') == p.code %} selected{% endif %}>{{ p.name }}（{{ p.code }}）</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>依頼科
+      <select name="department">
+        {% for d in departments %}
+        <option value="{{ d }}"{% if values.get('department', default_department) == d %} selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </fieldset>
+  <button type="submit" class="btn btn-primary">照合・送信</button>
+</form>
+{% endif %}
+<p><a href="/reconciliation">未照合へ</a></p>
+{% endblock %}

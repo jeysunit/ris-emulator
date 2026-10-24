@@ -3,7 +3,8 @@
 PACS の PIR（Patient Information Reconciliation）への対応を試すために、HL7 v2.3.1 の
 メッセージを組み立て、MLLP で設定した宛先へ送る。送るのは次の 3 種類で、受信はしない
 （[project_charter.md](../project_charter.md) の 2 章）。選んだ形式の理由は
-[ADR-0010](../decisions/0010-hl7-sender-format.md) にある。
+[ADR-0010](../decisions/0010-hl7-sender-format.md) にある。照合の確定でどれを送るか、
+送信の結果の記録と再送信は [07_reconciliation.md](07_reconciliation.md) にある。
 
 ## 1. 送るメッセージ
 

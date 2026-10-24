@@ -11,17 +11,19 @@ import json
 import sqlite3
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from app.core.exceptions import (
+    AlreadyReconciledError,
     DuplicateMppsError,
     InvalidTransitionError,
     MppsNotFoundError,
     MppsNotInProgressError,
     OrderNotFoundError,
+    ReconciliationNotFoundError,
 )
 from app.core.models import STATUS_LABELS, Order, OrderStatus, can_transition
 
@@ -52,6 +54,13 @@ CREATE TABLE IF NOT EXISTS mpps (
     sop_instance_uid TEXT PRIMARY KEY,
     status TEXT NOT NULL,
     accession_numbers TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reconciliations (
+    accession_number TEXT PRIMARY KEY,
+    sop_instance_uid TEXT NOT NULL UNIQUE,
     body TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -89,6 +98,41 @@ class MppsResult:
     linked: list[str] = field(default_factory=list)
     changed: list[str] = field(default_factory=list)
     unchanged: list[tuple[str, OrderStatus]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Delivery:
+    """照合で送る HL7 の1通（docs/spec/07_reconciliation.md 4 章）.
+
+    `outcome` は pending（未送信）・accepted・rejected・failed。`text` は組み立てた本文で、
+    送り直すときは同じ本文（同じ MSH-10）を送る。
+    """
+
+    kind: str
+    message_type: str
+    control_id: str = ""
+    text: str = ""
+    outcome: str = "pending"
+    ack_code: str = ""
+    detail: str = ""
+    attempts: int = 0
+    sent_at: str = ""
+
+
+@dataclass(frozen=True)
+class Reconciliation:
+    """照合の記録。仮の患者の値と、HL7 の送信の経過."""
+
+    accession_number: str
+    sop_instance_uid: str
+    temporary: dict[str, str]
+    deliveries: list[Delivery]
+    created_at: str
+    updated_at: str
+
+
+# 予約と送る HL7 の組み立て：(連番, MPPS の記録) → (予約, 送る HL7)。予約の状態は store が MPPS に合わせて決める
+ReconcileBuilder = Callable[[int, MppsRecord], tuple[Order, list[Delivery]]]
 
 
 class OrderStore:
@@ -393,17 +437,172 @@ class OrderStore:
                 "ORDER BY created_at, rowid",
                 (accession_number,),
             ).fetchall()
-        return [
-            MppsRecord(
-                sop_instance_uid=row[0],
-                status=row[1],
-                accession_numbers=json.loads(row[2]),
-                body=json.loads(row[3]),
-                created_at=row[4],
-                updated_at=row[5],
-            )
-            for row in rows
-        ]
+        return [_mpps_record(row) for row in rows]
+
+    def get_mpps(self, sop_instance_uid: str) -> MppsRecord:
+        """SOP Instance UID の MPPS。無ければ MppsNotFoundError."""
+        with self._connect() as conn:
+            row = _select_mpps(conn, sop_instance_uid)
+        if row is None:
+            raise MppsNotFoundError("MPPS not found", {"sop_instance_uid": sop_instance_uid})
+        return _mpps_record(row)
+
+    def list_unlinked_mpps(self) -> list[MppsRecord]:
+        """予約に結び付いていない MPPS を、受けた順に返す（照合の対象。docs/spec/07_reconciliation.md）."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sop_instance_uid, status, accession_numbers, body, created_at, updated_at "
+                "FROM mpps WHERE json_array_length(accession_numbers) = 0 "
+                "ORDER BY created_at, rowid"
+            ).fetchall()
+        return [_mpps_record(row) for row in rows]
+
+    def reconcile_mpps(
+        self,
+        counter: str,
+        sop_instance_uid: str,
+        build: ReconcileBuilder,
+        temporary: dict[str, str],
+    ) -> Order:
+        """予約に結び付いていない MPPS に、新しい予約を結ぶ.
+
+        連番の取得・予約の保存・MPPS と予約の結び付け・照合の記録を1つのトランザクションで行う。
+        予約の状態は MPPS の状態に合わせる。MPPS が無ければ MppsNotFoundError、すでに予約に
+        結び付いていれば AlreadyReconciledError で、何も変えない。`build` が例外を出せば何も
+        残さない（連番に欠番を作らない）。`build` が返す HL7 は、照合の記録に未送信で残す。
+        """
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = _select_mpps(conn, sop_instance_uid)
+                if row is None:
+                    raise MppsNotFoundError(
+                        "MPPS not found", {"sop_instance_uid": sop_instance_uid}
+                    )
+                record = _mpps_record(row)
+                if record.accession_numbers:
+                    raise AlreadyReconciledError(
+                        "この撮影はすでに予約に結び付いています",
+                        {
+                            "sop_instance_uid": sop_instance_uid,
+                            "accession_number": record.accession_numbers[0],
+                        },
+                    )
+                counter_row = conn.execute(
+                    "SELECT value FROM counters WHERE name = ?", (counter,)
+                ).fetchone()
+                number = (counter_row[0] if counter_row else 0) + 1
+                now = _now()
+                built, deliveries = build(number, record)
+                order = built.model_copy(
+                    update={
+                        "status": _ORDER_STATUS_FOR_PPS[record.status],
+                        "created_at": now,
+                        "updated_at": now,
+                    }
+                )
+                conn.execute(
+                    "INSERT INTO counters (name, value) VALUES (?, ?) "
+                    "ON CONFLICT(name) DO UPDATE SET value = excluded.value",
+                    (counter, number),
+                )
+                _insert_order(conn, order)
+                conn.execute(
+                    "UPDATE mpps SET accession_numbers = ? WHERE sop_instance_uid = ?",
+                    (json.dumps([order.accession_number]), sop_instance_uid),
+                )
+                body = {
+                    "temporary": temporary,
+                    "deliveries": [asdict(delivery) for delivery in deliveries],
+                }
+                conn.execute(
+                    "INSERT INTO reconciliations (accession_number, sop_instance_uid, body, "
+                    "created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        order.accession_number,
+                        sop_instance_uid,
+                        json.dumps(body, ensure_ascii=False),
+                        now,
+                        now,
+                    ),
+                )
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return order
+
+    def get_reconciliation(self, accession_number: str) -> Reconciliation | None:
+        """予約の照合の記録。照合で作った予約でなければ None."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT accession_number, sop_instance_uid, body, created_at, updated_at "
+                "FROM reconciliations WHERE accession_number = ?",
+                (accession_number,),
+            ).fetchone()
+        if row is None:
+            return None
+        body = json.loads(row[2])
+        return Reconciliation(
+            accession_number=row[0],
+            sop_instance_uid=row[1],
+            temporary=body["temporary"],
+            deliveries=[Delivery(**item) for item in body["deliveries"]],
+            created_at=row[3],
+            updated_at=row[4],
+        )
+
+    def update_delivery(self, accession_number: str, index: int, **changes: Any) -> Delivery:
+        """照合の `index` 番めの送信の記録を変える（組み立てた本文、送信の結果）.
+
+        すでに受理（accepted）の送信は変えない。変えた後の記録を返す。
+        """
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT body FROM reconciliations WHERE accession_number = ?",
+                    (accession_number,),
+                ).fetchone()
+                if row is None:
+                    raise ReconciliationNotFoundError(
+                        "Reconciliation not found", {"accession_number": accession_number}
+                    )
+                body = json.loads(row[0])
+                current = Delivery(**body["deliveries"][index])
+                if current.outcome == "accepted":
+                    conn.execute("ROLLBACK")
+                    return current
+                updated = replace(current, **changes)
+                body["deliveries"][index] = asdict(updated)
+                conn.execute(
+                    "UPDATE reconciliations SET body = ?, updated_at = ? WHERE accession_number = ?",
+                    (json.dumps(body, ensure_ascii=False), _now(), accession_number),
+                )
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return updated
+
+
+def _select_mpps(conn: sqlite3.Connection, sop_instance_uid: str) -> tuple[Any, ...] | None:
+    return conn.execute(
+        "SELECT sop_instance_uid, status, accession_numbers, body, created_at, updated_at "
+        "FROM mpps WHERE sop_instance_uid = ?",
+        (sop_instance_uid,),
+    ).fetchone()
+
+
+def _mpps_record(row: Sequence[Any]) -> MppsRecord:
+    return MppsRecord(
+        sop_instance_uid=row[0],
+        status=row[1],
+        accession_numbers=json.loads(row[2]),
+        body=json.loads(row[3]),
+        created_at=row[4],
+        updated_at=row[5],
+    )
 
 
 def _order_filter(
