@@ -190,3 +190,37 @@ PACS が受理すると終了コード 0、AE・AR で断ると 5、通信でき
 メッセージの中身と例は [spec/06_hl7_pir.md](spec/06_hl7_pir.md) にあります。
 Docker から同じマシンの受け口へ送るときは、`hl7.host` にそのマシンのホスト名か
 IP アドレスを書きます（`127.0.0.1` はコンテナ自身です）。
+
+## 8. 予約の無い撮影を照合する
+
+モダリティが予約なしで撮影すると（緊急の飛び込みなど）、仮の患者 ID と氏名の撮影が
+MPPS として記録されます。画面の「未照合」（`/reconciliation`）に出るので、「照合」で
+正式な患者（名簿から選ぶか、入力）と検査名、依頼科を決めます。「照合・送信」で、
+撮影の Study Instance UID を持つ新しい予約を作り、PACS へ HL7 を送ります。患者 ID が
+変わるときは ADT^A40 と ORM^O01、氏名などだけが変わるときは ADT^A08 と ORM^O01 です。
+
+結果は予約の詳細の「HL7 送信」に残ります。PACS が断ったり、つながらなかったりしても
+照合は取り消されません。原因を直したら、「再送信」で受理されていない通を同じ本文で
+送り直します。
+
+CLI でも同じことができます。
+
+```bash
+# 未照合の撮影（SOP Instance UID を見る）
+docker exec ris-emulator python -m app.cli reconcile list
+
+# 名簿の患者 P000001 で照合する。検査名と依頼科は省略できる
+docker exec ris-emulator python -m app.cli reconcile run 1.2.826.0.1.3680043.8.498.1 \
+  --roster-patient-id P000001
+
+# 名簿に無い患者を入力して照合する
+docker exec ris-emulator python -m app.cli reconcile run 1.2.826.0.1.3680043.8.498.1 \
+  --patient-id RE0000001 --name "YAMADA^TARO=山田^太郎=ヤマダ^タロウ" \
+  --birth-date 19800101 --sex M
+
+# 受理されていない HL7 を送り直す
+docker exec ris-emulator python -m app.cli reconcile resend RE202610210001
+```
+
+HL7 がすべて受理されれば終了コード 0、断られると 5、通信できないと 6 になります。
+中身と規則は [spec/07_reconciliation.md](spec/07_reconciliation.md) にあります。

@@ -14,6 +14,9 @@ flowchart LR
   CLI["python -m app.cli"]
   DB[("SQLite<br/>state/ris.sqlite3")]
   MOD["モダリティ"]
+  PACS["PACS の HL7 受け口"]
+  WEB -->|"HL7 v2 のメッセージ（照合・再送信）"| PACS
+  CLI -->|"HL7 v2 のメッセージ（pir send・照合・再送信）"| PACS
   WEB <-->|"予約（読み書き）"| DB
   CLI <-->|"予約（読み書き）"| DB
   DB <-->|"予約・MPPS の記録（読み書き）"| MWL
@@ -36,9 +39,11 @@ MWL (app/mwl/) ─┤
 HL7 (app/hl7/) ─┘
 ```
 
-- Core：予約のモデル、患者の生成、照合、応答の組み立て、文字コードの検証、
-  HL7 v2 のメッセージの組み立てと ACK の読み取り。ファイル・通信・ログを使わない
-- Service：設定・名簿の読み込み、予約と MPPS の記録の保存（SQLite）、予約の作成
+- Core：予約のモデル、患者の生成、MWL の照合、応答の組み立て、文字コードの検証、
+  HL7 v2 のメッセージの組み立てと ACK の読み取り、未照合の撮影（MPPS）の読み取り。
+  ファイル・通信・ログを使わない
+- Service：設定・名簿の読み込み、予約と MPPS の記録の保存（SQLite）、予約の作成、
+  照合（予約の作成・MPPS との結び付け・HL7 の送信と記録）
 - Web・CLI・MWL：外部からの操作を受け付ける。予約の保存と作成は Service を経由し、
   Core のモデルと、照合・応答の組み立ての関数は直接呼び出す
 
@@ -49,8 +54,8 @@ HL7 (app/hl7/) ─┘
 
 | 場所 | 内容 |
 |------|------|
-| `app/core/` | 予約のモデル、患者の生成、MWL の照合と応答の組み立て、文字コードの検証 |
-| `app/services/` | 設定・名簿の読み込み、予約の保存（SQLite）、予約の作成 |
+| `app/core/` | 予約のモデル、患者の生成、MWL の照合と応答の組み立て、文字コードの検証、HL7 の組み立て、未照合の撮影の読み取り |
+| `app/services/` | 設定・名簿の読み込み、予約の保存（SQLite）、予約の作成、照合 |
 | `app/mwl/` | MWL と MPPS の SCP（pynetdicom） |
 | `app/hl7/` | HL7 v2 の MLLP での送信（ソケット。待ち受けはしない） |
 | `app/cli/` | CLI |

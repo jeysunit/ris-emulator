@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
+import pydantic
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -19,9 +20,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.core.exceptions import (
+    AlreadyReconciledError,
     ConfigurationError,
     InvalidTransitionError,
+    MppsNotFoundError,
     OrderNotFoundError,
+    ReconciliationNotFoundError,
     ValidationError,
 )
 from app.core.models import (
@@ -30,10 +34,13 @@ from app.core.models import (
     CharacterSet,
     Order,
     OrderStatus,
+    Patient,
+    PersonName,
     is_final,
     selectable_statuses,
 )
 from app.core.mwl_dataset import order_to_dataset
+from app.core.reconciliation import DELIVERY_LABELS
 from app.mwl.server import MwlServer
 from app.services.config import MINUTE_STEPS, AppConfig
 from app.services.order_service import (
@@ -45,6 +52,7 @@ from app.services.order_service import (
     parse_date_option,
     parse_time_option,
 )
+from app.services.reconciliation import DEFAULT_DEPARTMENT, ReconcileRequest, ReconciliationService
 
 from .auth import (
     CSRF_FIELD,
@@ -60,6 +68,7 @@ HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 HTTP_NOT_FOUND = 404
+HTTP_CONFLICT = 409
 HTTP_SEE_OTHER = 303
 # 一覧の1頁の件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
 LIST_PAGE_SIZE = 100
@@ -101,6 +110,7 @@ def create_app(
     `start_mwl`（既定は設定の web.start_mwl）なら、起動のときに MWL の SCP も立てる。
     """
     order_service = service or OrderService(config)
+    reconciliation_service = ReconciliationService(order_service)
     mwl = MwlServer(config.mwl, order_service.store)
     run_mwl = config.web.start_mwl if start_mwl is None else start_mwl
 
@@ -345,15 +355,24 @@ def create_app(
     def _render_detail(
         request: Request, order: Order, *, error: str = "", status_code: int = 200
     ) -> HTMLResponse:
+        reconciliation = reconciliation_service.get_reconciliation(order.accession_number)
+        before = reconciliation.temporary if reconciliation else {}
         return render(
             request,
             "order_detail.html",
             status_code=status_code,
             order=order,
+            temporary_name=PersonName(
+                alphabetic=before.get("alphabetic", ""),
+                ideographic=before.get("ideographic", ""),
+                phonetic=before.get("phonetic", ""),
+            ).to_dicom(),
             error=error,
             dataset=str(order_to_dataset(order)),
             character_set_labels=CHARACTER_SET_LABELS,
             mpps_records=order_service.list_mpps(order.accession_number),
+            reconciliation=reconciliation,
+            delivery_labels=DELIVERY_LABELS,
             retakes=order_service.list_retakes(order.accession_number),
             can_retake=config.orders.retake_mode == "new_order" and order.status in RETAKE_FROM,
             today=order_service.today(),
@@ -408,6 +427,89 @@ def create_app(
         if request.headers.get("hx-request"):
             return render(request, "_order_row.html", order=order)
         return RedirectResponse(f"/orders/{order.accession_number}", status_code=HTTP_SEE_OTHER)
+
+    @app.get("/reconciliation", response_class=HTMLResponse)
+    def reconciliation_list(request: Request) -> HTMLResponse:
+        return render(
+            request, "reconciliation_list.html", items=reconciliation_service.list_unreconciled()
+        )
+
+    @app.get("/reconciliation/{sop_instance_uid}", response_class=HTMLResponse)
+    def reconciliation_form(request: Request, sop_instance_uid: str) -> HTMLResponse:
+        return _render_reconcile(request, sop_instance_uid, error="", values={})
+
+    def _render_reconcile(
+        request: Request,
+        sop_instance_uid: str,
+        *,
+        error: str,
+        values: dict[str, Any],
+        status_code: int = 200,
+    ) -> HTMLResponse:
+        try:
+            item, linked = reconciliation_service.get_mpps(sop_instance_uid)
+        except MppsNotFoundError as exc:
+            raise HTTPException(HTTP_NOT_FOUND, "MPPS not found") from exc
+        try:
+            roster = order_service.roster_patients()
+            roster_error = ""
+        except ConfigurationError as exc:
+            roster, roster_error = [], f"名簿を読めません（{exc.message}）"
+        return render(
+            request,
+            "reconcile.html",
+            status_code=status_code,
+            error=error,
+            values=values,
+            item=item,
+            linked=linked[0] if linked else "",
+            roster=roster,
+            roster_error=roster_error,
+            procedures=reconciliation_service.procedures_for(item.modality),
+            departments=config.orders.departments,
+            default_department=DEFAULT_DEPARTMENT,
+        )
+
+    @app.post("/reconciliation/{sop_instance_uid}")
+    async def reconcile(request: Request, sop_instance_uid: str) -> Response:
+        form = await request.form()
+        values = {key: value for key, value in form.items() if isinstance(value, str)}
+        try:
+            patient = _reconcile_patient(values, order_service)
+            department = values.get("department", "").strip()
+            if department and department not in config.orders.departments:
+                raise ValidationError("依頼科を選び直してください")
+            result = reconciliation_service.reconcile(
+                ReconcileRequest(
+                    sop_instance_uid=sop_instance_uid,
+                    patient=patient,
+                    procedure_code=values.get("procedure", "").strip() or None,
+                    department=department or None,
+                )
+            )
+        except MppsNotFoundError as exc:
+            raise HTTPException(HTTP_NOT_FOUND, "MPPS not found") from exc
+        except AlreadyReconciledError as exc:
+            return _render_reconcile(
+                request, sop_instance_uid, error=exc.message, values=values, status_code=HTTP_CONFLICT
+            )
+        except (ValidationError, ConfigurationError) as exc:
+            return _render_reconcile(
+                request,
+                sop_instance_uid,
+                error=exc.message,
+                values=values,
+                status_code=HTTP_BAD_REQUEST,
+            )
+        return RedirectResponse(f"/orders/{result.accession_number}", status_code=HTTP_SEE_OTHER)
+
+    @app.post("/orders/{accession_number}/hl7/resend")
+    def resend_hl7(accession_number: str) -> Response:
+        try:
+            reconciliation_service.send_pending(accession_number)
+        except ReconciliationNotFoundError as exc:
+            raise HTTPException(HTTP_NOT_FOUND, "Reconciliation not found") from exc
+        return RedirectResponse(f"/orders/{accession_number}", status_code=HTTP_SEE_OTHER)
 
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
     templates.env.filters["date_param"] = date_param
@@ -503,6 +605,43 @@ def _form_character_set(values: dict[str, str]) -> CharacterSet | None:
         return CharacterSet(charset) if charset else None
     except ValueError as exc:
         raise ValidationError("文字コードを選び直してください") from exc
+
+
+def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient:
+    """照合のフォームの正式な患者。名簿から選ぶか、入力する。誤りは ValidationError."""
+    source = values.get("patient", "")
+    if source == "roster":
+        patient_id = values.get("roster_patient_id", "").strip()
+        if not patient_id:
+            raise ValidationError("名簿の患者を選んでください")
+        patient = next((p for p in service.roster_patients() if p.patient_id == patient_id), None)
+        if patient is None:
+            raise ValidationError(f"名簿に無い患者 ID です: {patient_id}")
+        return patient
+    if source != "manual":
+        raise ValidationError("患者を、名簿から選ぶか入力するかを選んでください")
+    patient_id = values.get("patient_id", "").strip()
+    if not patient_id:
+        raise ValidationError("患者 ID を入力してください")
+    groups = {}
+    for script in ("alphabetic", "ideographic", "phonetic"):
+        family = values.get(f"{script}_family", "").strip()
+        given = values.get(f"{script}_given", "").strip()
+        groups[script] = f"{family}^{given}".rstrip("^") if family or given else ""
+    if not any(groups.values()):
+        raise ValidationError("患者氏名を入力してください")
+    birth_date = values.get("birth_date", "").strip().replace("-", "")
+    try:
+        return Patient(
+            patient_id=patient_id,
+            name=PersonName(**groups),
+            birth_date=birth_date,
+            sex=values.get("sex", "").strip(),
+        )
+    except pydantic.ValidationError as exc:
+        first = exc.errors()[0]
+        location = ".".join(str(part) for part in first["loc"])
+        raise ValidationError(f"患者の値が正しくありません: {location}: {first['msg']}") from exc
 
 
 def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:

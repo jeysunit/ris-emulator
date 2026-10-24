@@ -28,6 +28,10 @@
   {% if retakes %}
   <dt>撮り直し</dt><dd class="mono">{% for r in retakes %}<a href="/orders/{{ r.accession_number }}">{{ r.accession_number }}</a>{% if not loop.last %} {% endif %}{% endfor %}</dd>
   {% endif %}
+  {% if reconciliation %}
+  <dt>照合前の患者 ID</dt><dd class="mono">{{ reconciliation.temporary.patient_id }}</dd>
+  <dt>照合前の患者氏名</dt><dd class="mono">{{ temporary_name }}</dd>
+  {% endif %}
 </dl>
 {% if not is_final(order.status) %}
 <form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
@@ -66,6 +70,34 @@
 </div>
 {% else %}
 <p class="muted">受けた MPPS はありません。</p>
+{% endif %}
+{% if reconciliation %}
+<h2>HL7 送信</h2>
+<div class="table-wrap">
+<table class="orders">
+  <thead>
+    <tr><th>メッセージ</th><th>状態</th><th>ACK</th><th>詳細</th><th>送信日時</th><th>回数</th></tr>
+  </thead>
+  <tbody>
+    {% for d in reconciliation.deliveries %}
+    <tr class="delivery-{{ d.outcome }}">
+      <td class="mono">{{ d.message_type }}</td>
+      <td>{{ delivery_labels[d.outcome] }}</td>
+      <td class="mono">{{ d.ack_code }}</td>
+      <td>{{ d.detail }}</td>
+      <td class="nowrap">{{ d.sent_at }}</td>
+      <td>{{ d.attempts }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if reconciliation.deliveries | rejectattr('outcome', 'equalto', 'accepted') | list %}
+<form method="post" action="/orders/{{ order.accession_number }}/hl7/resend" class="filters">
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+  <button type="submit" class="btn">再送信</button>
+</form>
+{% endif %}
 {% endif %}
 <h2>MWL の属性</h2>
 <pre class="dataset">{{ dataset }}</pre>

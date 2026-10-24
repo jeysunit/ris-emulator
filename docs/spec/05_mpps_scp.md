@@ -28,7 +28,8 @@
 5. Scheduled Step Attributes Sequence の項目ごとに、Accession Number (0008,0050) と
    Scheduled Procedure Step ID (0040,0009) の両方が一致する予約を MPPS に結び付ける。
    1つの MPPS に複数の予約が結び付いてよい（IHE の Group Case）。一致する予約が
-   無い項目は、予定の無い撮影として MPPS だけを記録する
+   無い項目は、予定の無い撮影として MPPS だけを記録する（後から正式な患者と予約を結ぶ
+   操作は [07_reconciliation.md](07_reconciliation.md)）
 6. 結び付いた予約を実施中にし、MPPS を記録して `0000`（Success）
 
 断った N-CREATE は記録せず、予約も変えない。

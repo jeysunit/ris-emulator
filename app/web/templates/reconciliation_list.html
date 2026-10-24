@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}未照合{% endblock %}
+{% block content %}
+<h1>未照合</h1>
+{% if items %}
+<div class="table-wrap">
+<table class="orders">
+  <thead>
+    <tr>
+      <th>受けた日時</th>
+      <th>状態</th>
+      <th>患者 ID</th>
+      <th>患者氏名</th>
+      <th>生年月日・性別</th>
+      <th>モダリティ</th>
+      <th>予定の AE タイトル</th>
+      <th>Study Instance UID</th>
+      <th><span class="visually-hidden">操作</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td class="nowrap">{{ item.received_at }}</td>
+      <td class="mono">{{ item.status }}</td>
+      <td class="mono">{{ item.patient.patient_id }}</td>
+      <td>{{ item.patient.name.ideographic | pn }}<br><span class="muted">{{ item.patient.name.phonetic | pn }} / {{ item.patient.name.alphabetic | pn }}</span></td>
+      <td class="nowrap">{{ item.patient.birth_date | ymd }} {{ item.patient.sex }}</td>
+      <td>{{ item.modality }}</td>
+      <td class="mono">{{ item.station_ae_title }}</td>
+      <td class="mono">{{ item.study_instance_uid }}</td>
+      <td class="nowrap"><a href="/reconciliation/{{ item.sop_instance_uid }}" class="btn">照合</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">未照合の撮影はありません。</p>
+{% endif %}
+{% endblock %}

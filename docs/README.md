@@ -16,6 +16,7 @@ ris-emulator の使い方・設計・仕様・開発の手順を書いたドキ�
 | [spec/04_identifiers.md](spec/04_identifiers.md) | 発番する識別子と、DICOM・HL7 v2・FHIR R5 の規則との対応 |
 | [spec/05_mpps_scp.md](spec/05_mpps_scp.md) | MPPS の SCP：N-CREATE・N-SET、予約との結び付け、記録 |
 | [spec/06_hl7_pir.md](spec/06_hl7_pir.md) | HL7 v2.3.1 の送信（PIR）：ADT^A40・ADT^A08・ORM^O01 の組み立てと例、MLLP、ACK |
+| [spec/07_reconciliation.md](spec/07_reconciliation.md) | 照合：予約の無い撮影に正式な患者と予約を結び、HL7 で知らせる。未照合の一覧、送信の記録と再送信 |
 | [decisions/README.md](decisions/README.md) | ADR の一覧と、ADR に固有の書き方 |
 | [roadmap.md](roadmap.md) | 未実装の機能 |
 | [development.md](development.md) | 開発環境と Python での起動、テスト、確認のスクリプト、変更の手順 |

@@ -6,7 +6,10 @@ from datetime import date, datetime
 from pathlib import Path
 
 import pytest
+from pydicom.dataset import Dataset
+from pydicom.uid import generate_uid
 
+from app.mwl.mpps import STATUS_SUCCESS, handle_n_create
 from app.services.config import AppConfig, load_config
 from app.services.order_service import OrderService
 from app.services.store import OrderStore
@@ -37,6 +40,46 @@ def store(config: AppConfig) -> OrderStore:
 @pytest.fixture
 def service(config: AppConfig, store: OrderStore) -> OrderService:
     return OrderService(config, store, today=lambda: TODAY)
+
+
+def add_unscheduled_mpps(
+    store: OrderStore,
+    *,
+    patient_id: str = "ER2026102400",
+    name: str = "UNKNOWN^MALE=不明^男性=フメイ^ダンセイ",
+    birth_date: str = "",
+    sex: str = "M",
+    modality: str = "CT",
+    station_ae_title: str = "DTG_CT01",
+    study_instance_uid: str | None = None,
+    status: str = "IN PROGRESS",
+) -> tuple[str, str]:
+    """予約の無い撮影（緊急）の MPPS を N-CREATE の処理で記録する。(SOP Instance UID, Study Instance UID)."""
+    sop_instance_uid = generate_uid()
+    study_uid = study_instance_uid or generate_uid()
+    step = Dataset()
+    step.StudyInstanceUID = study_uid
+    step.AccessionNumber = ""
+    step.ScheduledProcedureStepID = ""
+    attributes = Dataset()
+    attributes.SpecificCharacterSet = "ISO_IR 192"
+    attributes.ScheduledStepAttributesSequence = [step]
+    attributes.PatientName = name
+    attributes.PatientID = patient_id
+    attributes.PatientBirthDate = birth_date
+    attributes.PatientSex = sex
+    attributes.PerformedProcedureStepID = "PPS1"
+    attributes.PerformedStationAETitle = station_ae_title
+    attributes.PerformedStationName = "CT01"
+    attributes.PerformedProcedureStepStartDate = "20261021"
+    attributes.PerformedProcedureStepStartTime = "101530.123"
+    attributes.PerformedProcedureStepStatus = "IN PROGRESS"
+    attributes.Modality = modality
+    status_code, _ = handle_n_create(store, sop_instance_uid, attributes)
+    assert status_code == STATUS_SUCCESS
+    if status != "IN PROGRESS":
+        store.update_mpps(sop_instance_uid, status, {"PerformedProcedureStepStatus": {"vr": "CS", "Value": [status]}})
+    return sop_instance_uid, study_uid
 
 
 def new_order_service(config: AppConfig, store: OrderStore) -> OrderService:

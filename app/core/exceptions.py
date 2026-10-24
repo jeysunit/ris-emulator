@@ -56,3 +56,11 @@ class MppsNotFoundError(MppsError):
 
 class MppsNotInProgressError(MppsError):
     """N-SET の対象の MPPS が IN PROGRESS でない（0110H、Error ID A710）."""
+
+
+class AlreadyReconciledError(ValidationError):
+    """MPPS がすでに予約に結び付いている（照合済み、または予約どおりの撮影）."""
+
+
+class ReconciliationNotFoundError(RisEmulatorError):
+    """受付番号に当たる照合の記録が無い."""

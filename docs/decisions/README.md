@@ -17,6 +17,7 @@ ADR（Architecture Decision Record）の一覧と、ADR に固有の書き方で
 | [0008](0008-retake-mode.md) | 撮り直しの扱いを設定で選び、既定は IHE の Append Case にする | 採用 |
 | [0009](0009-station-registry-in-config.md) | 装置の台帳は設定ファイルに持ち、予約では装置を名前で選ぶ | 採用 |
 | [0010](0010-hl7-sender-format.md) | HL7 v2.3.1 を自前で組み立て、漢字は UTF-8、氏名は表記ごとの繰り返しで送る | 採用 |
+| [0011](0011-reconciliation-links-the-mpps.md) | 照合は MPPS に新しい予約を結び、Study Instance UID は撮影の値を使い、HL7 は同じ本文で送り直す | 採用 |
 
 ## 書き方
 
