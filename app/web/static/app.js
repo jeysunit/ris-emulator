@@ -1,13 +1,14 @@
 // 画面の小さな動き。インラインのスクリプトは CSP で止めるので、ここに置く
 (function () {
-  // htmx の要求が失敗したとき、画面の上にエラーを出す。一覧の状態の変更なら、選択を保存済みの
-  // 状態に戻す（失敗した応答は行を置き換えない（base.html の responseHandling）ので、戻さないと
-  // 未保存の値が残る）。エラーは画面を読み直すまで残す（別の行の変更が成功しても消さない）
+  // htmx の要求が失敗したとき、画面の上にエラーを出す。選んだ予約の状態の変更なら、選択を保存済みの
+  // 状態に戻す（失敗した応答は区画を置き換えない（base.html の responseHandling）ので、戻さないと
+  // 未保存の値が残る）。エラーは画面を読み直すまで残す（別の予約の変更が成功しても消さない）
   function fail(event, detail) {
     var element = event.detail.elt;
-    var isStatus = element && element.matches && element.matches("select[data-current]");
+    var select = element && element.querySelector && element.querySelector("select[data-current]");
+    var isStatus = !!select;
     if (isStatus) {
-      element.value = element.dataset.current;
+      select.value = select.dataset.current;
     }
     var box = document.getElementById("request-error");
     if (box) {
@@ -50,7 +51,7 @@
   // 登録・作成のボタンは、押したら送信が終わるまで押せなくする（二重送信を防ぐ）
   document.addEventListener("submit", function (event) {
     var form = event.target;
-    if (form.method && form.method.toLowerCase() === "post") {
+    if (!form.hasAttribute("hx-post") && form.method && form.method.toLowerCase() === "post") {
       var buttons = form.querySelectorAll("button[type=submit]");
       for (var i = 0; i < buttons.length; i++) {
         buttons[i].disabled = true;

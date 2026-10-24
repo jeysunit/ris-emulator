@@ -275,11 +275,12 @@ class OrderStore:
         date_to: str = "",
         statuses: list[OrderStatus] | None = None,
         modality: str = "",
+        query: str = "",
         limit: int | None = None,
         offset: int = 0,
     ) -> list[Order]:
         """予約を予定の日時の順に返す。空の条件は絞らない。`limit` があれば `offset` 件目から切る."""
-        where, params = _order_filter(date_from, date_to, statuses, modality)
+        where, params = _order_filter(date_from, date_to, statuses, modality, query)
         page = ""
         if limit is not None:
             page = " LIMIT ? OFFSET ?"
@@ -299,15 +300,30 @@ class OrderStore:
         date_to: str = "",
         statuses: list[OrderStatus] | None = None,
         modality: str = "",
+        query: str = "",
     ) -> int:
         """`list_orders` と同じ条件に合う予約の件数."""
-        where, params = _order_filter(date_from, date_to, statuses, modality)
+        where, params = _order_filter(date_from, date_to, statuses, modality, query)
         with self._connect() as conn:
             row = conn.execute(
                 f"SELECT COUNT(*) FROM orders {where}",  # noqa: S608 - 列名と ? だけを組む
                 params,
             ).fetchone()
         return int(row[0])
+
+    def count_orders_by_status(
+        self, *, date_from: str = "", date_to: str = "", modality: str = "", query: str = ""
+    ) -> dict[OrderStatus, int]:
+        """状態の条件を外して、すべての状態の件数を返す."""
+        where, params = _order_filter(date_from, date_to, None, modality, query)
+        counts = dict.fromkeys(OrderStatus, 0)
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT status, COUNT(*) FROM orders {where} GROUP BY status",  # noqa: S608
+                params,
+            ).fetchall()
+        counts.update({OrderStatus(row[0]): int(row[1]) for row in rows})
+        return counts
 
     def set_status(self, accession_number: str, status: OrderStatus) -> Order:
         with self._connect() as conn:
@@ -644,7 +660,7 @@ def _mpps_record(row: Sequence[Any]) -> MppsRecord:
 
 
 def _order_filter(
-    date_from: str, date_to: str, statuses: list[OrderStatus] | None, modality: str
+    date_from: str, date_to: str, statuses: list[OrderStatus] | None, modality: str, query: str = ""
 ) -> tuple[str, list[str | int]]:
     """一覧の条件の WHERE 句と値。空の条件は絞らない."""
     clauses: list[str] = []
@@ -661,6 +677,9 @@ def _order_filter(
     if modality:
         clauses.append("modality = ?")
         params.append(modality)
+    if query.strip():
+        clauses.append("(patient_id = ? OR accession_number = ?)")
+        params.extend([query.strip(), query.strip()])
     return (f"WHERE {' AND '.join(clauses)}" if clauses else ""), params
 
 
