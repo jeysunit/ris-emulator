@@ -12,10 +12,10 @@ PACS の PIR（Patient Information Reconciliation）への対応を試すため�
 |------------|--------------|----------|------------|
 | ADT^A40^ADT_A39 | 4.12.4.4（Patient Update [RAD-12]） | 仮の患者ID で撮った検査を、正式な患者ID に統合する。PID が正式の患者、MRG が旧い患者 | MSH・EVN・PID・MRG |
 | ADT^A08^ADT_A08 | 4.12.4.3（RAD-12） | 患者の氏名・生年月日・性別を更新する。患者ID は更新できない（A40 を使う） | MSH・EVN・PID・PV1 |
-| ORM^O01^ORM_O01 | 4.4.4.1.2.1（Procedure Scheduled [RAD-4]） | 予約を知らせる。ORC-1 は `NW` | MSH・PID・PV1・ORC・OBR・ZDS |
+| ORM^O01^ORM_O01 | 4.4.4.1.2.1（Procedure Scheduled [RAD-4]）・4.13（Procedure Update [RAD-13]） | 予約を知らせる（ORC-1 は `NW`）。予約の取消・中止・変更を知らせる（`CA`・`DC`・`XO`） | MSH・PID・PV1・ORC・OBR・ZDS |
 
 どれも HL7 のオリジナルモードで確認を求める（MSH-15・MSH-16 は空。IHE RAD TF-2 2.4.1.2）。
-A02・A03・A06・A07、ORM の `CA`・`DC`・`XO`（RAD-13）、HL7 v2.5.1 の OMI は送らない。
+A02・A03・A06・A07、HL7 v2.5.1 の OMI は送らない。
 
 ## 2. 組み立ての規則
 
@@ -74,7 +74,7 @@ ORM の PV1-8 には、紹介医を英字（無ければ漢字、かな）の 1 
 
 | 欄 | 値 |
 |----|----|
-| ORC-1・ORC-5 | `NW`・`SC` |
+| ORC-1・ORC-5 | `NW`・`SC`、`CA`・`CA`、`DC`・`DC`。`XO` の ORC-5 は予約のいまの状態（予定 `SC`・実施中 `IP`・完了 `CM`・取消 `CA`・中止 `DC`） |
 | ORC-2・OBR-2 | 空（発注元の番号を持たない） |
 | ORC-3・OBR-3 | `<受付番号>^<発番元>`（Filler Order Number） |
 | ORC-7・OBR-27 | `^^^<予定日時>`（4 つめのコンポーネントが開始日時） |
@@ -158,6 +158,7 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
 | `--patient-id`・`--name` | a40・a08：患者ID と氏名（`英字=漢字=かな`、各グループは `姓^名^ミドル^接頭辞^接尾辞`）。`--birth-date`・`--sex` を足せる |
 | `--prior-patient-id`・`--prior-name` | a40：旧い患者ID（必須）と氏名 |
 | `--accession` | orm：保存済みの予約の受付番号（患者・検査・UID は予約から取る） |
+| `--order-control` | orm：ORC-1（`NW`・`CA`・`DC`・`XO`。既定 `NW`）。orm 以外で `NW` 以外を指定すると断る |
 | `--visit-number`・`--account-number`・`--patient-class` | PV1-19、PID-18（a08）、PV1-2 |
 | `--host`・`--port` | 設定の `hl7.host`・`hl7.port` を上書きする |
 | `--dry-run` | 組み立てたメッセージを標準出力に出して終わる（ネットワークを使わない） |
@@ -173,7 +174,8 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
 
 - IHE Radiology Technical Framework Volume 2 Rev. 23.0（2025-08-08）：2.4（HL7 の実装の
   注意。Table 2.4-2 の MSH、Table 2.4-3 の MSA）、4.1.4.1.2.1（EVN・PID・PV1）、
-  4.4.4.1.2.1（ORM の Table 4.4-2〜4.4-8）、4.12.4.3・4.12.4.4（A08・A40）
+  4.4.4.1.2.1（ORM の Table 4.4-2〜4.4-8）、4.12.4.3・4.12.4.4（A08・A40）、
+  4.13（Procedure Update の ORC-1 の `CA`・`DC`・`XO`）
   <https://www.ihe.net/uploadedFiles/Documents/Radiology/IHE_RAD_TF_Vol2.pdf>
 - IHE Radiology Technical Framework Volume 1 Rev. 23.0：4.1（PIR のアクターとトランザクション）
 - HL7 v2.3.1 の原典（セグメントの欄の定義、エスケープ、データ型）は読んでいない。
@@ -181,6 +183,8 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
   - XPN の 8 つめ（表記の種類 `A`・`I`・`P`）が v2.3.1 にあるか。受け手が読み取れない
     ときは、順番（英字、漢字、かな）で判断する
   - CX の 5 つめ（`PI`・`VN`・`AN`）が HL7 Table 0203 の値として v2.3.1 にあるか
+  - ORC-5 の `CA`・`DC`・`IP`・`CM` が v2.3.1 の Table 0038 にあるか。RAD-13 の ORC-5 に
+    IHE が決めた値があるか
   - MSH-18 の `UNICODE UTF-8` が v2.3.1 の Table 0211 にあるか。IHE の MSH-18 の節
     （v2.5.1 向け）が例に挙げている
   - IHE の v2.3.1 の表にある欄の長さ（PID-3 は 20、PID-5 は 48 など）は守っていない。

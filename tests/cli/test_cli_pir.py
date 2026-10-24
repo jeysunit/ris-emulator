@@ -167,6 +167,10 @@ def test_exit_6_when_receiver_is_down(config_file: Path, capsys: pytest.CaptureF
         (["--kind", "a08", "--patient-id", "RE1", "--name", "A=B=C=D", "--visit-number", "V1"], "3 グループ"),
         (["--kind", "a08", "--patient-id", "RE1", "--name", "A\\B", "--visit-number", "V1"], "alphabetic"),
         (["--kind", "orm"], "--accession"),
+        (
+            ["--kind", "a08", "--patient-id", "RE1", "--name", NAME, "--visit-number", "V1", "--order-control", "CA"],
+            "orm だけ",
+        ),
         (["--kind", "a08", "--patient-id", "RE1", "--name", NAME, "--visit-number", "V1", "--port", "0"], "ポート"),
     ],
 )

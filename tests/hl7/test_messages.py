@@ -344,3 +344,22 @@ def test_parse_ack_accepts_lf_separators() -> None:
 def test_parse_ack_refuses_bad_input(raw: str) -> None:
     with pytest.raises(AckParseError):
         parse_ack(raw)
+
+
+@pytest.mark.parametrize("control,status,expected", [
+    ("NW", "completed", "SC"), ("CA", "scheduled", "CA"), ("DC", "in_progress", "DC"),
+    ("XO", "scheduled", "SC"), ("XO", "in_progress", "IP"), ("XO", "completed", "CM"),
+    ("XO", "cancelled", "CA"), ("XO", "discontinued", "DC"),
+])
+def test_orm_order_controls(service, control, status, expected):
+    from app.core.models import OrderStatus
+    order = _order(service).model_copy(update={"status": OrderStatus(status)})
+    message = build_orm_o01(HEADER, order, visit_number="V1", order_control=control)
+    orc = _segments(message.text)["ORC"]
+    assert (orc[1], orc[5]) == (control, expected)
+
+
+@pytest.mark.parametrize("control", ["", "ca", "XX", "NW|CA"])
+def test_invalid_order_control(service, control):
+    with pytest.raises(ValidationError):
+        build_orm_o01(HEADER, _order(service), visit_number="V1", order_control=control)

@@ -228,3 +228,12 @@ docker exec ris-emulator python -m app.cli reconcile resend RE202610210001
 
 HL7 がすべて受理されれば終了コード 0、断られると 5、通信できないと 6 になります。
 中身と規則は [spec/07_reconciliation.md](spec/07_reconciliation.md) にあります。
+
+照合の後に、モダリティが同じ Study を仮の患者のまま撮ると、その MPPS は照合で作った
+予約に結び付き、未照合の一覧には出ません。照合で作った予約を取消・中止にすると、
+PACS へ ORM^O01（ORC-1 が CA・DC）を送り、予約の詳細の「HL7 送信」に行が足されます。
+
+```bash
+# 照合で作った予約を取消にして、PACS へ ORM（CA）を送る
+docker exec ris-emulator python -m app.cli status RE202610210001 cancelled
+```

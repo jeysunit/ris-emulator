@@ -19,9 +19,9 @@
 | `list` | 一覧。`--date`・`--status`・`--modality`・`--json` |
 | `show <受付番号>` | 予約の MWL の全属性 |
 | `retake <受付番号>` | 撮り直しの予約を作る（`orders.retake_mode` が `new_order` のとき）。`--date`・`--start`・`--json` |
-| `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`・`discontinued`）。変更できる向きは [01_orders.md](01_orders.md) の 5 章 |
+| `status <受付番号> <状態>` | 状態を変更する（`scheduled`・`in_progress`・`completed`・`cancelled`・`discontinued`）。変更できる向きは [01_orders.md](01_orders.md) の 5 章。照合で作った予約を取消・中止にすると ORM^O01（CA・DC）を送り、結果を出す（[07_reconciliation.md](07_reconciliation.md) の 4.3） |
 | `mwl serve` | MWL・MPPS の SCP を起動する |
-| `pir send --kind a40/a08/orm` | HL7 v2.3.1 のメッセージを組み立て、MLLP で送る。`--dry-run` は組み立てて出すだけ。オプションは [06_hl7_pir.md](06_hl7_pir.md) の 5 章 |
+| `pir send --kind a40/a08/orm` | HL7 v2.3.1 のメッセージを組み立て、MLLP で送る。orm の ORC-1 は `--order-control`（NW・CA・DC・XO）。`--dry-run` は組み立てて出すだけ。オプションは [06_hl7_pir.md](06_hl7_pir.md) の 5 章 |
 | `reconcile list`・`reconcile run <SOP Instance UID>`・`reconcile resend <受付番号>` | 予約の無い撮影の照合：未照合の一覧、正式な患者と新しい予約を結んで HL7 を送る、受理されていない HL7 の再送信。オプションは [07_reconciliation.md](07_reconciliation.md) の 6 章 |
 | `version` | バージョン |
 

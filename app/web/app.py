@@ -452,7 +452,7 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(HTTP_BAD_REQUEST, "Unknown status") from exc
         try:
-            order = order_service.set_status(accession_number, new_status)
+            order, _ = reconciliation_service.set_status(accession_number, new_status)
         except OrderNotFoundError as exc:
             raise HTTPException(HTTP_NOT_FOUND, "Order not found") from exc
         except InvalidTransitionError as exc:
