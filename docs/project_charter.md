@@ -27,6 +27,10 @@ MWL（Modality Worklist、C-FIND の SCP）で返す。モダリティがワー�
   変更。完了・取消・中止の予約は MWL で返さない
 - MPPS の SCP。モダリティの N-CREATE・N-SET を受け、予約を実施中・完了・中止にする
 - 撮り直しの扱いの選択（同じ予約の中で追加するか、撮り直しの予約を作るか）
+- HL7 v2 の送信。PIR（Patient Information Reconciliation）の Patient Update
+  （ADT^A08・ADT^A40）と Procedure Scheduled（ORM^O01）を組み立て、MLLP で設定した宛先へ
+  送り、ACK を受け取る。PACS の PIR への対応を試す相手にするためで、宛先は
+  開発・試験の環境の受け口に限る
 - Docker イメージ
 
 対象外とするもの：

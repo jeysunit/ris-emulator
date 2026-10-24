@@ -38,6 +38,10 @@ class MwlServerError(RisEmulatorError):
     """MWL の SCP を起動できない."""
 
 
+class AckParseError(RisEmulatorError):
+    """HL7 の ACK を読めない（MSH・MSA が無い、区切りの定義が違う）."""
+
+
 class MppsError(RisEmulatorError):
     """MPPS の N-CREATE・N-SET を受け付けられない."""
 
