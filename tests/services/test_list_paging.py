@@ -29,3 +29,21 @@ def test_limit_offset_and_count(service: OrderService) -> None:
     assert service.count_orders(date_from=today, date_to=today) == 7
     assert service.count_orders(modality="MR") == 2
     assert service.count_orders(statuses=[OrderStatus.COMPLETED]) == 0
+
+
+def test_query_and_counts_by_status(service: OrderService) -> None:
+    first, second = service.create_orders(
+        OrderRequest(counts={"CT": 2}, scheduled_date=TODAY, seed=1)
+    )
+    service.create_orders(OrderRequest(counts={"MR": 1}, scheduled_date=TODAY, seed=2))
+    service.set_status(second.accession_number, OrderStatus.COMPLETED)
+    for source in (service, service.store):
+        assert source.list_orders(query=f" {first.patient.patient_id} ") == [first]
+        assert source.count_orders(query=second.accession_number) == 1
+        assert source.list_orders(query=first.accession_number[:-1]) == []
+        assert source.count_orders(query="' OR 1=1 --") == 0
+        assert source.count_orders(query="  ") == 3
+        counts = source.count_orders_by_status(date_from="20261021", date_to="20261021", modality="CT")
+        assert counts == {s: (1 if s in (OrderStatus.SCHEDULED, OrderStatus.COMPLETED) else 0) for s in OrderStatus}
+        assert source.count_orders_by_status(query=first.patient.patient_id)[OrderStatus.SCHEDULED] == 1
+        assert source.count_orders_by_status(date_to="20261020") == dict.fromkeys(OrderStatus, 0)

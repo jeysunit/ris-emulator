@@ -51,10 +51,11 @@ def test_station_name_is_shown(config: AppConfig, service: OrderService) -> None
         html = client.get("/orders?date=2026-10-21").text
         detail = client.get(f"/orders/{order.accession_number}").text
         legacy_detail = client.get(f"/orders/{legacy.accession_number}").text
-    assert "<th>装置</th>" in html
-    assert "CT1号機" in _row(html, order.accession_number)
-    legacy_row = _row(html, legacy.accession_number)
-    assert "号機" not in legacy_row and "CT01" in legacy_row
+    assert "<th>装置</th>" not in html
+    assert "CT1号機" in html.split('<aside')[1]
+    with _client(config, service) as client:
+        legacy_panel = client.get(f"/orders?selected={legacy.accession_number}").text.split('<aside')[1]
+    assert "号機" not in legacy_panel and "CT01" in legacy_panel
     assert "<dt>装置</dt><dd>CT1号機</dd>" in detail
     assert "<dt>装置</dt>" not in legacy_detail
 
@@ -79,11 +80,13 @@ def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) 
         detail = client.get(f"/orders/{order.accession_number}").text
     headers = re.findall(r"<th[^>]*>([^<]+)</th>", listing.split("<tbody>")[0])
     assert headers == [
-        "予定日時", "受付番号", "患者ID", "氏名", "生年月日・性別",
-        "モダリティ", "検査名", "依頼科", "装置", "状態",
+        "予定日時", "受付番号", "氏名", "モダリティ", "検査名", "状態",
     ]  # fmt: skip
     for header in headers:
         assert all(part in SCREEN_TERMS | OTHER_HEADINGS for part in header.split("・")), header
+    panel_items = re.findall(r"<dt>([^<]+)</dt>", listing)
+    assert panel_items == ["氏名", "患者ID", "生年月日", "性別", "予定日時", "検査名", "装置", "依頼科"]
+    assert set(panel_items) <= SCREEN_TERMS | OTHER_HEADINGS
     items = re.findall(r"<dt>([^<]+)</dt>", detail)
     assert {"予定日時", "モダリティ", "予定の AEタイトル", "予定の装置名", "検査名", "依頼科",
             "患者ID", "氏名", "文字コード"} <= set(items)  # fmt: skip
@@ -93,7 +96,7 @@ def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) 
 
 
 # 画面の言葉の決まりで外した言い方（openspec/specs/screen-terms/spec.md の「語の使い分け」）
-RETIRED_WORDS = ("患者 ID", "患者氏名", "AE タイトル", "頁", "既定", "送り先")
+RETIRED_WORDS = ("予約一覧", "患者 ID", "患者氏名", "AE タイトル", "頁", "既定", "送り先")
 
 
 def test_pages_avoid_retired_words(config: AppConfig, service: OrderService) -> None:
@@ -233,8 +236,9 @@ def test_status_change_with_htmx(config: AppConfig, service: OrderService) -> No
             data={"status": "in_progress"},
             headers={"Origin": ORIGIN, "X-CSRF-Token": _token(client), "HX-Request": "true"},
         )
-        assert response.status_code == 200
-        assert response.text.lstrip().startswith(f'<tr id="order-{order.accession_number}"')
+        assert response.status_code == 204
+        assert response.headers["HX-Refresh"] == "true"
+        assert response.content == b""
         assert service.get(order.accession_number).status is OrderStatus.IN_PROGRESS
         missing = client.post(
             "/orders/NOPE/status",
@@ -251,8 +255,9 @@ def test_status_change_with_htmx(config: AppConfig, service: OrderService) -> No
 
 
 def _status_options(html: str, accession_number: str) -> list[str]:
-    """一覧の行の状態の選択肢の値."""
-    return re.findall(r'<option value="([a-z_]+)"', _row(html, accession_number))
+    """選んだ予約の区画の状態の選択肢の値."""
+    assert f"<h2>予約 {accession_number}" in html
+    return re.findall(r'<option value="([a-z_]+)"', html.split('<aside')[1])
 
 
 def _row(html: str, accession_number: str) -> str:
@@ -274,7 +279,10 @@ def test_list_offers_only_allowed_statuses(config: AppConfig, service: OrderServ
         "completed",
         "cancelled",
     ]
-    # 完了の行は選択肢を出さず、状態の名前だけ
+    with _client(config, service) as client:
+        done_panel = client.get(f"/orders?selected={done.accession_number}").text.split('<aside')[1]
+    assert '<select' not in done_panel and '完了' in done_panel
+    # 完了の行は選択肢を出さず、状態の札だけ
     done_row = _row(html, done.accession_number)
     assert "<select" not in done_row and "完了" in done_row
 
@@ -324,6 +332,7 @@ def test_retake_button_only_in_new_order_mode(config: AppConfig, service: OrderS
     with _client(config, service) as client:
         detail = client.get(f"/orders/{order.accession_number}").text
         assert "撮り直しの予約を作る" not in detail
+        assert "撮り直しの予約を作る" not in client.get("/orders").text
         refused = client.post(
             f"/orders/{order.accession_number}/retake",
             data={"csrf_token": _token(client)},
@@ -345,6 +354,13 @@ def test_retake_from_detail(config: AppConfig, store: OrderStore) -> None:
         assert "撮り直しの予約を作る" not in client.get(f"/orders/{scheduled.accession_number}").text
         detail = client.get(f"/orders/{done.accession_number}").text
         assert "撮り直しの予約を作る" in detail
+        listing = client.get(f"/orders?selected={done.accession_number}").text
+        panel = listing.split('<aside')[1]
+        assert f'action="/orders/{done.accession_number}/retake"' in panel
+        assert 'name="date" value="2026-10-21"' in panel
+        assert 'name="start" value=""' in panel
+        assert f'name="csrf_token" value="{_token(client)}"' in panel
+        assert "撮り直しの予約を作る" not in client.get(f"/orders?selected={scheduled.accession_number}").text
         response = client.post(
             f"/orders/{done.accession_number}/retake",
             data={"csrf_token": _token(client), "date": "2026-10-21", "start": "15:00"},

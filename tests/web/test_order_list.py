@@ -1,4 +1,4 @@
-"""予約一覧の画面（openspec/changes/refine-order-list）の試験."""
+"""予約の画面（openspec/changes/refine-order-list）の試験."""
 
 from __future__ import annotations
 
@@ -35,22 +35,25 @@ def test_titles_and_nav(config: AppConfig, service: OrderService) -> None:
     order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
     with _client(config, service) as client:
         pages = {
-            "予約一覧": client.get("/orders").text,
+            "予約": client.get("/orders").text,
             "予約作成": client.get("/orders/new").text,
             order.accession_number: client.get(f"/orders/{order.accession_number}").text,
         }
     for title, page in pages.items():
-        nav = page.split('<nav class="nav"')[1].split("</nav>")[0]
-        assert re.findall(r">([^<]+)</a>", nav) == ["予約一覧", "予約作成", "一括作成", "未照合"]
+        nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
+        assert re.findall(r">([^<]+)</a>", nav) == ["予約", "予約作成", "一括作成", "未照合"]
         assert f"<title>{title} - ris-emulator</title>" in page
+        selected_nav = re.findall(r'<a href="([^"]+)" class="nav-i" aria-current="page">', nav)
+        assert selected_nav == ["/orders/new" if title == "予約作成" else "/orders"]
+        assert '<nav' not in page.split('</header>')[0]
         head = page.split("</h1>")[0]
         assert "予約の一覧" not in head and "予約を作る" not in head
         # 帯は無く、版はヘッダーにだけ出る
         assert "<footer" not in page and "開発・試験用" not in page
         assert f'<span class="version">{__version__}</span>' in page.split("</header>")[0]
-    assert "<h1>予約一覧</h1>" in pages["予約一覧"]
+    assert "<h1>予約 <small>2026/10/21</small></h1>" in pages["予約"]
     assert "<h1>予約作成</h1>" in pages["予約作成"]
-    assert _links(pages[order.accession_number])["予約一覧へ"] == "/orders?date_from=2026-10-21"
+    assert _links(pages[order.accession_number])["予約へ戻る"] == "/orders?date_from=2026-10-21"
 
 
 def test_default_is_today_and_today_button(config: AppConfig, service: OrderService) -> None:
@@ -130,7 +133,7 @@ def test_odd_page_numbers_fall_back_to_first_page(config: AppConfig, service: Or
             assert "1〜1 件目／全 1 件" in response.text
 
 
-def test_status_column_class(config: AppConfig, service: OrderService) -> None:
+def test_status_badges_and_six_columns(config: AppConfig, service: OrderService) -> None:
     orders = service.create_orders(OrderRequest(counts={"CT": 5}, scheduled_date=TODAY, seed=1))
     for order, status in zip(
         orders[1:],
@@ -145,11 +148,15 @@ def test_status_column_class(config: AppConfig, service: OrderService) -> None:
             f"/orders/{orders[1].accession_number}/status",
             data={"status": "completed"},
             headers={"Origin": ORIGIN, "X-CSRF-Token": client.app.state.csrf_token, "HX-Request": "true"},  # type: ignore[attr-defined]
-        ).text
-    assert '<th class="col-status">状態</th>' in page
-    # すべての状態の行（予定・実施中・完了・取消・中止）で、状態のセルに同じ class が付く
-    assert page.count('<td class="col-status">') == 5
-    assert row.count('<td class="col-status">') == 1
+        )
+    assert row.status_code == 204 and row.headers["HX-Refresh"] == "true"
+    assert "<th>状態</th>" in page
+    rows = re.findall(r'<tr id="order-.*?</tr>', page, re.S)
+    assert len(rows) == 5
+    for row_html, kind in zip(rows, ("plan", "run", "done", "cancel", "stop"), strict=True):
+        assert len(re.findall(r'<td[ >]', row_html)) == 6
+        assert f'data-k="{kind}"' in row_html
+        assert "<select" not in row_html
 
 
 def test_status_select_guards_against_unsaved_values(config: AppConfig, service: OrderService) -> None:
@@ -158,9 +165,10 @@ def test_status_select_guards_against_unsaved_values(config: AppConfig, service:
         page = client.get("/orders").text
         script = client.get("/static/app.js")
     # 送信中は選択を無効にし、失敗したら保存済みの状態（data-current）へ戻す
-    select = re.search(r"<select name=\"status\" aria-label=[^>]*>", page)
+    select = re.search(r'<select name="status"[^>]*data-current=[^>]*>', page)
     assert select is not None
-    assert 'hx-disabled-elt="this"' in select.group(0) and 'data-current="scheduled"' in select.group(0)
+    assert 'hx-disabled-elt="find select, find button"' in page
+    assert 'hx-swap="none"' in page and 'data-current="scheduled"' in select.group(0)
     assert '<p id="request-error" class="error" role="alert" hidden></p>' in page
     assert '<script src="/static/app.js" defer></script>' in page
     assert script.status_code == 200
@@ -174,3 +182,71 @@ def test_unreadable_date_message_uses_screen_format(config: AppConfig, service: 
     assert response.status_code == 400
     assert "予定日は YYYY-MM-DD の日付で指定してください" in response.text
     assert "tomorrow" not in response.text
+
+
+def _summary(page: str) -> dict[str, int]:
+    return {label.strip(): int(count) for label, count in re.findall(
+        r'class="sum"[^>]*>([^<]+)<span class="nbr">(\d+)</span>', page
+    )}
+
+
+def test_selection_summary_and_panel(config: AppConfig, service: OrderService) -> None:
+    first, second = service.create_orders(OrderRequest(counts={"CT": 2}, scheduled_date=TODAY, seed=1))
+    service.set_status(second.accession_number, OrderStatus.COMPLETED)
+    with _client(config, service) as client:
+        default = client.get("/orders").text
+        chosen = client.get(f"/orders?selected={second.accession_number}").text
+        invalid = client.get("/orders?selected=missing").text
+        filtered = client.get("/orders?status=completed&modality=CT").text
+        empty = client.get("/orders?q=missing").text
+        patient = client.get("/orders", params={"q": f" {first.patient.patient_id} "}).text
+        accession = client.get("/orders", params={"q": second.accession_number}).text
+        response = client.post(
+            f"/orders/{first.accession_number}/status", data={"status": "discontinued"},
+            headers={"Origin": ORIGIN, "X-CSRF-Token": client.app.state.csrf_token, "HX-Request": "true"},
+        )
+    for page in (default, invalid):
+        assert f'<h2>予約 {first.accession_number}' in page
+        assert re.search(rf'selected={first.accession_number}" aria-current="true"', page)
+    assert f'<h2>予約 {second.accession_number}' in chosen
+    assert "状態を変える" not in chosen
+    assert f'href="/orders/{second.accession_number}" class="btn btn-primary">詳細を開く' in chosen
+    assert re.findall(r'<dt>(.*?)</dt>', default) == [
+        "氏名", "患者ID", "生年月日", "性別", "予定日時", "検査名", "装置", "依頼科"
+    ]
+    assert first.patient.patient_id in default and first.procedure.code in default
+    assert first.scheduled_station_label in default and first.requesting_service in default
+    assert _summary(default) == _summary(filtered) == {"すべて": 2, "予定": 1, "実施中": 0, "完了": 1, "取消": 0, "中止": 0}
+    assert first.accession_number not in filtered and second.accession_number in filtered
+    assert 'aria-label="選んだ予約"' not in empty and '<table' not in empty
+    assert "条件に合う予約はありません。" in empty and _summary(empty)["すべて"] == 0
+    assert _links(empty)["予約作成"] == "/orders/new"
+    assert first.accession_number in patient and second.accession_number not in patient
+    assert second.accession_number in accession and first.accession_number not in accession
+    assert response.status_code == 400 and "HX-Refresh" not in response.headers
+    assert 'data-current="scheduled"' in default
+
+
+def test_query_and_status_survive_links(config: AppConfig, service: OrderService) -> None:
+    orders = service.create_orders(OrderRequest(counts={"CT": 101}, scheduled_date=TODAY, interval_minutes=1, seed=1))
+    # 同じ患者の予約を 101 件にして、検索とページ送りを同時に確かめる
+    for order in orders[1:]:
+        with service.store._connect() as conn:
+            copied = order.model_copy(update={"patient": orders[0].patient})
+            conn.execute("UPDATE orders SET patient_id = ?, body = ? WHERE accession_number = ?",
+                         (copied.patient.patient_id, copied.model_dump_json(), copied.accession_number))
+    query = orders[0].patient.patient_id
+    with _client(config, service) as client:
+        first = client.get("/orders", params={"q": query, "status": "scheduled", "modality": "CT", "selected": orders[2].accession_number}).text
+        next_url = _links(first)["次のページ"]
+        last = client.get(next_url).text
+    assert f"q={query}" in next_url and "status=scheduled" in next_url and "modality=CT" in next_url
+    assert "selected=" not in next_url
+    assert f'<h2>予約 {orders[-1].accession_number}' in last
+    for label in ("前日", "翌日", "前のページ"):
+        url = _links(last)[label]
+        assert f"q={query}" in url and "status=scheduled" in url and "modality=CT" in url
+    summary_links = re.findall(r'<a href="([^"]+)" class="sum"', first)
+    assert len(summary_links) == 6
+    assert all(f"q={query}" in url and "modality=CT" in url for url in summary_links)
+    assert 'class="sum" aria-current="true">予定' in first

@@ -138,6 +138,15 @@ def create_app(
     check_host = is_loopback(config.web.bind_address)
 
     def render(request: Request, name: str, status_code: int = 200, **context: Any) -> HTMLResponse:
+        context.setdefault(
+            "nav_current",
+            {
+                "new_order.html": "new",
+                "batch_order.html": "batch",
+                "reconciliation_list.html": "reconciliation",
+                "reconcile.html": "reconciliation",
+            }.get(name, "orders"),
+        )
         context.update(
             csrf_token=app.state.csrf_token,
             csrf_field=CSRF_FIELD,
@@ -192,9 +201,14 @@ def create_app(
         status: str = "",
         modality: str = "",
         page: str = "1",
+        q: str = "",
+        selected: str = "",
     ) -> HTMLResponse:
+        q = q.strip()
         modality = modality.upper()
         context: dict[str, Any] = {
+            "q": q,
+            "summary": [],
             "status": status,
             "modality": modality,
             "modalities": list(config.orders.modalities),
@@ -214,6 +228,7 @@ def create_app(
             "date_to": last.strftime("%Y%m%d"),
             "statuses": statuses,
             "modality": modality,
+            "query": q,
         }
         total = order_service.count_orders(**where)
         pages = max(1, -(-total // LIST_PAGE_SIZE))
@@ -221,19 +236,45 @@ def create_app(
         offset = (number - 1) * LIST_PAGE_SIZE
         orders = order_service.list_orders(**where, limit=LIST_PAGE_SIZE, offset=offset)
 
-        def link(start: date, end: date, page_number: int = 1) -> str:
+        def link(
+            start: date, end: date, page_number: int = 1,
+            chosen_status: str = status, selection: str = "",
+        ) -> str:
             query = {"date_from": start.isoformat(), "date_to": end.isoformat()}
-            for key, value in (("status", status), ("modality", modality)):
+            for key, value in (
+                ("status", chosen_status), ("modality", modality), ("q", q), ("selected", selection)
+            ):
                 if value:
                     query[key] = value
             if page_number > 1:
                 query["page"] = str(page_number)
             return f"/orders?{urlencode(query)}"
 
+        counts = order_service.count_orders_by_status(
+            date_from=where["date_from"], date_to=where["date_to"], modality=modality, query=q
+        )
+        chosen = next(
+            (o for o in orders if o.accession_number == selected), orders[0] if orders else None
+        )
         context.update(
             date_from=first.isoformat(),
             date_to=last.isoformat(),
             orders=orders,
+            selected_order=chosen,
+            selection_links={
+                o.accession_number: link(first, last, number, selection=o.accession_number)
+                for o in orders
+            },
+            summary=[("", "すべて", sum(counts.values()), link(first, last, chosen_status=""))]
+            + [
+                (s.value, STATUS_LABELS[s], counts[s], link(first, last, chosen_status=s.value))
+                for s in OrderStatus
+            ],
+            period_label=first.strftime("%Y/%m/%d")
+            + ("〜" + last.strftime("%Y/%m/%d") if first != last else ""),
+            today=order_service.today(),
+            can_retake=chosen is not None
+            and config.orders.retake_mode == "new_order" and chosen.status in RETAKE_FROM,
             total=total,
             first_index=offset + 1,
             last_index=offset + len(orders),
@@ -415,7 +456,7 @@ def create_app(
         except OrderNotFoundError as exc:
             raise HTTPException(HTTP_NOT_FOUND, "Order not found") from exc
         except InvalidTransitionError as exc:
-            # 一覧の行（htmx）は 4xx で置き換えない。詳細はエラーを付けて表示し直す
+            # 選んだ予約の区画（htmx）は 4xx で置き換えない。詳細はエラーを付けて表示し直す
             if request.headers.get("hx-request"):
                 raise HTTPException(HTTP_BAD_REQUEST, exc.message) from exc
             return _render_detail(
@@ -425,7 +466,7 @@ def create_app(
                 status_code=HTTP_BAD_REQUEST,
             )
         if request.headers.get("hx-request"):
-            return render(request, "_order_row.html", order=order)
+            return Response(status_code=204, headers={"HX-Refresh": "true"})
         return RedirectResponse(f"/orders/{order.accession_number}", status_code=HTTP_SEE_OTHER)
 
     @app.get("/reconciliation", response_class=HTMLResponse)
@@ -517,6 +558,7 @@ def create_app(
     templates.env.filters["ymd"] = (
         lambda value: f"{value[:4]}-{value[4:6]}-{value[6:]}" if len(value) == 8 else value
     )
+    templates.env.filters["md"] = lambda value: f"{value[4:6]}/{value[6:]}" if len(value) == 8 else value
     templates.env.filters["pn"] = lambda value: value.replace("^", " ")
     return app
 
@@ -641,7 +683,7 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
     except pydantic.ValidationError as exc:
         first = exc.errors()[0]
         location = ".".join(str(part) for part in first["loc"])
-        raise ValidationError(f"患者の値が正しくありません: {location}: {first['msg']}") from exc
+        raise ValidationError(f"患者の値を受け付けられません: {location}: {first['msg']}") from exc
 
 
 def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:
