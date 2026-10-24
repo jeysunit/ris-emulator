@@ -198,7 +198,7 @@ th { font-size: 13px; color: var(--color-label); font-weight: 700; white-space: 
 .sum{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-background);cursor:pointer}
 .sum .nbr{font-size:16px;font-weight:700;color:var(--color-value);font-variant-numeric:tabular-nums}
 .split-h{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;align-items:start}
-.side{border:1px solid var(--color-border);border-radius:6px;background:var(--color-background);position:sticky;top:8px}
+.side{border:1px solid var(--color-border);border-radius:6px;background:var(--color-background);position:sticky;top:56px}
 .side>h2{font-size:14px;line-height:20px;padding:8px 12px;margin:0;background:var(--color-surface);border-bottom:1px solid var(--color-border);border-radius:6px 6px 0 0;color:var(--color-value);display:flex;justify-content:space-between;align-items:center}
 .side>.in{padding:12px;display:flex;flex-direction:column;gap:12px}
 .kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px}
