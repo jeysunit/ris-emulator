@@ -8,7 +8,8 @@ from pathlib import Path
 CSS = Path(__file__).resolve().parents[2] / "app" / "web" / "static" / "app.css"
 _DECLARATION = re.compile(r"(--[a-z-]+):\s*(#[0-9a-f]{6});")
 
-# 文字の色と、その文字が乗る地
+# 文字の色と、その文字が乗る地。状態のバッジ（白い字と --ok・--off）は、状態の色を前の値のまま
+# にする方針のため対象外（前から明るい地の --off は 3.04:1、暗い地の --ok は 2.54:1 で AA に届かない）
 _TEXT_PAIRS = [
     ("--text", "--bg"),
     ("--text", "--surface"),
