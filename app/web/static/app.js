@@ -29,6 +29,24 @@
     fail(event, "。接続を確かめて、画面を読み直してください");
   });
 
+  // 予約作成：「新規（架空）」を選んでいる間は、名簿の患者の選択肢を選べなくする。
+  // 見た目だけの補助で、サーバーは患者が新規なら名簿の患者 ID を使わない
+  function syncRosterSelect() {
+    var select = document.querySelector("select[data-roster-select]");
+    var fresh = document.querySelector("input[name=patient][value=new]");
+    if (select && fresh) {
+      select.disabled = fresh.checked || select.hasAttribute("data-no-roster");
+    }
+  }
+  document.addEventListener("change", function (event) {
+    if (event.target.name === "patient") {
+      syncRosterSelect();
+    }
+  });
+  // 戻るボタンで戻った画面は、ブラウザが戻した選択に合わせる
+  window.addEventListener("pageshow", syncRosterSelect);
+  syncRosterSelect();
+
   // 登録・作成のボタンは、押したら送信が終わるまで押せなくする（二重送信を防ぐ）
   document.addEventListener("submit", function (event) {
     var form = event.target;
