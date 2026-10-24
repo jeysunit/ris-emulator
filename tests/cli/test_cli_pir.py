@@ -96,6 +96,25 @@ def test_exit_5_when_receiver_rejects(config_file: Path, capsys: pytest.CaptureF
     assert code == 5 and "断られました" in err and "AR" in err and "unknown merge" in err
 
 
+def test_receiver_text_with_escape_sequences_is_not_printed_raw(
+    config_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def respond(body: bytes) -> bytes:
+        control_id = body.decode("utf-8").split("|")[9]
+        return _ack("AR", control_id=control_id, text="\x1b[2Jclear\x9b", err="X\x1b]0;t\x07")
+
+    with stub_receiver(respond) as receiver:
+        code, out, err = _run(
+            capsys,
+            "pir", "send", "--kind", "a40", "--patient-id", "RE0000001", "--name", NAME,
+            "--prior-patient-id", "ER0001", "--port", str(receiver.port), "--config", str(config_file),
+        )  # fmt: skip
+    assert code == 5
+    for stream in (out, err):
+        assert "\x1b" not in stream and "\x9b" not in stream and "\x07" not in stream
+    assert "\\u001b" in err
+
+
 def test_exit_6_when_receiver_is_down(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     import socket
 

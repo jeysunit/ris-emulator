@@ -306,6 +306,21 @@ def test_parse_ack_reject_with_text_and_err() -> None:
     assert (ack.code, ack.text, ack.error) == ("AR", "unknown patient | id", "PID^1^3")
 
 
+def test_parse_ack_makes_control_characters_visible() -> None:
+    """相手の ACK の ESC・C1・双方向の制御・行の区切りは、端末へ出す前に見える形になる."""
+    raw = (
+        "MSH|^~\\&|A|B|C|D|20261024||ACK|1|P|2.3.1\r"
+        "MSA|A\x1bE|CT\x07RL|bad\x1b[2J\x9b31m‮ end\x7f\r"
+        "ERR|PID\x1b]0;x\x07\r"
+    )
+    ack = parse_ack(raw)
+    for value in (ack.code, ack.control_id, ack.text, ack.error):
+        assert all(ord(char) >= 0x20 and not 0x7F <= ord(char) <= 0x9F for char in value)
+        assert "‮" not in value and " " not in value
+    assert ack.text == "bad\\u001b[2J\\u009b31m\\u202e\\u2028end\\u007f"
+    assert ack.code == "A\\u001bE"
+
+
 def test_parse_ack_accepts_lf_separators() -> None:
     ack = parse_ack("MSH|^~\\&|A|B|C|D|20261024||ACK|1|P|2.3.1\nMSA|AE|CTRL9\n")
     assert (ack.code, ack.control_id) == ("AE", "CTRL9")

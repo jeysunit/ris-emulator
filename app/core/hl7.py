@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import secrets
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -271,11 +272,23 @@ def parse_ack(data: bytes | str) -> Ack:
     if msa is None:
         raise AckParseError("ACK に MSA がありません")
     err = _find_segment(segments, "ERR", separator)
+    # 相手が返した値は、端末・ログに出しても制御文字が働かないよう、見える形にして持つ
     return Ack(
-        code=_field(msa, 1),
-        control_id=unescape(_field(msa, 2), encoding_characters),
-        text=unescape(_field(msa, 3), encoding_characters),
-        error=_field(err, 1) if err else "",
+        code=visible(_field(msa, 1)),
+        control_id=visible(unescape(_field(msa, 2), encoding_characters)),
+        text=visible(unescape(_field(msa, 3), encoding_characters)),
+        error=visible(_field(err, 1) if err else ""),
+    )
+
+
+def visible(value: str) -> str:
+    """制御文字（C0・DEL・C1）、書式文字（双方向の制御など）、行・段落の区切りを `\\uXXXX` にする.
+
+    外から来た値を端末やログへ出すときの、エスケープシーケンスの注入と表示の偽装を防ぐ。
+    """
+    return "".join(
+        f"\\u{ord(char):04x}" if unicodedata.category(char) in ("Cc", "Cf", "Zl", "Zp") else char
+        for char in value
     )
 
 
