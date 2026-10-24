@@ -23,7 +23,7 @@ from app.core.exceptions import (
     OrderNotFoundError,
     ValidationError,
 )
-from app.core.hl7 import Hl7Message, build_adt_a08, build_adt_a40, build_orm_o01
+from app.core.hl7 import Hl7Message, build_adt_a08, build_adt_a40, build_orm_o01, visible
 from app.core.models import (
     CHARACTER_SET_LABELS,
     STATUS_LABELS,
@@ -279,18 +279,19 @@ def pir_send_command(args: argparse.Namespace) -> int:
         raise ValidationError("ポートは 1〜65535 で指定してください")
     message = _build_pir_message(args, config)
     if args.dry_run:
-        print(message.display(), end="")
+        # 端末に出す表示だけ変える（送る本文は変えない）。入力の氏名などの書式文字も見える形にする
+        print("\n".join(visible(line) for line in message.display().splitlines()))
         return EXIT_OK
     result = send_message(message, host, port, hl7.timeout_seconds)
-    label = f"{message.message_type}（MSH-10 {message.control_id}）を {host}:{port} へ送りました"
+    label = visible(f"{message.message_type}（MSH-10 {message.control_id}）を {host}:{port} へ送りました")
     if result.outcome == "accepted":
         print(f"{label}：受理されました（{result.ack_code}）")
         return EXIT_OK
     reason = f"{result.ack_code}：{result.detail}" if result.ack_code else result.detail
     if result.outcome == "rejected":
-        print(f"[ERROR] {label}が、断られました（{reason}）", file=sys.stderr)
+        print(f"[ERROR] {label}が、断られました（{visible(reason)}）", file=sys.stderr)
         return EXIT_HL7_REJECTED
-    print(f"[ERROR] {message.message_type} を送れませんでした（{reason}）", file=sys.stderr)
+    print(f"[ERROR] {message.message_type} を送れませんでした（{visible(reason)}）", file=sys.stderr)
     return EXIT_HL7_FAILED
 
 
@@ -400,11 +401,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         return int(args.func(args))
     except (ConfigurationError, ValidationError) as exc:
-        print(f"[ERROR] {exc}", file=sys.stderr)
+        print(f"[ERROR] {visible(str(exc))}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
     except OrderNotFoundError as exc:
-        print(f"[ERROR] {exc}", file=sys.stderr)
+        print(f"[ERROR] {visible(str(exc))}", file=sys.stderr)
         return EXIT_NOT_FOUND
     except MwlServerError as exc:
-        print(f"[ERROR] {exc}", file=sys.stderr)
+        print(f"[ERROR] {visible(str(exc))}", file=sys.stderr)
         return EXIT_MWL_ERROR

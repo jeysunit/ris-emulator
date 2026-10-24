@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from app.core.exceptions import AckParseError
-from app.core.hl7 import Hl7Message, parse_ack
+from app.core.hl7 import Hl7Message, parse_ack, visible
 
 START_BLOCK = b"\x0b"
 END_BLOCK = b"\x1c\x0d"
@@ -62,7 +62,8 @@ def send_message(message: Hl7Message, host: str, port: int, timeout: float) -> D
             "failed",
             ack.code,
             ack.text,
-            f"ACK の MSA-2（{ack.control_id}）が送った MSH-10（{message.control_id}）と違います",
+            f"ACK の MSA-2（{visible(ack.control_id)}）が送った MSH-10"
+            f"（{visible(message.control_id)}）と違います",
         )
     if ack.code == "AA":
         return DeliveryResult("accepted", ack.code, ack.text)
@@ -84,7 +85,8 @@ def _receive_frame(connection: socket.socket, timeout: float) -> bytes:
     deadline = time.monotonic() + timeout
     buffer = b""
     while END_BLOCK not in buffer:
-        if len(buffer) > MAX_ACK_BYTES:
+        # 本文の上限に、開始と終端の分を足す（終端が 2 回の受信に分かれても、上限ちょうどは通す）
+        if len(buffer) > MAX_ACK_BYTES + len(START_BLOCK) + len(END_BLOCK):
             raise _FrameError("ACK が大きすぎます")
         remaining = deadline - time.monotonic()
         if remaining <= 0:

@@ -115,6 +115,33 @@ def test_receiver_text_with_escape_sequences_is_not_printed_raw(
     assert "\\u001b" in err
 
 
+def test_input_values_with_control_characters_are_not_printed_raw(
+    config_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """利用者が打った値（旧 ID・ホスト・氏名）も、端末に出す表示では制御・書式文字を見える形にする."""
+    code, out, err = _run(
+        capsys,
+        "pir", "send", "--kind", "a40", "--patient-id", "RE1", "--name", NAME,
+        "--prior-patient-id", "ER\x1b[2J1", "--dry-run", "--config", str(config_file),
+    )  # fmt: skip
+    assert code == 2 and "\x1b" not in err and "\\u001b" in err
+
+    code, out, err = _run(
+        capsys,
+        "pir", "send", "--kind", "a08", "--patient-id", "RE1", "--name", "YAMADA‮^TARO",
+        "--visit-number", "V1", "--dry-run", "--config", str(config_file),
+    )  # fmt: skip
+    assert code == 0 and "‮" not in out and "\\u202e" in out
+    assert len(out.splitlines()) == 4
+
+    code, out, err = _run(
+        capsys,
+        "pir", "send", "--kind", "a08", "--patient-id", "RE1", "--name", NAME,
+        "--visit-number", "V1", "--host", "h\x1b]0;x\x07", "--config", str(config_file),
+    )  # fmt: skip
+    assert code == 6 and "\x1b" not in err and "\x07" not in err
+
+
 def test_exit_6_when_receiver_is_down(config_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     import socket
 

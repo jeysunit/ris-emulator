@@ -196,6 +196,59 @@ def test_slowly_dripping_ack_hits_the_overall_deadline() -> None:
     assert elapsed < 1.5
 
 
+def _ack_of_body_size(size: int) -> bytes:
+    head = "MSH|^~\\&|PACS|PACS|RIS_EMU|X|20261024||ACK|A1|P|2.3.1\rMSA|AA|CTRL1|"
+    return (head + "x" * (size - len(head) - 1) + "\r").encode("ascii")
+
+
+@pytest.mark.parametrize("split_terminator", [False, True])
+def test_ack_of_exactly_the_limit_is_accepted(split_terminator: bool) -> None:
+    """本文が上限ちょうどなら、終端が同じ受信でも別の受信（FS と CR の間）でも受理する."""
+    body = _ack_of_body_size(MAX_ACK_BYTES)
+    assert len(body) == MAX_ACK_BYTES
+
+    if not split_terminator:
+        with stub_receiver(lambda _: START_BLOCK + body + END_BLOCK) as receiver:
+            result = send_message(_message(), "127.0.0.1", receiver.port, TIMEOUT)
+    else:
+        server = socket.socket()
+        server.bind(("127.0.0.1", 0))
+        server.listen(1)
+
+        def serve() -> None:
+            connection, _ = server.accept()
+            with connection:
+                connection.recv(4096)
+                connection.sendall(START_BLOCK + body + END_BLOCK[:1])
+                time.sleep(0.2)
+                connection.sendall(END_BLOCK[1:])
+
+        thread = threading.Thread(target=serve, daemon=True)
+        thread.start()
+        result = send_message(_message(), "127.0.0.1", server.getsockname()[1], TIMEOUT)
+        thread.join(timeout=TIMEOUT)
+        server.close()
+    assert result.outcome == "accepted"
+
+
+def test_one_byte_over_the_limit_is_a_failure() -> None:
+    body = _ack_of_body_size(MAX_ACK_BYTES + 1)
+    with stub_receiver(lambda _: START_BLOCK + body + END_BLOCK) as receiver:
+        result = send_message(_message(), "127.0.0.1", receiver.port, TIMEOUT)
+    assert result.outcome == "failed" and "大きすぎます" in result.detail
+
+
+def test_ack_matches_a_control_id_with_format_characters() -> None:
+    """MSA-2 の照合は生の値で行う。表示用の変換が入った値で比べない."""
+    control_id = "A​B"
+    message = build_adt_a40(
+        HEADER, PATIENT, namespace="RIS_EMU", prior_patient_id="ER0001", now=NOW, control_id=control_id
+    )
+    with stub_receiver(lambda _: _ack("AA", control_id=control_id)) as receiver:
+        result = send_message(message, "127.0.0.1", receiver.port, TIMEOUT)
+    assert result.outcome == "accepted"
+
+
 def test_complete_oversized_ack_is_a_failure() -> None:
     """上限を超える本文が、終端を含む 1 回の受信で届いても失敗にする."""
     oversized = START_BLOCK + b"x" * (MAX_ACK_BYTES + 10) + END_BLOCK

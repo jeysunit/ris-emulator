@@ -275,7 +275,8 @@ def parse_ack(data: bytes | str) -> Ack:
     # 相手が返した値は、端末・ログに出しても制御文字が働かないよう、見える形にして持つ
     return Ack(
         code=visible(_field(msa, 1)),
-        control_id=visible(unescape(_field(msa, 2), encoding_characters)),
+        # 照合に使う値なので、見える形にしない（表示するときは `visible` を通す）
+        control_id=unescape(_field(msa, 2), encoding_characters),
         text=visible(unescape(_field(msa, 3), encoding_characters)),
         error=visible(_field(err, 1) if err else ""),
     )

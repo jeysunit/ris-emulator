@@ -16,6 +16,7 @@ from app.core.hl7 import (
     new_control_id,
     parse_ack,
     unescape,
+    visible,
 )
 from app.core.models import Order, Patient, PersonName
 from app.services.order_service import OrderRequest, OrderService
@@ -314,7 +315,9 @@ def test_parse_ack_makes_control_characters_visible() -> None:
         "ERR|PID\x1b]0;x\x07\r"
     )
     ack = parse_ack(raw)
-    for value in (ack.code, ack.control_id, ack.text, ack.error):
+    # control_id は照合に使うので生のまま持つ。表示では visible を通す
+    assert ack.control_id == "CT\x07RL" and visible(ack.control_id) == "CT\\u0007RL"
+    for value in (ack.code, ack.text, ack.error):
         assert all(ord(char) >= 0x20 and not 0x7F <= ord(char) <= 0x9F for char in value)
         assert "‮" not in value and " " not in value
     assert ack.text == "bad\\u001b[2J\\u009b31m\\u202e\\u2028end\\u007f"
