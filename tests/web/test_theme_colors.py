@@ -77,3 +77,4 @@ def test_mr_mark_is_purple_and_there_is_no_dark_chrome_token() -> None:
     assert themes["dark"]["--color-mod-mr"].lower() == "#c084fc"
     for tokens in themes.values():
         assert "--color-chrome" not in tokens
+    assert "--color-chrome" not in CSS.read_text(encoding="utf-8")
