@@ -13,14 +13,23 @@ from typing import Any, Literal
 from pydicom.dataset import Dataset
 from pydicom.multival import MultiValue
 
-from app.core.models import PersonName, validate_ae_title, validate_patient_id
+from app.core.models import OrderStatus, PersonName, validate_ae_title, validate_patient_id
 
-DeliveryKind = Literal["a40", "a08", "orm"]
+# orm は ORC-1 が NW。orm_ca・orm_dc は、照合で作った予約を取消・中止したときの RAD-13
+DeliveryKind = Literal["a40", "a08", "orm", "orm_ca", "orm_dc"]
 MESSAGE_TYPES: dict[DeliveryKind, str] = {
     "a40": "ADT^A40",
     "a08": "ADT^A08",
     "orm": "ORM^O01",
+    "orm_ca": "ORM^O01（CA）",
+    "orm_dc": "ORM^O01（DC）",
 }
+# 予約の状態 → 照合で作った予約を手で変えたときに送る通
+STATUS_DELIVERIES: dict[OrderStatus, DeliveryKind] = {
+    OrderStatus.CANCELLED: "orm_ca",
+    OrderStatus.DISCONTINUED: "orm_dc",
+}
+ORDER_CONTROLS: dict[DeliveryKind, str] = {"orm": "NW", "orm_ca": "CA", "orm_dc": "DC"}
 # 送信の状態の画面・CLI での名前（docs/spec/07_reconciliation.md 5 章）
 DELIVERY_LABELS = {
     "pending": "送信待ち",

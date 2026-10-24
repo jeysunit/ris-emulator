@@ -270,3 +270,16 @@ def test_detail_terms_for_reconciled_order(config: AppConfig, store: OrderStore)
     assert re.findall(r"<th>([^<]+)</th>", page.split("<h2>HL7 送信</h2>")[1].split("</thead>")[0]) == [
         "メッセージ", "状態", "ACK", "詳細", "送信日時", "回数",
     ]  # fmt: skip
+
+
+def test_cancel_reconciled_order_shows_ca(config, store):
+    uid, _ = add_unscheduled_mpps(store)
+    with stub_receiver(_accept) as receiver:
+        with _client(config, store, receiver.port) as (client, _):
+            response = _post(client, f"/reconciliation/{uid}", **_roster())
+            accession = store.get_mpps(uid).accession_numbers[0]
+            response = _post(client, f"/orders/{accession}/status", status="cancelled")
+            assert response.status_code == 303
+            page = client.get(response.headers["location"])
+            assert "ORM^O01（CA）" in page.text
+    assert "\rORC|CA|" in receiver.received[-1]

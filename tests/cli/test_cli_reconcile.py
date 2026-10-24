@@ -147,3 +147,20 @@ def test_second_run_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
         assert _run(capsys, *args)[0] == 0
         code, _, err = _run(capsys, *args)
     assert code == 2 and "すでに予約に結び付いています" in err
+
+
+@pytest.mark.parametrize("outcome,expected", [("AA", 0), ("AE", 5), ("XX", 6)])
+def test_status_exit_code_and_manual_ca_dry_run(tmp_path, capsys, outcome, expected):
+    store = _store(tmp_path)
+    uid, _ = add_unscheduled_mpps(store)
+    answers = iter(["AA", "AA", outcome])
+    with stub_receiver(lambda text: ack(next(answers), text)) as receiver:
+        config = _config_file(tmp_path, receiver.port)
+        code, _, _ = _run(capsys, "reconcile", "run", uid, "--roster-patient-id", "P000001", "--config", str(config))
+        assert code == 0
+        accession = store.get_mpps(uid).accession_numbers[0]
+        code, out, _ = _run(capsys, "status", accession, "cancelled", "--config", str(config))
+        assert code == expected and "ORM^O01（CA）" in out
+    code, out, _ = _run(capsys, "pir", "send", "--kind", "orm", "--accession", accession,
+                         "--order-control", "CA", "--dry-run", "--config", str(config))
+    assert code == 0 and "ORC|CA|" in out

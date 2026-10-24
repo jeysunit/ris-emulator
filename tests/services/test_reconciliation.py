@@ -282,3 +282,102 @@ def test_station_in_the_registry_gets_its_name(config: AppConfig, store: OrderSt
         result = _service(config, store, receiver.port).reconcile(ReconcileRequest(sop_uid, OFFICIAL))
     order = store.get(result.accession_number)
     assert (order.scheduled_station_label, order.scheduled_station_ae_title) == ("CT1号機", "CT01")
+
+
+@pytest.mark.parametrize("patient_id,linked", [("ER2026102400", True), ("P000001", True), ("OTHER", False)])
+@pytest.mark.parametrize("status", ["IN PROGRESS", "COMPLETED"])
+def test_later_mpps_joins_reconciled_study(config, store, patient_id, linked, status):
+    sop_uid, study_uid = add_unscheduled_mpps(store, status=status)
+    with stub_receiver(_accept_all) as receiver:
+        service = _service(config, store, receiver.port)
+        result = service.reconcile(ReconcileRequest(sop_uid, OFFICIAL))
+    later, _ = add_unscheduled_mpps(store, study_instance_uid=study_uid, patient_id=patient_id)
+    assert store.get_mpps(later).accession_numbers == ([result.accession_number] if linked else [])
+    assert len(store.list_mpps(result.accession_number)) == (2 if linked else 1)
+    assert [m.sop_instance_uid for m in store.list_unlinked_mpps()] == ([] if linked else [later])
+    expected = OrderStatus.COMPLETED if status == "COMPLETED" else OrderStatus.IN_PROGRESS
+    assert store.get(result.accession_number).status == expected
+
+
+def test_study_uid_does_not_join_an_ordinary_order(config, store):
+    orders = OrderService(config, store, today=lambda: TODAY)
+    order = orders.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY))[0]
+    uid, _ = add_unscheduled_mpps(store, study_instance_uid=order.study_instance_uid,
+                                  patient_id=order.patient.patient_id)
+    assert store.get_mpps(uid).accession_numbers == []
+    result = store.create_mpps("1.2.99", [(order.accession_number, order.scheduled_procedure_step_id, "1.2.3")], {}, "OTHER")
+    assert result.linked == [order.accession_number]
+
+
+def test_study_uid_is_not_used_when_accession_is_given(config, store):
+    sop_uid, study_uid = add_unscheduled_mpps(store)
+    with stub_receiver(_accept_all) as receiver:
+        result = _service(config, store, receiver.port).reconcile(ReconcileRequest(sop_uid, OFFICIAL))
+    # 受付番号が入っていて一致しない項目は、照合済みの Study UID でも結ばない
+    linked = store.create_mpps("1.2.98", [("RE0000000000", "SPS0", study_uid)], {}, "ER2026102400")
+    assert linked.linked == []
+    assert len(store.list_mpps(result.accession_number)) == 1
+
+
+@pytest.mark.parametrize("status,control", [(OrderStatus.CANCELLED, "CA"), (OrderStatus.DISCONTINUED, "DC")])
+def test_manual_status_sends_rad13_and_same_status_does_nothing(config, store, status, control):
+    uid, _ = add_unscheduled_mpps(store)
+    with stub_receiver(_accept_all) as receiver:
+        service = _service(config, store, receiver.port)
+        result = service.reconcile(ReconcileRequest(uid, OFFICIAL))
+        order, updated = service.set_status(result.accession_number, status)
+        assert order.status == status
+        assert updated.deliveries[-1].kind == "orm_" + control.lower()
+        assert updated.deliveries[-1].outcome == "accepted"
+        assert f"\rORC|{control}|" in receiver.received[-1]
+        assert service.set_status(order.accession_number, status)[1] is None
+    assert len(receiver.received) == 3
+
+
+def test_rejected_nw_blocks_ca_until_resend(config, store):
+    uid, _ = add_unscheduled_mpps(store)
+    answers = iter(["AA", "AE", "AE", "AA", "AA"])
+    with stub_receiver(lambda text: ack(next(answers), text)) as receiver:
+        service = _service(config, store, receiver.port)
+        result = service.reconcile(ReconcileRequest(uid, OFFICIAL))
+        _, updated = service.set_status(result.accession_number, OrderStatus.CANCELLED)
+        assert [d.outcome for d in updated.deliveries] == ["accepted", "rejected", "pending"]
+        final = service.send_pending(result.accession_number)
+    controls = [line.split("|")[1] for text in receiver.received for line in text.split("\r") if line.startswith("ORC|")]
+    assert controls == ["NW", "NW", "NW", "CA"]
+    assert all(d.outcome == "accepted" for d in final.deliveries)
+
+
+def test_mpps_discontinued_does_not_add_delivery(config, store):
+    uid, _ = add_unscheduled_mpps(store)
+    with stub_receiver(_accept_all) as receiver:
+        service = _service(config, store, receiver.port)
+        result = service.reconcile(ReconcileRequest(uid, OFFICIAL))
+    store.update_mpps(uid, "DISCONTINUED", {})
+    assert len(store.get_reconciliation(result.accession_number).deliveries) == 2
+    assert store.get(result.accession_number).status == OrderStatus.DISCONTINUED
+
+
+def test_ordinary_order_status_does_not_send(config, store):
+    orders = OrderService(config, store, today=lambda: TODAY)
+    order = orders.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY))[0]
+    def unexpected(*args):
+        raise AssertionError("送信してはいけない")
+    service = ReconciliationService(orders, send=unexpected)
+    changed, result = service.set_status(order.accession_number, OrderStatus.CANCELLED)
+    assert changed.status == OrderStatus.CANCELLED and result is None
+
+
+def test_status_delivery_failure_rolls_back(config, store, monkeypatch):
+    uid, _ = add_unscheduled_mpps(store)
+    with stub_receiver(_accept_all) as receiver:
+        service = _service(config, store, receiver.port)
+        result = service.reconcile(ReconcileRequest(uid, OFFICIAL))
+    before = store.get(result.accession_number)
+    def broken(*args):
+        raise RuntimeError("組み立て失敗")
+    monkeypatch.setattr(service, "_build_delivery", broken)
+    with pytest.raises(RuntimeError):
+        service.set_status(result.accession_number, OrderStatus.CANCELLED)
+    assert store.get(result.accession_number) == before
+    assert store.get_reconciliation(result.accession_number) == result

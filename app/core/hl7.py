@@ -14,7 +14,14 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.core.exceptions import AckParseError, ValidationError
-from app.core.models import Order, Patient, PersonName, has_control_chars, validate_patient_id
+from app.core.models import (
+    Order,
+    OrderStatus,
+    Patient,
+    PersonName,
+    has_control_chars,
+    validate_patient_id,
+)
 
 SEGMENT_SEPARATOR = "\r"
 FIELD_SEPARATOR = "|"
@@ -27,6 +34,17 @@ PATIENT_CLASS_PATTERN = re.compile(r"[A-Z0-9]")
 # DICOM の PN のコンポーネント（姓・名・ミドル・接頭辞・接尾辞）の数
 _PN_COMPONENTS = 5
 _ORDER_PRIORITY = {"STAT": "S", "HIGH": "A", "ROUTINE": "R"}
+# ORC-1（HL7 Table 0119）の NW=予約、CA=取消、DC=中止、XO=変更（IHE RAD TF-2 4.13）。
+# NW・CA・DC の ORC-5（Table 0038）は決まった値。XO は予約のいまの状態を入れる
+ORDER_CONTROLS = ("NW", "CA", "DC", "XO")
+_ORDER_STATUS_FOR_CONTROL = {"NW": "SC", "CA": "CA", "DC": "DC"}
+_ORDER_STATUS_CODES = {
+    OrderStatus.SCHEDULED: "SC",
+    OrderStatus.IN_PROGRESS: "IP",
+    OrderStatus.COMPLETED: "CM",
+    OrderStatus.CANCELLED: "CA",
+    OrderStatus.DISCONTINUED: "DC",
+}
 _ESCAPES = (
     ("\\", "\\E\\"),
     ("|", "\\F\\"),
@@ -172,13 +190,18 @@ def build_orm_o01(
     *,
     visit_number: str,
     patient_class: str = "O",
+    order_control: str = "NW",
     now: datetime | None = None,
     control_id: str | None = None,
 ) -> Hl7Message:
-    """ORM^O01^ORM_O01（Procedure Scheduled。ORC-1 は NW。IHE RAD TF-2 4.4.4.1.2.1）.
+    """ORM^O01^ORM_O01（NW は Procedure Scheduled [RAD-4]、CA・DC・XO は Procedure Update [RAD-13]）.
 
     予約 1 件を ORC・OBR の 1 組にし、Study Instance UID を ZDS-1 に入れる。
+    IHE RAD TF-2 4.4.4.1.2.1・4.13。
     """
+    if order_control not in ORDER_CONTROLS:
+        raise ValidationError("ORC-1 は NW・CA・DC・XO にしてください", {"value": order_control})
+    order_status = _ORDER_STATUS_FOR_CONTROL.get(order_control) or _ORDER_STATUS_CODES[order.status]
     _require_visit_or_account(visit_number, "")
     namespace = order.issuer_namespace
     when = now or datetime.now()
@@ -193,9 +216,9 @@ def build_orm_o01(
         segment(
             "ORC",
             {
-                1: "NW",
+                1: order_control,
                 3: filler_number,
-                5: "SC",
+                5: order_status,
                 7: timing,
                 12: ordering_provider,
             },

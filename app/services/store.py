@@ -309,48 +309,68 @@ class OrderStore:
             ).fetchone()
         return int(row[0])
 
-    def set_status(self, accession_number: str, status: OrderStatus) -> Order:
+    def set_status(
+        self, accession_number: str, status: OrderStatus,
+        build_delivery: Callable[[Order], Delivery | None] | None = None,
+    ) -> Order:
+        """予約の状態を変える.
+
+        照合で作った予約で、`build_delivery` が通を返せば、照合の記録の末尾に未送信で足す。
+        状態の変更と通の追加は 1 つのトランザクションで行う（`build_delivery` が例外を出せば
+        どちらも残さない）。
+        """
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                "SELECT body FROM orders WHERE accession_number = ?", (accession_number,)
-            ).fetchone()
-            if row is None:
-                conn.execute("ROLLBACK")
-                raise OrderNotFoundError(
-                    "Order not found", {"accession_number": accession_number}
+            try:
+                current = _load_order(conn, accession_number)
+                if current is None:
+                    raise OrderNotFoundError("Order not found", {"accession_number": accession_number})
+                if status == current.status:
+                    # 同じ状態は何もしない（更新日時も変えず、通も足さない）
+                    conn.execute("ROLLBACK")
+                    return current
+                if not can_transition(current.status, status):
+                    raise InvalidTransitionError(
+                        f"{STATUS_LABELS[current.status]}の予約は{STATUS_LABELS[status]}に変更できません",
+                        {"accession_number": accession_number, "status": current.status.value},
+                    )
+                order = current.model_copy(update={"status": status, "updated_at": _now()})
+                conn.execute(
+                    "UPDATE orders SET status = ?, body = ? WHERE accession_number = ?",
+                    (status.value, order.model_dump_json(), accession_number),
                 )
-            current = Order.model_validate_json(row[0])
-            if status == current.status:
-                # 同じ状態は何もしない（更新日時も変えない）
+                if build_delivery is not None:
+                    row = conn.execute(
+                        "SELECT body FROM reconciliations WHERE accession_number = ?",
+                        (accession_number,),
+                    ).fetchone()
+                    if row is not None:
+                        delivery = build_delivery(order)
+                        if delivery is not None:
+                            body = json.loads(row[0])
+                            body["deliveries"].append(asdict(delivery))
+                            conn.execute(
+                                "UPDATE reconciliations SET body = ?, updated_at = ? WHERE accession_number = ?",
+                                (json.dumps(body, ensure_ascii=False), _now(), accession_number),
+                            )
+                conn.execute("COMMIT")
+            except BaseException:
                 conn.execute("ROLLBACK")
-                return current
-            if not can_transition(current.status, status):
-                conn.execute("ROLLBACK")
-                raise InvalidTransitionError(
-                    f"{STATUS_LABELS[current.status]}の予約は"
-                    f"{STATUS_LABELS[status]}に変更できません",
-                    {"accession_number": accession_number, "status": current.status.value},
-                )
-            order = current.model_copy(update={"status": status, "updated_at": _now()})
-            conn.execute(
-                "UPDATE orders SET status = ?, body = ? WHERE accession_number = ?",
-                (status.value, order.model_dump_json(), accession_number),
-            )
-            conn.execute("COMMIT")
+                raise
         return order
-
 
     def create_mpps(
         self,
         sop_instance_uid: str,
-        steps: Sequence[tuple[str, str]],
+        steps: Sequence[tuple[str, str] | tuple[str, str, str]],
         body: dict[str, Any],
+        patient_id: str = "",
     ) -> MppsResult:
         """N-CREATE（IN PROGRESS）の MPPS を記録し、結び付いた予約を実施中にする.
 
         `steps` は Scheduled Step Attributes Sequence の項目の
-        (Accession Number, Scheduled Procedure Step ID)。両方が一致する予約に結び付ける。
+        (Accession Number, Scheduled Procedure Step ID, Study Instance UID)。
+        受付番号が空なら、照合済みの予約を Study UID と患者ID で探す。
         MPPS の記録と予約の状態の変更は1つのトランザクションで行う。
         """
         with self._connect() as conn:
@@ -363,7 +383,7 @@ class OrderStore:
                     raise DuplicateMppsError(
                         "MPPS already exists", {"sop_instance_uid": sop_instance_uid}
                     )
-                orders = _orders_for_steps(conn, steps)
+                orders = _orders_for_steps(conn, steps, patient_id)
                 result = _apply_mpps(conn, orders, OrderStatus.IN_PROGRESS)
                 now = _now()
                 conn.execute(
@@ -690,18 +710,34 @@ def _load_order(conn: sqlite3.Connection, accession_number: str) -> Order | None
 
 
 def _orders_for_steps(
-    conn: sqlite3.Connection, steps: Sequence[tuple[str, str]]
+    conn: sqlite3.Connection, steps: Sequence[tuple[str, str] | tuple[str, str, str]],
+    patient_id: str = "",
 ) -> list[Order]:
-    """Accession Number と Scheduled Procedure Step ID の両方が一致する予約（重ねない）."""
+    """受付番号と SPS ID、または照合済みの Study UID と患者ID で探す（重ねない）."""
     orders: list[Order] = []
-    for accession_number, step_id in steps:
-        if not accession_number or not step_id:
-            continue
-        order = _load_order(conn, accession_number)
-        if order is None or order.scheduled_procedure_step_id != step_id:
-            continue
-        if all(o.accession_number != order.accession_number for o in orders):
-            orders.append(order)
+    for step in steps:
+        accession_number, step_id = step[:2]
+        study_uid = step[2] if len(step) == 3 else ""
+        matches: list[Order] = []
+        if accession_number:
+            order = _load_order(conn, accession_number)
+            if order is not None and step_id and order.scheduled_procedure_step_id == step_id:
+                matches.append(order)
+        elif study_uid and patient_id:
+            # 照合の後も、モダリティが仮の患者のまま同じ Study で撮る（IHE PIR の Case 6）。
+            # 照合で作った予約だけを相手にし、患者ID が仮か正式のどちらかと合うときだけ結ぶ
+            rows = conn.execute(
+                "SELECT orders.body FROM orders JOIN reconciliations "
+                "ON orders.accession_number = reconciliations.accession_number "
+                "WHERE json_extract(orders.body, '$.study_instance_uid') = ? "
+                "AND (orders.patient_id = ? OR "
+                "json_extract(reconciliations.body, '$.temporary.patient_id') = ?)",
+                (study_uid, patient_id, patient_id),
+            ).fetchall()
+            matches = [Order.model_validate_json(row[0]) for row in rows]
+        for order in matches:
+            if all(o.accession_number != order.accession_number for o in orders):
+                orders.append(order)
     return orders
 
 

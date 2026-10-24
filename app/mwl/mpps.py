@@ -62,11 +62,14 @@ def handle_n_create(store: OrderStore, sop_instance_uid: str | None, attributes:
         return STATUS_MISSING_ATTRIBUTE, None
 
     steps = [
-        (_text(item, "AccessionNumber"), _text(item, "ScheduledProcedureStepID"))
+        (_text(item, "AccessionNumber"), _text(item, "ScheduledProcedureStepID"),
+         _text(item, "StudyInstanceUID"))
         for item in attributes.ScheduledStepAttributesSequence or []
     ]
     try:
-        result = store.create_mpps(sop_instance_uid, steps, attributes.to_json_dict())
+        result = store.create_mpps(
+            sop_instance_uid, steps, attributes.to_json_dict(), _text(attributes, "PatientID")
+        )
     except DuplicateMppsError:
         logger.warning("MPPS N-CREATE %s refused: duplicate SOP Instance", sop_instance_uid)
         return STATUS_DUPLICATE_SOP_INSTANCE, None

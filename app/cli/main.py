@@ -26,7 +26,14 @@ from app.core.exceptions import (
     ReconciliationNotFoundError,
     ValidationError,
 )
-from app.core.hl7 import Hl7Message, build_adt_a08, build_adt_a40, build_orm_o01, visible
+from app.core.hl7 import (
+    ORDER_CONTROLS,
+    Hl7Message,
+    build_adt_a08,
+    build_adt_a40,
+    build_orm_o01,
+    visible,
+)
 from app.core.models import (
     CHARACTER_SET_LABELS,
     STATUS_LABELS,
@@ -161,7 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="HL7 v2.3.1 のメッセージを組み立て、MLLP で送る",
         description=(
             "a40=患者ID の統合（ADT^A40）、a08=患者の属性の更新（ADT^A08）、"
-            "orm=予約（ORM^O01、ORC-1 は NW）"
+            "orm=予約（ORM^O01。ORC-1 は --order-control）"
         ),
     )
     send.add_argument("--kind", required=True, choices=PIR_KINDS, help="メッセージの種類")
@@ -175,6 +182,12 @@ def build_parser() -> argparse.ArgumentParser:
     send.add_argument("--prior-patient-id", help="a40：統合される旧い患者ID（MRG-1）")
     send.add_argument("--prior-name", help="a40：旧い患者の氏名（MRG-7。--name と同じ形）")
     send.add_argument("--accession", help="orm：送る予約の受付番号")
+    send.add_argument(
+        "--order-control",
+        choices=ORDER_CONTROLS,
+        default="NW",
+        help="orm：ORC-1（NW=予約、CA=取消、DC=中止、XO=変更。default: NW）",
+    )
     send.add_argument(
         "--visit-number",
         default="",
@@ -293,8 +306,12 @@ def retake_command(args: argparse.Namespace) -> int:
 
 
 def status_command(args: argparse.Namespace) -> int:
-    order = _service(args).set_status(args.accession_number, OrderStatus(args.status))
+    order, result = ReconciliationService(_service(args)).set_status(
+        args.accession_number, OrderStatus(args.status)
+    )
     print(f"{order.accession_number}: {STATUS_LABELS[order.status]}（{order.status.value}）")
+    if result is not None:
+        return _print_reconciliation(result, as_json=False)
     return EXIT_OK
 
 
@@ -336,6 +353,8 @@ def pir_send_command(args: argparse.Namespace) -> int:
 def _build_pir_message(args: argparse.Namespace, config: AppConfig) -> Hl7Message:
     header = config.hl7.header()
     now = datetime.now()
+    if args.order_control != "NW" and args.kind != "orm":
+        raise ValidationError("--order-control は orm だけで使います")
     if args.kind == "orm":
         if not args.accession:
             raise ValidationError("orm には --accession が要ります")
@@ -345,6 +364,7 @@ def _build_pir_message(args: argparse.Namespace, config: AppConfig) -> Hl7Messag
             order,
             visit_number=args.visit_number or order.accession_number,
             patient_class=args.patient_class,
+            order_control=args.order_control,
             now=now,
         )
     if not args.patient_id or not args.name:

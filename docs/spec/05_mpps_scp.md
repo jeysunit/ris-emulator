@@ -29,7 +29,10 @@
    Scheduled Procedure Step ID (0040,0009) の両方が一致する予約を MPPS に結び付ける。
    1つの MPPS に複数の予約が結び付いてよい（IHE の Group Case）。一致する予約が
    無い項目は、予定の無い撮影として MPPS だけを記録する（後から正式な患者と予約を結ぶ
-   操作は [07_reconciliation.md](07_reconciliation.md)）
+   操作は [07_reconciliation.md](07_reconciliation.md)）。ただし、Accession Number が
+   空の項目は、Study Instance UID (0020,000D) が照合で作った予約と同じで、MPPS の
+   Patient ID がその照合の仮の患者ID か正式な患者ID と同じなら、その予約に結び付ける
+   （照合の後の撮影。[07_reconciliation.md](07_reconciliation.md) の 3.4）
 6. 結び付いた予約を実施中にし、MPPS を記録して `0000`（Success）
 
 断った N-CREATE は記録せず、予約も変えない。
