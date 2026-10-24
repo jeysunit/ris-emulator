@@ -1,33 +1,33 @@
 /* ris-emulator の画面。明るい地と暗い地は OS の設定に合わせる */
 :root {
-  --bg: #f6f7f9;
+  --bg: #f6f6f6;
   --surface: #ffffff;
-  --text: #1f2328;
-  --muted: #59636e;
-  --border: #d1d9e0;
-  --accent: #0969da;
+  --text: #262626;
+  --muted: #5f5f5f;
+  --border: #d2d2d2;
+  --accent: #4b4fbf;
   --accent-text: #ffffff;
   --ok: #1a7f37;
   --off: #8c959f;
   --error-bg: #ffebe9;
   --error-text: #82071e;
-  --done: #eef1f4;
+  --done: #eeeeee;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d1117;
-    --surface: #151b23;
-    --text: #e6edf3;
-    --muted: #9198a1;
-    --border: #3d444d;
-    --accent: #4493f8;
-    --accent-text: #0d1117;
+    --bg: #1b1b1b;
+    --surface: #242424;
+    --text: #e8e8e8;
+    --muted: #a3a3a3;
+    --border: #3a3a3a;
+    --accent: #a5a8ff;
+    --accent-text: #1b1b1b;
     --ok: #3fb950;
     --off: #656c76;
     --error-bg: #3c1618;
     --error-text: #ffa198;
-    --done: #1c232c;
+    --done: #2d2d2d;
   }
 }
 
