@@ -683,7 +683,7 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
     except pydantic.ValidationError as exc:
         first = exc.errors()[0]
         location = ".".join(str(part) for part in first["loc"])
-        raise ValidationError(f"患者の値が正しくありません: {location}: {first['msg']}") from exc
+        raise ValidationError(f"患者の値を受け付けられません: {location}: {first['msg']}") from exc
 
 
 def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:

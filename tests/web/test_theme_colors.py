@@ -68,3 +68,13 @@ def test_accent_values() -> None:
     themes = _themes()
     assert themes["light"]["--color-primary"].lower() == "#4b4fbf"
     assert themes["dark"]["--color-link"].lower() == "#a5a8ff"
+
+
+def test_mr_mark_is_purple_and_there_is_no_dark_chrome_token() -> None:
+    """MR の印は赤紫（青い CT と見分ける）。暗い外枠は使わないので、そのトークンも持たない."""
+    themes = _themes()
+    assert themes["light"]["--color-mod-mr"].lower() == "#9333ea"
+    assert themes["dark"]["--color-mod-mr"].lower() == "#c084fc"
+    for tokens in themes.values():
+        assert "--color-chrome" not in tokens
+    assert "--color-chrome" not in CSS.read_text(encoding="utf-8")
