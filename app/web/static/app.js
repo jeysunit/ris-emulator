@@ -73,8 +73,21 @@
   var PATIENT_ID_CHARS = /^[\x20-\x7E]*$/;
   var PATIENT_ID_DELIMITERS = /[\\^~&|]/;
   var ALPHABETIC_CHARS = /^[A-Za-z' -]*$/;
-  var IDEOGRAPHIC_CHARS =
-    /^[\x20-\x7E　-〿ぁ-ゖァ-ー一-鿿！-～]*$/;
+  // JIS X 0208 の字を全部含む範囲（含みすぎてよい。サーバーが正確に判定する。正しい氏名を
+  // 画面で止めないため、範囲を狭めない）
+  var IDEOGRAPHIC_RANGES = [
+    [0x20, 0x7e], [0xa0, 0xf7], [0x391, 0x3c9], [0x401, 0x451], [0x2010, 0x23ff],
+    [0x2500, 0x266f], [0x3000, 0x303f], [0x3041, 0x3096], [0x309b, 0x309e],
+    [0x30a1, 0x30fe], [0x4e00, 0x9fff], [0xff01, 0xff5e], [0xffe0, 0xffe5],
+  ];
+  function isIdeographic(value) {
+    return Array.from(value).every(function (char) {
+      var code = char.codePointAt(0);
+      return IDEOGRAPHIC_RANGES.some(function (range) {
+        return code >= range[0] && code <= range[1];
+      });
+    });
+  }
   function today() {
     var now = new Date();
     var month = ("0" + (now.getMonth() + 1)).slice(-2);
@@ -89,7 +102,7 @@
       return ALPHABETIC_CHARS.test(value);
     }
     if (kind === "ideographic") {
-      return IDEOGRAPHIC_CHARS.test(value);
+      return isIdeographic(value);
     }
     if (kind === "birth-date") {
       return !value || value <= today();
