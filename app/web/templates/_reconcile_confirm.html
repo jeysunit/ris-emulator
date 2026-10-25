@@ -1,7 +1,7 @@
 {# 照合の確認の窓（標準の dialog）。サーバーが開いた形（open）で出し、app.js がモーダルで開き直す。
    「照合・送信する」で、フォームの値に確認の鍵を付けて送り直す。押すまで何も送らない #}
-<dialog id="dlg-reconcile" class="dlg" aria-labelledby="dlg-reconcile-title" data-show-modal open>
-  <h2 id="dlg-reconcile-title" class="dlg-title">{{ confirm.title }}</h2>
+<dialog id="dlg-reconcile" class="dlg dlg-wide" aria-labelledby="dlg-reconcile-title" data-show-modal open>
+  <h2 id="dlg-reconcile-title">{{ confirm.title }}</h2>
   <div class="table-wrap">
   <table class="tbl dlg-compare">
     <thead>
@@ -43,7 +43,7 @@
     {% endfor %}
     <input type="hidden" name="confirmed_key" value="{{ confirm.key }}">
   </form>
-  <div class="dlg-bar">
+  <div class="ft">
     <form method="dialog"><button type="submit" class="btn" autofocus>キャンセル</button></form>
     <button type="submit" form="dlg-reconcile-form" class="btn btn-primary">照合・送信する</button>
   </div>

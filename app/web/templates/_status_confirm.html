@@ -4,7 +4,7 @@
 {% for s in selectable_statuses(order.status) if is_final(s) and s != order.status %}
 {% set label = status_labels[s] %}
 <dialog id="dlg-status-{{ s.value }}" class="dlg" aria-labelledby="dlg-status-{{ s.value }}-title"{% if confirm_status == s %} data-show-modal open{% endif %}>
-  <h2 id="dlg-status-{{ s.value }}-title" class="dlg-title">{{ order.accession_number }}（{{ order.patient.name.ideographic | pn or order.patient.name.alphabetic | pn }}・{{ order.procedure.name }}）を{{ label }}にしますか？</h2>
+  <h2 id="dlg-status-{{ s.value }}-title">{{ order.accession_number }}（{{ order.patient.name.ideographic | pn or order.patient.name.alphabetic | pn }}・{{ order.procedure.name }}）を{{ label }}にしますか？</h2>
   <p>{{ label }}にすると、ワークリストに出なくなります。状態は戻せません。</p>
   {% if s.value in status_confirm.sends %}
   {% set message_type, purpose = status_confirm.sends[s.value] %}
@@ -15,9 +15,9 @@
     <input type="hidden" name="status" value="{{ s.value }}">
     <input type="hidden" name="confirmed" value="1">
   </form>
-  <div class="dlg-bar">
+  <div class="ft">
     <form method="dialog"><button type="submit" class="btn" autofocus>キャンセル</button></form>
-    <button type="submit" form="dlg-status-{{ s.value }}-form" class="btn {{ 'btn-primary' if s.value == 'completed' else 'btn-danger' }}">{{ label }}にする</button>
+    <button type="submit" form="dlg-status-{{ s.value }}-form" class="btn {{ 'btn-primary' if s.value == 'completed' else 'btn-danger fill' }}">{{ label }}にする</button>
   </div>
 </dialog>
 {% endfor %}

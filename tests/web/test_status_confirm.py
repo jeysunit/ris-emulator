@@ -56,7 +56,7 @@ def test_detail_has_a_dialog_for_each_final_status(config: AppConfig, service: O
     assert '<input type="hidden" name="confirmed" value="1">' in cancelled
     assert "hx-post" not in cancelled
     assert re.findall(r"<button[^>]*>([^<]+)</button>", cancelled) == ["キャンセル", "取消にする"]
-    assert 'class="btn btn-danger">取消にする' in cancelled
+    assert 'class="btn btn-danger fill">取消にする' in cancelled
     assert 'class="btn btn-primary">完了にする' in dialogs["completed"]
 
 

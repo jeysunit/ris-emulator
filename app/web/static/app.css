@@ -304,18 +304,22 @@ input, select { min-height: 32px; border-color: var(--color-border-input); borde
 input:disabled, select:disabled { opacity: 0.55; cursor: not-allowed; }
 .field:has(> :disabled) > .l { opacity: 0.55; }
 
-/* 確認の窓（標準の dialog）。画面の中央に出し、後ろは暗くする。題は「対象＋動詞」の疑問、
-   キャンセルを左、実行を右。戻せない操作の実行は、窓の中だけ危険の塗り（.btn-danger）にする */
-.dlg { width: min(40rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); margin: auto; padding: 16px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-background); color: var(--color-foreground); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2); overflow-y: auto; }
-.dlg::backdrop { background: rgb(0 0 0 / 0.4); }
+/* 確認の窓（標準の dialog）。bcamp/design の system/css/components.css の .dlg・.ft・
+   .btn-danger.fill と同じ形。題は「対象＋動詞」の疑問、キャンセルを左、実行を右。戻せない操作の
+   実行は、窓の中だけ危険の塗り（.btn-danger.fill）にする。照合の窓は比べる表があるので広い */
+dialog.dlg { width: min(440px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); margin: auto; padding: 16px 20px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-background); color: var(--color-foreground); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16); overflow-y: auto; }
+dialog.dlg.dlg-wide { width: min(40rem, calc(100vw - 2rem)); }
+dialog.dlg::backdrop { background: rgba(0, 0, 0, 0.45); }
 .dlg > * + * { margin-top: 12px; }
 .dlg p { margin-bottom: 0; }
-.dlg-title { margin: 0; font-size: 16px; line-height: 24px; font-weight: 700; color: var(--color-value); }
+.dlg h2 { margin: 0; padding: 0; border: 0; font-size: 16px; line-height: 24px; font-weight: 700; color: var(--color-value); }
 .dlg-list { margin-bottom: 0; padding-left: 24px; }
-.dlg-bar { display: flex; justify-content: flex-end; gap: 8px; }
-.dlg-bar form { margin: 0; }
+.dlg .ft { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.dlg .ft form { margin: 0; }
 .dlg .tbl td { height: auto; padding: 4px 8px; white-space: normal; overflow-wrap: anywhere; }
 .dlg .tbl tbody th { position: static; height: auto; padding: 4px 8px; background: none; }
 .dlg-compare tr[data-changed] td { background: var(--color-selected); font-weight: 700; color: var(--color-value); }
-.btn-danger { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-background); font-weight: 700; }
-.btn-danger:hover { background: var(--color-danger); color: var(--color-background); filter: brightness(0.9); }
+.btn-danger { border-color: var(--color-danger); color: var(--color-danger); font-weight: 700; }
+/* 危険の塗りの字は、明るい地で白・暗い地で地の色（design の --color-danger-foreground と同じ値） */
+.btn-danger.fill { background: var(--color-danger); color: var(--color-background); }
+.btn-danger.fill:hover { background: var(--color-danger); color: var(--color-background); filter: brightness(0.92); }

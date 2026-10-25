@@ -397,7 +397,7 @@ def test_reconcile_shows_the_confirm_dialog_and_sends_nothing(config: AppConfig,
     assert f"予約（頭部 CT 単純・救急科）を作り、PACS（127.0.0.1:{receiver.port}）へ次の HL7 を順に送ります" in dialog
     assert "送った患者の統合は、この画面から取り消せません。" in dialog
     # キャンセルを左（初めのフォーカス）、実行を右
-    bar = dialog.split('<div class="dlg-bar">', 1)[1]
+    bar = dialog.split('<div class="ft">', 1)[1]
     assert re.findall(r"<button[^>]*>([^<]+)</button>", bar) == ["キャンセル", "照合・送信する"]
     assert '<form method="dialog"><button type="submit" class="btn" autofocus>キャンセル</button>' in bar
     assert 'form="dlg-reconcile-form" class="btn btn-primary">照合・送信する' in bar
