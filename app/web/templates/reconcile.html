@@ -1,23 +1,41 @@
 {% extends "base.html" %}
 {% block title %}照合{% endblock %}
 {% block content %}
-<h1>照合</h1>
+<nav aria-label="いまの場所">
+  <ol class="crumbs">
+    <li><a href="/reconciliation">未照合</a></li>
+    <li aria-current="page">照合</li>
+  </ol>
+</nav>
+<div class="pagehead"><h1>照合</h1></div>
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
-<dl class="detail">
-  <dt>受けた日時</dt><dd>{{ item.received_at }}</dd>
-  <dt>状態</dt><dd class="mono">{{ item.status }}</dd>
-  <dt>患者ID</dt><dd class="mono">{{ item.patient.patient_id }}</dd>
-  <dt>氏名</dt><dd class="mono">{{ item.patient.name.to_dicom() }}</dd>
-  <dt>生年月日</dt><dd>{{ item.patient.birth_date | ymd }}</dd>
-  <dt>性別</dt><dd>{{ item.patient.sex }}</dd>
-  <dt>モダリティ</dt><dd>{{ item.modality }}</dd>
-  <dt>予定の AEタイトル</dt><dd class="mono">{{ item.station_ae_title }}</dd>
-  <dt>Study Instance UID</dt><dd class="mono">{{ item.study_instance_uid }}</dd>
-</dl>
+{% set mark = mpps_marks.get(item.status, ('plan', item.status)) %}
+<div class="form-col">
+<section class="banner" aria-label="仮の患者">
+  <div class="banner-name">
+    <div class="banner-n">{{ item.patient.name.ideographic | pn or item.patient.name.alphabetic | pn }}</div>
+    <div class="banner-k">{{ item.patient.name.phonetic | pn }}</div>
+  </div>
+  <div class="banner-f"><div class="l">患者ID</div><div class="v mono">{{ item.patient.patient_id }}</div></div>
+  <div class="banner-f"><div class="l">生年月日・性別</div><div class="v">{{ item.patient.birth_date | ymd }} {{ item.patient.sex }}</div></div>
+  <div class="banner-f"><div class="l">モダリティ</div><div class="v">{{ item.modality }}</div></div>
+  <div class="banner-end"><span class="tag">仮の患者</span><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span></div>
+</section>
+<section class="sec">
+  <h2 class="sec-title">受けた撮影</h2>
+  <div class="in">
+    <dl class="kv">
+      <dt>受けた日時</dt><dd>{{ item.received_at }}</dd>
+      <dt>氏名</dt><dd class="mono">{{ item.patient.name.to_dicom() }}</dd>
+      <dt>予定の AEタイトル</dt><dd class="mono">{{ item.station_ae_title }}</dd>
+      <dt>Study Instance UID</dt><dd class="mono">{{ item.study_instance_uid }}</dd>
+    </dl>
+  </div>
+</section>
 {% if linked %}
-<p>予約 <a href="/orders/{{ linked }}" class="mono">{{ linked }}</a> に結び付いています。</p>
+<p class="notice">予約 <a href="/orders/{{ linked }}" class="mono">{{ linked }}</a> に結び付いています。</p>
 {% elif item.problem %}
 <p class="error" role="alert">{{ item.problem }}。</p>
 {% elif not procedures %}
@@ -26,53 +44,62 @@
 <form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   {% set patient = values.get('patient', 'roster' if roster else 'manual') %}
-  <fieldset>
+  <fieldset class="sec">
     <legend>正式な患者</legend>
-    {% if roster_error %}
-    <p class="error" role="alert">{{ roster_error }}</p>
-    {% endif %}
-    <label><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
-    <label>名簿の患者
-      <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
-        {% for p in roster %}
-        <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label><input type="radio" name="patient" value="manual" required{% if patient == 'manual' %} checked{% endif %}> 入力する</label>
-    <label>患者ID <input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}"></label>
-    {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
-    <label>氏名（{{ label }}）の姓 <input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}"></label>
-    <label>氏名（{{ label }}）の名 <input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}"></label>
-    {% endfor %}
-    <label>生年月日 <input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}"></label>
-    <label>性別
-      <select name="sex">
-        {% for value in ('', 'M', 'F', 'O') %}
-        <option value="{{ value }}"{% if values.get('sex', '') == value %} selected{% endif %}>{{ value }}</option>
-        {% endfor %}
-      </select>
-    </label>
+    <div class="in grid2">
+      {% if roster_error %}
+      <p class="error span" role="alert">{{ roster_error }}</p>
+      {% endif %}
+      <div class="span choices">
+        <label class="choice"><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
+        <label class="choice"><input type="radio" name="patient" value="manual" required{% if patient == 'manual' %} checked{% endif %}> 入力する</label>
+      </div>
+      <label class="field span"><span class="l">名簿の患者</span>
+        <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
+          {% for p in roster %}
+          <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}"></label>
+      {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
+      <label class="field"><span class="l">氏名（{{ label }}）の姓</span><input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}"></label>
+      <label class="field"><span class="l">氏名（{{ label }}）の名</span><input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}"></label>
+      {% endfor %}
+      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}"></label>
+      <label class="field"><span class="l">性別</span>
+        <select name="sex">
+          {% for value in ('', 'M', 'F', 'O') %}
+          <option value="{{ value }}"{% if values.get('sex', '') == value %} selected{% endif %}>{{ value }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
   </fieldset>
-  <fieldset>
+  <fieldset class="sec">
     <legend>検査</legend>
-    <label>検査名
-      <select name="procedure">
-        {% for p in procedures %}
-        <option value="{{ p.code }}"{% if values.get('procedure') == p.code %} selected{% endif %}>{{ p.name }}（{{ p.code }}）</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>依頼科
-      <select name="department">
-        {% for d in departments %}
-        <option value="{{ d }}"{% if values.get('department', default_department) == d %} selected{% endif %}>{{ d }}</option>
-        {% endfor %}
-      </select>
-    </label>
+    <div class="in grid2">
+      <label class="field"><span class="l">検査名<span class="req">必須</span></span>
+        <select name="procedure">
+          {% for p in procedures %}
+          <option value="{{ p.code }}"{% if values.get('procedure') == p.code %} selected{% endif %}>{{ p.name }}（{{ p.code }}）</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field"><span class="l">依頼科<span class="req">必須</span></span>
+        <select name="department">
+          {% for d in departments %}
+          <option value="{{ d }}"{% if values.get('department', default_department) == d %} selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
   </fieldset>
-  <button type="submit" class="btn btn-primary">照合・送信</button>
+  <div class="formbar">
+    <a href="/reconciliation" class="btn">キャンセル</a>
+    <button type="submit" class="btn btn-primary">照合・送信</button>
+  </div>
 </form>
 {% endif %}
-<p><a href="/reconciliation">未照合へ</a></p>
+</div>
 {% endblock %}

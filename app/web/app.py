@@ -75,6 +75,12 @@ LIST_PAGE_SIZE = 100
 MAX_LIST_DAYS = 31
 # 一括作成の間隔の既定（分）
 DEFAULT_INTERVAL = 15
+# MPPS の状態（PS3.4 F.7）→ 状態の札の種類と文字（予約の状態の札と同じ印と語）
+MPPS_MARKS = {
+    "IN PROGRESS": ("run", "実施中"),
+    "COMPLETED": ("done", "完了"),
+    "DISCONTINUED": ("stop", "中止"),
+}
 CONTENT_SECURITY_POLICY = "; ".join(
     (
         "default-src 'self'",
@@ -560,6 +566,7 @@ def create_app(
     )
     templates.env.filters["md"] = lambda value: f"{value[4:6]}/{value[6:]}" if len(value) == 8 else value
     templates.env.filters["pn"] = lambda value: value.replace("^", " ")
+    templates.env.globals["mpps_marks"] = MPPS_MARKS
     return app
 
 

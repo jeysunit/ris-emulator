@@ -283,3 +283,28 @@ def test_cancel_reconciled_order_shows_ca(config, store):
             page = client.get(response.headers["location"])
             assert "ORM^O01（CA）" in page.text
     assert "\rORC|CA|" in receiver.received[-1]
+
+
+def test_reconcile_screen_follows_screen_type_c(config: AppConfig, store: OrderStore) -> None:
+    """パンくず → 見出し → 患者バナー（仮の患者）→ 区画 → 操作の行。MPPS の状態は札で出す."""
+    sop_uid, _ = add_unscheduled_mpps(store)
+    with _client(config, store) as (client, _):
+        page = client.get(f"/reconciliation/{sop_uid}").text
+    order = [
+        page.index('<ol class="crumbs">'),
+        page.index('<div class="pagehead"><h1>照合</h1></div>'),
+        page.index('<section class="banner" aria-label="仮の患者">'),
+        page.index('<h2 class="sec-title">受けた撮影</h2>'),
+        page.index("<legend>正式な患者</legend>"),
+        page.index("<legend>検査</legend>"),
+        page.index('<div class="formbar">'),
+    ]
+    assert order == sorted(order)
+    banner = page.split('<section class="banner"', 1)[1].split("</section>", 1)[0]
+    assert '<span class="st" data-k="run">実施中</span>' in banner and "ER2026102400" in banner
+    assert "IN PROGRESS" not in page
+    bar = page.split('<div class="formbar">')[1].split("</div>")[0]
+    assert re.findall(r'<(?:a|button)[^>]*class="([^"]+)"[^>]*>([^<]+)<', bar) == [
+        ("btn", "キャンセル"),
+        ("btn btn-primary", "照合・送信"),
+    ]
