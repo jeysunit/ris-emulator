@@ -7,7 +7,18 @@
     <li aria-current="page">{{ order.accession_number }}</li>
   </ol>
 </nav>
-<div class="pagehead"><h1>予約 {{ order.accession_number }}</h1></div>
+<div class="pagehead">
+  <h1>予約 {{ order.accession_number }} {% include "_status_badge.html" %}</h1>
+  {# 見出しの行の右には、副の操作だけを置く。状態を変える主は「状態」の区画に置く #}
+  {% if can_retake %}
+  <form method="post" action="/orders/{{ order.accession_number }}/retake">
+    <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+    <input type="hidden" name="date" value="{{ today.isoformat() }}">
+    <input type="hidden" name="start" value="">
+    <button type="submit" class="btn">撮り直しの予約を作る</button>
+  </form>
+  {% endif %}
+</div>
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
@@ -20,10 +31,9 @@
   <div class="banner-f"><div class="l">生年月日・性別</div><div class="v">{{ order.patient.birth_date | ymd }} {{ order.patient.sex }}</div></div>
   <div class="banner-f"><div class="l">予定日時</div><div class="v">{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</div></div>
   <div class="banner-f"><div class="l">モダリティ・検査名</div><div class="v"><span class="mod" data-mod="{{ order.modality }}">{{ order.modality }}</span> {{ order.procedure.name }}</div></div>
-  <div class="banner-end">{% include "_status_badge.html" %}</div>
 </section>
 <section class="sec">
-  <h2>予約の情報</h2>
+  <h2>予約の内容</h2>
   <div class="in">
 <dl class="detail">
   <dt>予定日時</dt><dd>{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</dd>
@@ -54,31 +64,21 @@
 </dl>
   </div>
 </section>
-{% if not is_final(order.status) or can_retake %}
-<section class="sec">
-  <h2>操作</h2>
-  <div class="in ops">
 {% if not is_final(order.status) %}
+<section class="sec">
+  <h2>状態</h2>
+  <div class="in ops">
 <form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-  <label class="field"><span class="l">状態</span>
+  <label class="field"><span class="l">新しい状態</span>
     <select name="status">
       {% for s in selectable_statuses(order.status) %}
       <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
       {% endfor %}
     </select>
   </label>
-  <button type="submit" class="btn">状態を変える</button>
+  <button type="submit" class="btn btn-primary">状態を変える</button>
 </form>
-{% endif %}
-{% if can_retake %}
-<form method="post" action="/orders/{{ order.accession_number }}/retake" class="filters">
-  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-  <label class="field"><span class="l">予定日</span><input type="date" name="date" value="{{ today.isoformat() }}"></label>
-  <label class="field"><span class="l">予定時刻</span><input type="time" name="start" placeholder="空なら今の時刻"></label>
-  <button type="submit" class="btn">撮り直しの予約を作る</button>
-</form>
-{% endif %}
   </div>
 </section>
 {% endif %}

@@ -436,24 +436,30 @@ def test_lifespan_starts_and_stops_mwl(config: AppConfig, service: OrderService)
     assert not app.state.mwl.running
 
 
-def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: OrderService) -> None:
-    """パンくず → 見出し → 患者バナー（状態の札つき）→ 区画の順。操作は区画「操作」に置く."""
+def test_detail_follows_patient_banner_and_sections(config: AppConfig, store: OrderStore) -> None:
+    """パンくず → 見出しの行（題と状態の札）→ 患者バナー → 区画の順。状態を変える主は区画「状態」に置く."""
+    service = new_order_service(config, store)
     order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
-    with _client(config, service) as client:
+    service.set_status(order.accession_number, OrderStatus.IN_PROGRESS)
+    with _client(service.config, service) as client:
         page = client.get(f"/orders/{order.accession_number}").text
     positions = [
         page.index('<ol class="crumbs">'),
-        page.index(f"<h1>予約 {order.accession_number}</h1>"),
+        page.index(f"<h1>予約 {order.accession_number} "),
         page.index('<section class="banner" aria-label="患者">'),
-        page.index("<h2>予約の情報</h2>"),
-        page.index("<h2>操作</h2>"),
+        page.index("<h2>予約の内容</h2>"),
+        page.index("<h2>状態</h2>"),
         page.index("<h2>MPPS</h2>"),
         page.index("<h2>MWL の属性</h2>"),
     ]
     assert positions == sorted(positions)
+    head = page.split('<div class="pagehead">', 1)[1].split("</div>", 1)[0]
+    assert '<span class="st" data-k="run">実施中</span>' in head
+    # 見出しの行の右には副の「撮り直しの予約を作る」だけを置く（主は置かない）
+    assert re.findall(r'<button[^>]*class="([^"]+)"[^>]*>([^<]+)<', head) == [("btn", "撮り直しの予約を作る")]
     banner = page.split('<section class="banner"', 1)[1].split("</section>", 1)[0]
-    assert '<span class="st" data-k="plan">予定</span>' in banner
-    assert order.patient.patient_id in banner
-    # 状態の変更は区画「操作」の中にあり、項目名を欄の上に小さく出す
-    ops = page.split("<h2>操作</h2>")[1].split("</section>")[0]
-    assert "状態を変える" in ops and '<span class="l">状態</span>' in ops
+    assert order.patient.patient_id in banner and 'class="st"' not in banner
+    # 状態を変えるのは区画「状態」の中の主のボタン
+    status = page.split("<h2>状態</h2>")[1].split("</section>")[0]
+    assert '<button type="submit" class="btn btn-primary">状態を変える</button>' in status
+    assert '<span class="l">新しい状態</span>' in status and "撮り直し" not in status
