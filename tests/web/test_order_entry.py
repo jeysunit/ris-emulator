@@ -290,3 +290,37 @@ def test_submit_buttons_are_guarded(config: AppConfig, service: OrderService) ->
     assert '<button type="submit" class="btn btn-primary">表示</button>' in listing
     # 0件の文と予約作成のリンクを分ける
     assert '<p class="empty">条件に合う予約はありません。</p>' in listing
+
+
+def test_input_screens_follow_screen_type_c(config: AppConfig, service: OrderService) -> None:
+    """入力の画面（型 C）：見出しの行、区画、操作の行（キャンセルが副、登録・作成が主で右端）."""
+    with _client(config, service) as client:
+        pages = {"/orders/new": "登録", "/orders/batch": "作成"}
+        for path, primary in pages.items():
+            page = client.get(path).text
+            assert '<div class="pagehead"><h1>' in page
+            assert page.count('<fieldset class="sec">') == len(re.findall(r"<legend>", page))
+            bar = page.split('<div class="formbar">')[1].split("</div>")[0]
+            assert re.findall(r'<(?:a|button)[^>]*class="([^"]+)"[^>]*>([^<]+)<', bar) == [
+                ("btn", "キャンセル"),
+                ("btn btn-primary", primary),
+            ]
+            assert 'href="/orders" class="btn">キャンセル</a>' in bar
+            # 操作の行は、区画の下に続く（フォームの最後の要素）
+            assert page.index('<div class="formbar">') > page.rindex("</fieldset>")
+
+
+def test_required_fields_are_marked_in_words(config: AppConfig, service: OrderService) -> None:
+    with _client(config, service) as client:
+        page = client.get("/orders/new").text
+    marked = re.findall(r'<span class="l">([^<]+)<span class="req">必須</span></span>', page)
+    assert marked == ["モダリティ", "検査名", "予定日", "依頼科"]
+    # 必須の印は、項目名の上に小さく出す欄だけに付ける（placeholder に頼らない）
+    assert "placeholder" not in page
+
+
+def test_error_is_shown_as_notice_with_text(config: AppConfig, service: OrderService) -> None:
+    with _client(config, service) as client:
+        response = _post(client, "/orders", {**ENTRY, "patient": "roster", "roster_patient_id": ""})
+    assert response.status_code == 400
+    assert re.search(r'<p class="error" role="alert">[^<]+</p>', response.text)
