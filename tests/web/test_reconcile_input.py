@@ -276,6 +276,16 @@ def test_script_phonetic_range_matches_the_server(tmp_path: Path) -> None:
     assert sorted(set(json.loads(result.stdout)) - {"　"}) == sorted(accepted)
 
 
+@pytest.mark.parametrize("character_set", [CharacterSet.JIS, CharacterSet.JIS_KANA])
+@pytest.mark.parametrize("value", ["ﾀﾛｳ", "山田^ｱ"])
+def test_server_refuses_halfwidth_kana_in_jis_like_the_screen(
+    character_set: CharacterSet, value: str
+) -> None:
+    """jis_kana は半角カナを符号化できるが、画面は jis・jis_kana のどちらでも断る。サーバーも同じにする."""
+    assert check_ideographic_group(value, character_set) == IDEOGRAPHIC_MESSAGE
+    assert check_ideographic_group(value, CharacterSet.UTF8) == ""
+
+
 def test_server_accepts_iteration_marks() -> None:
     assert check_ideographic_group("すゞき^スヾキ", CharacterSet.JIS) == ""
 

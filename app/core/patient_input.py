@@ -45,6 +45,9 @@ _DATE = re.compile(r"[0-9]{8}")
 _KATAKANA = re.compile(r"[ァ-ヺ・-ヾ ]*")
 _HIRAGANA_TO_KATAKANA_OFFSET = 0x60
 _HIRAGANA_RANGES = ((0x3041, 0x3096), (0x309D, 0x309E))
+# 半角カナ。jis_kana の ISO 2022 IR 13 は表せるが、RIS は漢字の氏名に半角カナを入れない
+# （画面は jis・jis_kana のどちらでも断る。docs/spec/01_orders.md の 3.4）
+_HALFWIDTH_KANA = re.compile("[｡-ﾟ]")
 
 # 画面のスクリプトも同じ文を出す（入力した時に分かるように。app/web/static/app.js）
 ALPHABETIC_MESSAGE = "氏名（英字）は半角の英字・空白・ハイフン・アポストロフィで入力してください。"
@@ -149,9 +152,11 @@ def check_alphabetic_group(group: str) -> str:
 
 def check_ideographic_group(group: str, character_set: CharacterSet = CharacterSet.UTF8) -> str:
     """漢字の氏名：予約の文字コードで表せる字だけ。UTF-8 なら制限しない."""
-    if not unencodable_chars(group, CHARACTER_SET_TERMS[character_set]):
+    if character_set == CharacterSet.UTF8:
         return ""
-    return IDEOGRAPHIC_MESSAGE
+    if _HALFWIDTH_KANA.search(group) or unencodable_chars(group, CHARACTER_SET_TERMS[character_set]):
+        return IDEOGRAPHIC_MESSAGE
+    return ""
 
 
 def check_phonetic_group(group: str, *, test_mode: bool = False) -> str:
