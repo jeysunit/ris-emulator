@@ -99,7 +99,7 @@ def test_list_panel_dialog_posts_with_htmx(config: AppConfig, service: OrderServ
     assert f'hx-post="/orders/{order.accession_number}/status" hx-swap="none"' in dialog
     assert "取消にする" in dialog
     # 検索の帯（GET）にも状態の選択がある。窓を開くのは POST の状態の変更のフォームだけ
-    assert '<form method="get" action="/orders" class="filters searchband">' in page
+    assert '<form method="get" action="/orders" class="searchband">' in page
     with _client(config, service) as client:
         script = client.get("/static/app.js").text
     assert 'form.method.toLowerCase() !== "post"' in script

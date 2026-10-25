@@ -2,12 +2,12 @@
 {% block title %}予約{% endblock %}
 {% block content %}
 <div class="pagehead"><h1>予約 <small>{{ period_label }}</small></h1><a href="/orders/new" class="btn btn-primary">予約作成</a></div>
-<form method="get" action="/orders" class="filters searchband">
-  <label>開始日
-    <input type="date" name="date_from" value="{{ date_from }}">
+<form method="get" action="/orders" class="searchband">
+  <label class="field"><span class="l">開始日</span>
+    <input type="date" name="date_from" value="{{ date_from }}" class="input">
   </label>
-  <label>終了日
-    <input type="date" name="date_to" value="{{ date_to }}">
+  <label class="field"><span class="l">終了日</span>
+    <input type="date" name="date_to" value="{{ date_to }}" class="input">
   </label>
   <div class="field"><span class="l">日</span>  <span class="day-nav seg">
     {% if prev_day %}<a href="{{ prev_day }}">前日</a>{% endif %}
@@ -15,23 +15,23 @@
     {% if next_day %}<a href="{{ next_day }}">翌日</a>{% endif %}
   </span>
 </div>
-  <label>状態
-    <select name="status">
+  <label class="field"><span class="l">状態</span>
+    <select name="status" class="select">
       <option value="">すべて</option>
       {% for s in statuses %}
       <option value="{{ s.value }}"{% if s.value == status %} selected{% endif %}>{{ status_labels[s] }}</option>
       {% endfor %}
     </select>
   </label>
-  <label>モダリティ
-    <select name="modality">
+  <label class="field"><span class="l">モダリティ</span>
+    <select name="modality" class="select">
       <option value="">すべて</option>
       {% for m in modalities %}
       <option value="{{ m }}"{% if m == modality %} selected{% endif %}>{{ m }}</option>
       {% endfor %}
     </select>
   </label>
-  <label>患者ID・受付番号<input type="text" name="q" value="{{ q }}"></label>
+  <label class="field"><span class="l">患者ID・受付番号</span><input type="text" name="q" value="{{ q }}" class="input w-m"></label>
   <button type="submit" class="btn btn-primary">検索</button>
   <a href="/orders" class="btn">条件をクリア</a>
 </form>
@@ -45,7 +45,7 @@
 {% elif orders %}
 <div class="split-h">
 <section>
-<div class="table-wrap">
+<div class="tbl-wrap">
 <table class="orders tbl tall">
   <thead>
     <tr>
@@ -89,7 +89,7 @@
 {% if not is_final(order.status) %}
 <form method="post" action="/orders/{{ order.accession_number }}/status" hx-post="/orders/{{ order.accession_number }}/status" hx-swap="none" hx-disabled-elt="find select, find button">
 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-<label>状態<select name="status" data-current="{{ order.status.value }}" aria-label="{{ order.accession_number }} の状態">
+<label class="field"><span class="l">状態</span><select name="status" data-current="{{ order.status.value }}" aria-label="{{ order.accession_number }} の状態" class="select">
 {% for s in selectable_statuses(order.status) %}
 <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
 {% endfor %}

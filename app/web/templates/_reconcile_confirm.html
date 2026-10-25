@@ -2,10 +2,10 @@
    「照合・送信する」で、フォームの値に確認の鍵を付けて送り直す。押すまで何も送らない #}
 <dialog id="dlg-reconcile" class="dlg dlg-wide" aria-labelledby="dlg-reconcile-title" data-show-modal open>
   <h2 id="dlg-reconcile-title">{{ confirm.title }}</h2>
-  <div class="table-wrap">
+  <div class="tbl-wrap">
   <table class="tbl dlg-compare">
     <thead>
-      <tr><th>項目</th><th>仮の患者</th><th>正式な患者</th>{% if confirm.existing %}<th>既にある患者（同じ患者ID）</th>{% endif %}<th><span class="visually-hidden">違い</span></th></tr>
+      <tr><th>項目</th><th>仮の患者</th><th>正式な患者</th>{% if confirm.existing %}<th>既にある患者（同じ患者ID）</th>{% endif %}<th><span class="sr">違い</span></th></tr>
     </thead>
     <tbody>
       {% for row in confirm.rows %}

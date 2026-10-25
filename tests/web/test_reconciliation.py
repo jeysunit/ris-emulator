@@ -522,5 +522,5 @@ def test_patient_source_form_is_marked_for_the_script(config: AppConfig, store: 
     with _client(config, store) as (client, _):
         page = client.get(f"/reconciliation/{sop_uid}").text
         script = client.get("/static/app.js").text
-    assert f'action="/reconciliation/{sop_uid}" class="form" data-patient-source>' in page
+    assert f'action="/reconciliation/{sop_uid}" class="w-form" data-patient-source>' in page
     assert "form[data-patient-source]" in script and "syncPatientSource" in script
