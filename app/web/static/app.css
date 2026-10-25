@@ -304,9 +304,9 @@ input, select { min-height: 32px; border-color: var(--color-border-input); borde
 input:disabled, select:disabled { opacity: 0.55; cursor: not-allowed; }
 .field:has(> :disabled) > .l { opacity: 0.55; }
 
-/* 確認の窓（標準の dialog）。bcamp/design の system/css/components.css の .dlg・.ft・
-   .btn-danger.fill と同じ形。題は「対象＋動詞」の疑問、キャンセルを左、実行を右。戻せない操作の
-   実行は、窓の中だけ危険の塗り（.btn-danger.fill）にする。照合の窓は比べる表があるので広い */
+/* 確認の窓（標準の dialog）。共通の部品の .dlg・.ft・.btn-danger.fill と同じ形。題は
+   「対象＋動詞」の疑問、キャンセルを左、実行を右。戻せない操作の実行は、窓の中だけ危険の
+   塗り（.btn-danger.fill）にする。照合の窓は比べる表があるので広い */
 dialog.dlg { width: min(440px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); margin: auto; padding: 16px 20px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-background); color: var(--color-foreground); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16); overflow-y: auto; }
 dialog.dlg.dlg-wide { width: min(40rem, calc(100vw - 2rem)); }
 dialog.dlg::backdrop { background: rgba(0, 0, 0, 0.45); }
