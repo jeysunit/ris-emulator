@@ -434,3 +434,26 @@ def test_lifespan_starts_and_stops_mwl(config: AppConfig, service: OrderService)
         assert app.state.mwl.running
         assert "待ち受け中" in client.get("/orders").text
     assert not app.state.mwl.running
+
+
+def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: OrderService) -> None:
+    """パンくず → 見出し → 患者バナー（状態の札つき）→ 区画の順。操作は区画「操作」に置く."""
+    order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    with _client(config, service) as client:
+        page = client.get(f"/orders/{order.accession_number}").text
+    positions = [
+        page.index('<ol class="crumbs">'),
+        page.index(f"<h1>予約 {order.accession_number}</h1>"),
+        page.index('<section class="banner" aria-label="患者">'),
+        page.index("<h2>予約の情報</h2>"),
+        page.index("<h2>操作</h2>"),
+        page.index("<h2>MPPS</h2>"),
+        page.index("<h2>MWL の属性</h2>"),
+    ]
+    assert positions == sorted(positions)
+    banner = page.split('<section class="banner"', 1)[1].split("</section>", 1)[0]
+    assert '<span class="st" data-k="plan">予定</span>' in banner
+    assert order.patient.patient_id in banner
+    # 状態の変更は区画「操作」の中にあり、項目名を欄の上に小さく出す
+    ops = page.split("<h2>操作</h2>")[1].split("</section>")[0]
+    assert "状態を変える" in ops and '<span class="l">状態</span>' in ops
