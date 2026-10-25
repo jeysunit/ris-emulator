@@ -5,13 +5,16 @@
 .shell { min-height: 100vh; }
 .topbar { position: sticky; top: 0; z-index: 20; }
 .brand { text-decoration: none; }
-.version { font-size: 12px; color: var(--color-label); }
-
-/* 上の帯の MWL の札（塗りの札） */
-.mwl-state { margin: 0 0 0 auto; color: var(--color-label); font-size: 14px; }
-.badge { display: inline-block; padding: 0 8px; border-radius: 999px; font-size: 12px; color: #fff; }
-.badge-ok { background: var(--color-success); }
-.badge-off { background: var(--color-label); }
+/* 表示の押しボタン：いまの地の絵を出す（明るい地は太陽、暗い地は月） */
+.show-dark { display: none; }
+:root[data-theme=dark] .show-dark { display: inline; }
+:root[data-theme=dark] .show-light { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) .show-dark { display: inline; }
+  :root:not([data-theme=light]) .show-light { display: none; }
+}
+/* 閉じたナビ：項目の絵を縦に並べる */
+.collapsed .sidenav { padding: 8px 4px; }
 
 /* 予約の一覧：行の全体を押せるように、受付番号のリンクを行の大きさに広げる */
 .tbl tbody tr { position: relative; }
@@ -87,5 +90,5 @@ fieldset.sec { min-width: 0; margin: 0; padding: 0; }
   .nav-g { width: 100%; }
   .main { padding: 12px 16px 24px; }
   .side { position: static; }
-  .mwl-state { font-size: 12px; overflow-wrap: anywhere; }
+  .topbar .ver { display: none; }
 }

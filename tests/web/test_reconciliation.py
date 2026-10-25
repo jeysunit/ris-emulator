@@ -65,7 +65,7 @@ def test_list_shows_mpps_state_as_marks(config: AppConfig, store: OrderStore) ->
     add_unscheduled_mpps(store)
     add_unscheduled_mpps(store, patient_id="ER2026102401", status="COMPLETED")
     with _client(config, store) as (client, _):
-        page = client.get("/reconciliation").text
+        page = client.get("/reconciliation").text.split("</header>")[1]
     assert '<b class="count-n">2</b>' in page
     marks = re.findall(r'<span class="st" data-k="([a-z]+)">([^<]+)</span>', page)
     assert sorted(marks) == [("done", "完了"), ("run", "実施中")]
