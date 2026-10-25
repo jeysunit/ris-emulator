@@ -249,11 +249,16 @@ input, select { min-height: 32px; border-color: var(--color-border-input); borde
 /* 入力の画面（型 C）：区画（見出しと項目の格子）→ 操作の行。区画の幅は最大 760〜900px */
 .form { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
 .form-wide { max-width: 900px; }
-.sec { min-width: 0; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-background); }
-.sec > legend, .sec > .sec-title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--color-border); border-radius: 5px 5px 0 0; background: var(--color-surface); font-size: 16px; line-height: 24px; font-weight: 700; color: var(--color-value); }
+.sec { min-width: 0; margin-inline: 0; padding: 0; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-background); }
+.sec > legend, .sec > .sec-title, .sec > h2 { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--color-border); border-radius: 5px 5px 0 0; background: var(--color-surface); font-size: 16px; line-height: 24px; font-weight: 700; color: var(--color-value); }
 .sec > legend { float: left; width: 100%; }
 .sec > legend + * { clear: both; }
-.sec .kv { margin: 0; }
+.sec .kv, .sec .detail, .sec .dataset { margin: 0; }
+.sec .detail { padding: 0; border: 0; background: none; }
+.sec .dataset { background: var(--color-background); }
+.sec .filters { margin: 0; }
+.ops { display: flex; flex-direction: column; gap: 12px; }
+.main > .sec, .main > .banner { max-width: 1200px; }
 .form-col { display: flex; flex-direction: column; gap: 12px; max-width: 900px; }
 .form-col > .form { max-width: none; }
 .sec > .in { padding: 12px 16px; }

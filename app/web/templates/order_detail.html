@@ -1,12 +1,31 @@
 {% extends "base.html" %}
 {% block title %}{{ order.accession_number }}{% endblock %}
 {% block content %}
-<h1>予約 {{ order.accession_number }}</h1>
+<nav aria-label="いまの場所">
+  <ol class="crumbs">
+    <li><a href="/orders?date_from={{ order.scheduled_date | date_param }}">予約</a></li>
+    <li aria-current="page">{{ order.accession_number }}</li>
+  </ol>
+</nav>
+<div class="pagehead"><h1>予約 {{ order.accession_number }}</h1></div>
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
+<section class="banner" aria-label="患者">
+  <div class="banner-name">
+    <div class="banner-n">{{ order.patient.name.ideographic | pn or order.patient.name.alphabetic | pn }}</div>
+    <div class="banner-k">{{ order.patient.name.phonetic | pn }}</div>
+  </div>
+  <div class="banner-f"><div class="l">患者ID</div><div class="v mono">{{ order.patient.patient_id }}</div></div>
+  <div class="banner-f"><div class="l">生年月日・性別</div><div class="v">{{ order.patient.birth_date | ymd }} {{ order.patient.sex }}</div></div>
+  <div class="banner-f"><div class="l">予定日時</div><div class="v">{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</div></div>
+  <div class="banner-f"><div class="l">モダリティ・検査名</div><div class="v"><span class="mod" data-mod="{{ order.modality }}">{{ order.modality }}</span> {{ order.procedure.name }}</div></div>
+  <div class="banner-end">{% include "_status_badge.html" %}</div>
+</section>
+<section class="sec">
+  <h2>予約の情報</h2>
+  <div class="in">
 <dl class="detail">
-  <dt>状態</dt><dd>{{ status_labels[order.status] }}</dd>
   <dt>予定日時</dt><dd>{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</dd>
   <dt>モダリティ</dt><dd>{{ order.modality }}</dd>
   {% if order.scheduled_station_label %}
@@ -33,10 +52,16 @@
   <dt>照合前の氏名</dt><dd class="mono">{{ temporary_name }}</dd>
   {% endif %}
 </dl>
+  </div>
+</section>
+{% if not is_final(order.status) or can_retake %}
+<section class="sec">
+  <h2>操作</h2>
+  <div class="in ops">
 {% if not is_final(order.status) %}
 <form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-  <label>状態
+  <label class="field"><span class="l">状態</span>
     <select name="status">
       {% for s in selectable_statuses(order.status) %}
       <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
@@ -49,12 +74,17 @@
 {% if can_retake %}
 <form method="post" action="/orders/{{ order.accession_number }}/retake" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-  <label>予定日 <input type="date" name="date" value="{{ today.isoformat() }}"></label>
-  <label>予定時刻 <input type="time" name="start" placeholder="空なら今の時刻"></label>
+  <label class="field"><span class="l">予定日</span><input type="date" name="date" value="{{ today.isoformat() }}"></label>
+  <label class="field"><span class="l">予定時刻</span><input type="time" name="start" placeholder="空なら今の時刻"></label>
   <button type="submit" class="btn">撮り直しの予約を作る</button>
 </form>
 {% endif %}
-<h2>MPPS</h2>
+  </div>
+</section>
+{% endif %}
+<section class="sec">
+  <h2>MPPS</h2>
+  <div class="in">
 {% if mpps_records %}
 <div class="table-wrap">
 <table class="orders">
@@ -71,8 +101,12 @@
 {% else %}
 <p class="muted">受けた MPPS はありません。</p>
 {% endif %}
+  </div>
+</section>
 {% if reconciliation %}
-<h2>HL7 送信</h2>
+<section class="sec">
+  <h2>HL7 送信</h2>
+  <div class="in">
 <div class="table-wrap">
 <table class="orders">
   <thead>
@@ -98,8 +132,13 @@
   <button type="submit" class="btn">再送信</button>
 </form>
 {% endif %}
+  </div>
+</section>
 {% endif %}
-<h2>MWL の属性</h2>
+<section class="sec">
+  <h2>MWL の属性</h2>
+  <div class="in">
 <pre class="dataset">{{ dataset }}</pre>
-<p><a href="/orders?date_from={{ order.scheduled_date | date_param }}">予約へ戻る</a></p>
+  </div>
+</section>
 {% endblock %}

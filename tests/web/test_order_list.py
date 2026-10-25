@@ -53,7 +53,10 @@ def test_titles_and_nav(config: AppConfig, service: OrderService) -> None:
         assert f'<span class="version">{__version__}</span>' in page.split("</header>")[0]
     assert "<h1>予約 <small>2026/10/21</small></h1>" in pages["予約"]
     assert "<h1>予約作成</h1>" in pages["予約作成"]
-    assert _links(pages[order.accession_number])["予約へ戻る"] == "/orders?date_from=2026-10-21"
+    # 詳細からの戻り先は、パンくずの「予約」（予定日を保つ）
+    crumbs = pages[order.accession_number].split('<ol class="crumbs">')[1].split("</ol>")[0]
+    assert re.findall(r'<a href="([^"]+)">([^<]+)</a>', crumbs) == [("/orders?date_from=2026-10-21", "予約")]
+    assert "予約へ戻る" not in pages[order.accession_number]
 
 
 def test_default_is_today_and_today_button(config: AppConfig, service: OrderService) -> None:
