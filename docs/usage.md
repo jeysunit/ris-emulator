@@ -138,6 +138,10 @@ docker exec ris-emulator python -m app.cli create CR=2 --date tomorrow --start 1
 引数の一覧は [spec/03_web_cli.md](spec/03_web_cli.md) の 2 章と `--help` にあります。
 文字コードごとに書ける文字の制限は [spec/01_orders.md](spec/01_orders.md) の 3.3 にあります。
 
+画像の送り先が Orthanc 1.13.0 のときは、文字コードに `jis_kana` を選ばないでください。
+`jis_kana` の予約から撮影した画像は、Orthanc が漢字・かなを読み崩します。
+`jis` か `utf8` なら崩れません（理由は [spec/02_mwl_scp.md](spec/02_mwl_scp.md) の 5 章）。
+
 ## 5. 予約を確認し、状態を変更する
 
 ```bash
