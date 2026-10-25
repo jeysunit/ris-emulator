@@ -55,6 +55,23 @@ def test_empty_list(config: AppConfig, store: OrderStore) -> None:
     assert page.status_code == 200
     assert "<h1>未照合</h1>" in page.text and "未照合の撮影はありません。" in page.text
     assert "<title>未照合 - ris-emulator</title>" in page.text
+    # 空の状態：1 行目に事実、2 行目に次の手。表の見出しの行は出したままにする
+    assert "<b>未照合の撮影はありません。</b>" in page.text
+    assert "<span>予約の無い撮影をモダリティから受けると、ここに出ます。</span>" in page.text
+    assert "<thead>" in page.text and '<b class="count-n">0</b>' in page.text
+
+
+def test_list_shows_mpps_state_as_marks(config: AppConfig, store: OrderStore) -> None:
+    add_unscheduled_mpps(store)
+    add_unscheduled_mpps(store, patient_id="ER2026102401", status="COMPLETED")
+    with _client(config, store) as (client, _):
+        page = client.get("/reconciliation").text
+    assert '<b class="count-n">2</b>' in page
+    marks = re.findall(r'<span class="st" data-k="([a-z]+)">([^<]+)</span>', page)
+    assert sorted(marks) == [("done", "完了"), ("run", "実施中")]
+    assert "IN PROGRESS" not in page and "COMPLETED" not in page
+    # 行の中のボタンは副（高さ 24px）で、UID は省略して全文を title に持つ
+    assert 'class="btn btn-row">照合</a>' in page and 'class="mono uid-c" title="' in page
 
 
 def test_list_shows_unreconciled_only_and_links_to_the_form(config: AppConfig, store: OrderStore) -> None:
