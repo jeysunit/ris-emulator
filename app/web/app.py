@@ -40,6 +40,15 @@ from app.core.models import (
     selectable_statuses,
 )
 from app.core.mwl_dataset import order_to_dataset
+from app.core.patient_input import (
+    INPUT_MESSAGES,
+    SCRIPT_LABELS,
+    check_name_component,
+    check_name_group,
+    validate_birth_date,
+    validate_patient_id_input,
+    validate_sex,
+)
 from app.core.reconciliation import DELIVERY_LABELS
 from app.mwl.server import MwlServer
 from app.services.config import MINUTE_STEPS, AppConfig
@@ -515,6 +524,7 @@ def create_app(
             procedures=reconciliation_service.procedures_for(item.modality),
             departments=config.orders.departments,
             default_department=DEFAULT_DEPARTMENT,
+            input_messages=INPUT_MESSAGES,
         )
 
     @app.post("/reconciliation/{sop_instance_uid}")
@@ -670,27 +680,39 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
     if source != "manual":
         raise ValidationError("患者を、名簿から選ぶか入力するかを選んでください")
     patient_id = values.get("patient_id", "").strip()
-    if not patient_id:
-        raise ValidationError("患者ID を入力してください")
+    validate_patient_id_input(patient_id)
     groups = {}
-    for script in ("alphabetic", "ideographic", "phonetic"):
+    for script, label in SCRIPT_LABELS.items():
         family = values.get(f"{script}_family", "").strip()
         given = values.get(f"{script}_given", "").strip()
+        for part in (family, given):
+            message = check_name_component(label, part)
+            if message:
+                raise ValidationError(message)
         groups[script] = f"{family}^{given}".rstrip("^") if family or given else ""
     if not any(groups.values()):
         raise ValidationError("氏名を入力してください")
+    for script, label in SCRIPT_LABELS.items():
+        message = check_name_group(script, label, groups[script])
+        if message:
+            raise ValidationError(message)
     birth_date = values.get("birth_date", "").strip().replace("-", "")
+    sex = values.get("sex", "").strip()
+    # pydantic の英語の文より先に、日本語の文で断る
+    validate_birth_date(birth_date)
+    validate_sex(sex)
     try:
-        return Patient(
+        patient = Patient(
             patient_id=patient_id,
             name=PersonName(**groups),
             birth_date=birth_date,
-            sex=values.get("sex", "").strip(),
+            sex=sex,
         )
     except pydantic.ValidationError as exc:
         first = exc.errors()[0]
         location = ".".join(str(part) for part in first["loc"])
         raise ValidationError(f"患者の値を受け付けられません: {location}: {first['msg']}") from exc
+    return patient
 
 
 def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:

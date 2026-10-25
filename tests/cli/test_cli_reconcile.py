@@ -115,7 +115,7 @@ def test_unreachable_gives_exit_6(tmp_path: Path, capsys: pytest.CaptureFixture[
         (["--patient-id", "X1"], "--roster-patient-id か"),
         (["--roster-patient-id", "NOPE"], "名簿に無い患者ID"),
         (["--roster-patient-id", "P000001", "--patient-id", "X1"], "同時に指定できません"),
-        (["--patient-id", "X1", "--name", "A", "--birth-date", "19751345"], "実在する日付"),
+        (["--patient-id", "X1", "--name", "A", "--birth-date", "19751345"], "暦にある日付"),
         (["--roster-patient-id", "P000001", "--procedure", "CT9999"], "CT9999"),
     ],
 )

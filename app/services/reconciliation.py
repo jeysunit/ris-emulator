@@ -18,6 +18,7 @@ from app.core.hl7 import (
     visible,
 )
 from app.core.models import Order, OrderStatus, Patient, PersonName, Procedure
+from app.core.patient_input import validate_patient_input
 from app.core.reconciliation import (
     MESSAGE_TYPES,
     ORDER_CONTROLS,
@@ -89,6 +90,8 @@ class ReconciliationService:
                 "この撮影はすでに予約に結び付いています",
                 {"sop_instance_uid": request.sop_instance_uid, "accession_number": linked[0]},
             )
+        # 画面・CLI を通らない呼び出し（API）にも、手で入れた値と同じ確かめを効かせる
+        validate_patient_input(request.patient, self.orders.today())
         self._check(unreconciled, request.patient)
         procedure = self._procedure(unreconciled.modality, request.procedure_code)
         department = self._department(request.department)

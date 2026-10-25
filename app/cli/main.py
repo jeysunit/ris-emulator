@@ -44,6 +44,13 @@ from app.core.models import (
     PersonName,
 )
 from app.core.mwl_dataset import order_to_dataset
+from app.core.patient_input import (
+    SCRIPT_LABELS,
+    check_name_group,
+    validate_birth_date,
+    validate_patient_id_input,
+    validate_sex,
+)
 from app.core.reconciliation import DELIVERY_LABELS
 from app.hl7.mllp import send_message
 from app.mwl.server import MwlServer
@@ -394,10 +401,15 @@ def _build_pir_message(args: argparse.Namespace, config: AppConfig) -> Hl7Messag
 
 
 def _patient_from_args(args: argparse.Namespace) -> Patient:
+    # pydantic の英語の文より先に、日本語の文で断る（入力の確かめは app/core/patient_input.py）
+    validate_patient_id_input(args.patient_id)
+    name = _parse_person_name(args.name)
+    validate_birth_date(args.birth_date)
+    validate_sex(args.sex)
     try:
         return Patient(
             patient_id=args.patient_id,
-            name=_parse_person_name(args.name),
+            name=name,
             birth_date=args.birth_date,
             sex=args.sex,
         )
@@ -410,6 +422,10 @@ def _parse_person_name(text: str) -> PersonName:
     groups = text.split("=")
     if len(groups) > 3:
         raise ValidationError("氏名は 英字=漢字=かな の 3 グループまでです", {"value": text})
+    for (script, label), group in zip(SCRIPT_LABELS.items(), groups):
+        message = check_name_group(script, label, group)
+        if message:
+            raise ValidationError(message)
     try:
         return PersonName(**dict(zip(("alphabetic", "ideographic", "phonetic"), groups)))
     except pydantic.ValidationError as exc:

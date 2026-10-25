@@ -65,4 +65,62 @@
       buttons[i].disabled = false;
     }
   });
+
+  // 患者の入力欄：入力のたびに確かめ、誤りの文を欄の下に出す（読み上げない。画面の上の知らせ
+  // だけが読み上げる）。文は data-message（サーバーと同じ文。app/core/patient_input.py）。
+  // 漢字の氏名は JIS X 0208 の字かどうかの近似（半角カナ・拡張の字を断る）で、最後の判定は
+  // サーバーが行う。誤りがあるうちは setCustomValidity で送信を止める
+  var PATIENT_ID_CHARS = /^[\x20-\x7E]*$/;
+  var PATIENT_ID_DELIMITERS = /[\\^~&|]/;
+  var ALPHABETIC_CHARS = /^[A-Za-z' -]*$/;
+  var IDEOGRAPHIC_CHARS =
+    /^[\x20-\x7E　-〿ぁ-ゖァ-ー一-鿿！-～]*$/;
+  function today() {
+    var now = new Date();
+    var month = ("0" + (now.getMonth() + 1)).slice(-2);
+    var day = ("0" + now.getDate()).slice(-2);
+    return now.getFullYear() + "-" + month + "-" + day;
+  }
+  function isAcceptable(kind, value) {
+    if (kind === "patient-id") {
+      return PATIENT_ID_CHARS.test(value) && !PATIENT_ID_DELIMITERS.test(value);
+    }
+    if (kind === "alphabetic") {
+      return ALPHABETIC_CHARS.test(value);
+    }
+    if (kind === "ideographic") {
+      return IDEOGRAPHIC_CHARS.test(value);
+    }
+    if (kind === "birth-date") {
+      return !value || value <= today();
+    }
+    return true;
+  }
+  function checkField(input) {
+    var kind = input.getAttribute("data-check");
+    var note = document.getElementById(input.getAttribute("aria-describedby"));
+    if (!kind || !note) {
+      return;
+    }
+    var ok = isAcceptable(kind, input.value);
+    var message = ok ? "" : input.getAttribute("data-message");
+    input.setCustomValidity(message);
+    if (ok) {
+      input.removeAttribute("aria-invalid");
+    } else {
+      input.setAttribute("aria-invalid", "true");
+    }
+    note.textContent = message;
+    note.hidden = ok;
+  }
+  document.addEventListener("input", function (event) {
+    if (event.target instanceof HTMLInputElement) {
+      checkField(event.target);
+    }
+  });
+  document.addEventListener("change", function (event) {
+    if (event.target instanceof HTMLInputElement) {
+      checkField(event.target);
+    }
+  });
 })();
