@@ -1,78 +1,93 @@
 {% extends "base.html" %}
 {% block title %}予約作成{% endblock %}
 {% block content %}
-<h1>予約作成</h1>
+<div class="pagehead"><h1>予約作成</h1></div>
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
 <form method="post" action="/orders" class="form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   {% set patient = values.get('patient', 'roster' if roster else 'new') %}
-  <fieldset>
+  <fieldset class="sec">
     <legend>患者</legend>
-    {% if roster_error %}
-    <p class="error" role="alert">{{ roster_error }}</p>
-    {% endif %}
-    {# 名簿を選んで送った後に名簿が読めなくなったときは、どちらも選ばずに出す（黙って新規に切り替えない） #}
-    <label><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
-    <label>名簿の患者
-      <select name="roster_patient_id" data-roster-select{% if not roster %} data-no-roster disabled{% endif %}>
-        {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
-        {% set chosen = values.get('roster_patient_id', '') %}
-        {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}
-        <option value="" selected>選択してください</option>
-        {% endif %}
-        {% for p in roster %}
-        <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label><input type="radio" name="patient" value="new" required{% if patient == 'new' %} checked{% endif %}> 新規（架空）</label>
-  </fieldset>
-  <fieldset>
-    <legend>検査</legend>
-    <label>モダリティ
-      <select name="modality" hx-get="/orders/new/exam" hx-target="#exam-options" hx-swap="outerHTML">
-        {% for m in catalog %}
-        <option value="{{ m }}"{% if m == modality %} selected{% endif %}>{{ m }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    {% include "_exam_options.html" %}
-  </fieldset>
-  <fieldset>
-    <legend>予定</legend>
-    <label>予定日 <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required></label>
-    <label>予定時刻
-      <span class="time-select">
-        <select name="hour" aria-label="時">
-          {% for h in hours %}
-          <option value="{{ h }}"{% if values.get('hour', '09') == h %} selected{% endif %}>{{ h }}</option>
+    <div class="in grid2">
+      {% if roster_error %}
+      <p class="error span" role="alert">{{ roster_error }}</p>
+      {% endif %}
+      {# 名簿を選んで送った後に名簿が読めなくなったときは、どちらも選ばずに出す（黙って新規に切り替えない） #}
+      <div class="span choices">
+        <label class="choice"><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
+        <label class="choice"><input type="radio" name="patient" value="new" required{% if patient == 'new' %} checked{% endif %}> 新規（架空）</label>
+      </div>
+      <label class="field span"><span class="l">名簿の患者</span>
+        <select name="roster_patient_id" data-roster-select{% if not roster %} data-no-roster disabled{% endif %}>
+          {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
+          {% set chosen = values.get('roster_patient_id', '') %}
+          {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}
+          <option value="" selected>選択してください</option>
+          {% endif %}
+          {% for p in roster %}
+          <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
           {% endfor %}
         </select>
-        :
-        {% set selected = values.get('minute', '00') %}
-        {% include "_minute_select.html" %}
-      </span>
-    </label>
+      </label>
+    </div>
   </fieldset>
-  <fieldset>
+  <fieldset class="sec">
+    <legend>検査</legend>
+    <div class="in grid2">
+      <label class="field"><span class="l">モダリティ<span class="req">必須</span></span>
+        <select name="modality" hx-get="/orders/new/exam" hx-target="#exam-options" hx-swap="outerHTML">
+          {% for m in catalog %}
+          <option value="{{ m }}"{% if m == modality %} selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% include "_exam_options.html" %}
+    </div>
+  </fieldset>
+  <fieldset class="sec">
+    <legend>予定</legend>
+    <div class="in grid2">
+      <label class="field"><span class="l">予定日<span class="req">必須</span></span>
+        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required>
+      </label>
+      <label class="field"><span class="l">予定時刻</span>
+        <span class="time-select">
+          <select name="hour" aria-label="時">
+            {% for h in hours %}
+            <option value="{{ h }}"{% if values.get('hour', '09') == h %} selected{% endif %}>{{ h }}</option>
+            {% endfor %}
+          </select>
+          :
+          {% set selected = values.get('minute', '00') %}
+          {% include "_minute_select.html" %}
+        </span>
+      </label>
+    </div>
+  </fieldset>
+  <fieldset class="sec">
     <legend>依頼</legend>
-    <label>依頼科
-      <select name="department" required>
-        {% for d in departments %}
-        <option value="{{ d }}"{% if values.get('department') == d %} selected{% endif %}>{{ d }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>文字コード
-      <select name="charset">
-        {% for c in character_sets %}
-        <option value="{{ c.value }}"{% if values.get('charset', default_character_set.value) == c.value %} selected{% endif %}>{{ character_set_labels[c] }}</option>
-        {% endfor %}
-      </select>
-    </label>
+    <div class="in grid2">
+      <label class="field"><span class="l">依頼科<span class="req">必須</span></span>
+        <select name="department" required>
+          {% for d in departments %}
+          <option value="{{ d }}"{% if values.get('department') == d %} selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field"><span class="l">文字コード</span>
+        <select name="charset">
+          {% for c in character_sets %}
+          <option value="{{ c.value }}"{% if values.get('charset', default_character_set.value) == c.value %} selected{% endif %}>{{ character_set_labels[c] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
   </fieldset>
-  <button type="submit" class="btn btn-primary">登録</button>
+  <div class="formbar">
+    <a href="/orders" class="btn">キャンセル</a>
+    <button type="submit" class="btn btn-primary">登録</button>
+  </div>
 </form>
 {% endblock %}

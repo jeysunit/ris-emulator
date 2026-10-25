@@ -1,12 +1,12 @@
 <span id="exam-options" class="exam-options">
-  <label>検査名
+  <label class="field"><span class="l">検査名<span class="req">必須</span></span>
     <select name="procedure">
       {% for p in entry.procedures %}
       <option value="{{ p.code }}"{% if values.get('procedure') == p.code %} selected{% endif %}>{{ p.name }}</option>
       {% endfor %}
     </select>
   </label>
-  <label>装置
+  <label class="field"><span class="l">装置</span>
     <select name="station">
       {% for s in entry.stations %}
       <option value="{{ s.name }}"{% if values.get('station') == s.name %} selected{% endif %}>{{ s.name }}（{{ s.ae_title }}）</option>
