@@ -291,3 +291,11 @@ input, select { min-height: 32px; border-color: var(--color-border-input); borde
 .banner-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .tag { display: inline-block; padding: 0 6px; border: 1px solid var(--color-border-input); border-radius: 3px; font-size: 12px; line-height: 18px; color: var(--color-label); }
 .notice { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-border-input); border-radius: 4px; background: var(--color-surface); color: var(--color-foreground); }
+
+/* 件数の行、空の状態（1 行目に事実、2 行目に次の手）、一覧の行の中のボタン（高さ 24px の副） */
+.count-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.count-n { font-size: 16px; font-weight: 700; color: var(--color-value); }
+.empty-box { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; text-align: center; border: 1px dashed var(--color-border-input); border-radius: 6px; color: var(--color-label); }
+.empty-box b { font-weight: 700; color: var(--color-value); }
+.tbl td.uid-c { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; }
+.btn.btn-row { height: 24px; min-width: 48px; padding: 0 8px; font-size: 12px; }

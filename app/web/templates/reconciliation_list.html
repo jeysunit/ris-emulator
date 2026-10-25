@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 {% block title %}未照合{% endblock %}
 {% block content %}
-<h1>未照合</h1>
-{% if items %}
+<div class="pagehead"><h1>未照合</h1></div>
+<div class="count-row">
+  <span><b class="count-n">{{ items | length }}</b> 件</span>
+  <span class="muted">受けた順</span>
+</div>
 <div class="table-wrap">
-<table class="orders">
+<table class="orders tbl tall">
   <thead>
     <tr>
       <th>受けた日時</th>
@@ -18,24 +21,30 @@
       <th><span class="visually-hidden">操作</span></th>
     </tr>
   </thead>
+  {% if items %}
   <tbody>
     {% for item in items %}
+    {% set mark = mpps_marks.get(item.status, ('plan', item.status)) %}
     <tr>
       <td class="nowrap">{{ item.received_at }}</td>
-      <td class="mono">{{ item.status }}</td>
+      <td><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span></td>
       <td class="mono">{{ item.patient.patient_id }}</td>
-      <td>{{ item.patient.name.ideographic | pn }}<br><span class="muted">{{ item.patient.name.phonetic | pn }} / {{ item.patient.name.alphabetic | pn }}</span></td>
+      <td class="main-c">{{ item.patient.name.ideographic | pn }}<span class="sub">{{ item.patient.name.phonetic | pn }} / {{ item.patient.name.alphabetic | pn }}</span></td>
       <td class="nowrap">{{ item.patient.birth_date | ymd }} {{ item.patient.sex }}</td>
       <td>{{ item.modality }}</td>
       <td class="mono">{{ item.station_ae_title }}</td>
-      <td class="mono">{{ item.study_instance_uid }}</td>
-      <td class="nowrap"><a href="/reconciliation/{{ item.sop_instance_uid }}" class="btn">照合</a></td>
+      <td class="mono uid-c" title="{{ item.study_instance_uid }}">{{ item.study_instance_uid }}</td>
+      <td class="nowrap"><a href="/reconciliation/{{ item.sop_instance_uid }}" class="btn btn-row">照合</a></td>
     </tr>
     {% endfor %}
   </tbody>
+  {% endif %}
 </table>
 </div>
-{% else %}
-<p class="empty">未照合の撮影はありません。</p>
+{% if not items %}
+<div class="empty-box">
+  <b>未照合の撮影はありません。</b>
+  <span>予約の無い撮影をモダリティから受けると、ここに出ます。</span>
+</div>
 {% endif %}
 {% endblock %}
