@@ -1,0 +1,50 @@
+{# 照合の確認の窓（標準の dialog）。サーバーが開いた形（open）で出し、app.js がモーダルで開き直す。
+   「照合・送信する」で、フォームの値に確認の鍵を付けて送り直す。押すまで何も送らない #}
+<dialog id="dlg-reconcile" class="dlg dlg-wide" aria-labelledby="dlg-reconcile-title" data-show-modal open>
+  <h2 id="dlg-reconcile-title">{{ confirm.title }}</h2>
+  <div class="table-wrap">
+  <table class="tbl dlg-compare">
+    <thead>
+      <tr><th>項目</th><th>仮の患者</th><th>正式な患者</th>{% if confirm.existing %}<th>既にある患者（同じ患者ID）</th>{% endif %}<th><span class="visually-hidden">違い</span></th></tr>
+    </thead>
+    <tbody>
+      {% for row in confirm.rows %}
+      <tr{% if row.before != row.after %} data-changed="true"{% endif %}>
+        <th scope="row">{{ row.label }}</th>
+        <td>{{ row.before }}</td>
+        <td>{{ row.after }}</td>
+        {% if confirm.existing %}<td>{{ row.other }}</td>{% endif %}
+        <td>{% if row.before != row.after %}<span class="st" data-k="note">違う</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <th scope="row">受付番号</th>
+        <td>{{ confirm.accession_number or 'なし' }}</td>
+        <td>照合で新しく付ける</td>
+        {% if confirm.existing %}<td></td>{% endif %}
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>予約（{{ confirm.procedure.name }}・{{ confirm.department }}）を作り、{{ confirm.destination }}へ次の HL7 を順に送ります。</p>
+  <ol class="dlg-list">
+    {% for message_type, purpose in confirm.messages %}
+    <li><span class="mono">{{ message_type }}</span> {{ purpose }}</li>
+    {% endfor %}
+  </ol>
+  {% if confirm.merges %}
+  <p><b>送った患者の統合は、この画面から取り消せません。</b></p>
+  {% endif %}
+  <form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" id="dlg-reconcile-form">
+    <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+    {% for name, value in values.items() if name not in (csrf_field, 'confirmed_key') %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+    <input type="hidden" name="confirmed_key" value="{{ confirm.key }}">
+  </form>
+  <div class="ft">
+    <form method="dialog"><button type="submit" class="btn" autofocus>キャンセル</button></form>
+    <button type="submit" form="dlg-reconcile-form" class="btn btn-primary">照合・送信する</button>
+  </div>
+</dialog>

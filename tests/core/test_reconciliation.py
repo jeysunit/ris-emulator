@@ -7,8 +7,13 @@ from typing import Any
 import pytest
 from pydicom.dataset import Dataset
 
-from app.core.models import PersonName
-from app.core.reconciliation import TemporaryPatient, plan_deliveries, read_unreconciled
+from app.core.models import Patient, PersonName
+from app.core.reconciliation import (
+    TemporaryPatient,
+    looks_like_another_patient,
+    plan_deliveries,
+    read_unreconciled,
+)
 
 
 def _body(**overrides: Any) -> dict[str, Any]:
@@ -96,3 +101,48 @@ def test_plan_deliveries() -> None:
     assert plan_deliveries(temporary, "ER1", name, "19900101", "F") == ["a08", "orm"]
     assert plan_deliveries(temporary, "ER1", name, "19800101", "M") == ["a08", "orm"]
     assert plan_deliveries(temporary, "ER1", name, "19800101", "F") == ["orm"]
+
+
+def test_reads_the_accession_number_the_modality_sent() -> None:
+    step = Dataset()
+    step.StudyInstanceUID = "2.25.1"
+    step.AccessionNumber = "ACC1"
+    assert _read(ScheduledStepAttributesSequence=[step]).accession_number == "ACC1"
+    assert _read().accession_number == ""
+
+
+KNOWN = Patient(
+    patient_id="P1",
+    name=PersonName(alphabetic="TANAKA^HIROSHI", ideographic="田中^博", phonetic="タナカ^ヒロシ"),
+    birth_date="19980312",
+    sex="M",
+)
+
+
+@pytest.mark.parametrize(
+    ("name", "birth_date", "sex", "another"),
+    [
+        # 同じ人：両方に値のある項目がすべて合う（空白・英字の大小は見ない。片方だけの項目は比べない）
+        (PersonName(alphabetic="tanaka^hiroshi"), "", "", False),
+        (PersonName(ideographic="田中 ^ 博"), "19980312", "M", False),
+        (PersonName(alphabetic="TANAKA^HIROSHI", ideographic="田中^博"), "", "M", False),
+        # 別人に見える：どれかが違う
+        (PersonName(alphabetic="SATO^JIRO"), "19980312", "M", True),
+        (PersonName(alphabetic="TANAKA^HIROSHI", ideographic="田中^浩"), "19980312", "M", True),
+        (PersonName(alphabetic="TANAKA^HIROSHI"), "19980313", "M", True),
+        (PersonName(alphabetic="TANAKA^HIROSHI"), "19980312", "F", True),
+        # 成分の境目がずれた氏名は、字が同じでも別人と見る
+        (PersonName(ideographic="田^中博"), "19980312", "M", True),
+        (PersonName(alphabetic="TANAKAHIROSHI"), "19980312", "M", True),
+    ],
+)
+def test_looks_like_another_patient(name: PersonName, birth_date: str, sex: str, another: bool) -> None:
+    typed = Patient(patient_id="P1", name=name, birth_date=birth_date, sex=sex)
+    assert looks_like_another_patient(KNOWN, typed) is another
+
+
+def test_patient_without_a_comparable_name_looks_like_another() -> None:
+    # 氏名に両方に値のある表記が無ければ、同じ人と確かめられないので別人と見る
+    known = Patient(patient_id="P1", name=PersonName(ideographic="田中^博"))
+    typed = Patient(patient_id="P1", name=PersonName(alphabetic="TANAKA^HIROSHI"))
+    assert looks_like_another_patient(known, typed)
