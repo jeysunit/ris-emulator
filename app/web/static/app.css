@@ -250,8 +250,12 @@ input, select { min-height: 32px; border-color: var(--color-border-input); borde
 .form { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
 .form-wide { max-width: 900px; }
 .sec { min-width: 0; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-background); }
-.sec > legend { float: left; width: 100%; padding: 8px 12px; border-bottom: 1px solid var(--color-border); border-radius: 5px 5px 0 0; background: var(--color-surface); font-size: 16px; line-height: 24px; font-weight: 700; color: var(--color-value); }
+.sec > legend, .sec > .sec-title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--color-border); border-radius: 5px 5px 0 0; background: var(--color-surface); font-size: 16px; line-height: 24px; font-weight: 700; color: var(--color-value); }
+.sec > legend { float: left; width: 100%; }
 .sec > legend + * { clear: both; }
+.sec .kv { margin: 0; }
+.form-col { display: flex; flex-direction: column; gap: 12px; max-width: 900px; }
+.form-col > .form { max-width: none; }
 .sec > .in { padding: 12px 16px; }
 .grid2, .grid3 { display: grid; gap: 12px 16px; }
 .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -266,3 +270,19 @@ input, select { min-height: 32px; border-color: var(--color-border-input); borde
 @media (max-width: 760px) {
   .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* パンくず（患者や検査の下の画面だけ）、患者バナー、札、知らせ */
+.crumbs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 18px; color: var(--color-label); }
+.crumbs a { color: var(--color-label); }
+.crumbs li + li::before { content: "/"; margin-right: 4px; }
+.crumbs [aria-current] { color: var(--color-foreground); }
+.banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 8px 16px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); }
+.banner-name { min-width: 140px; }
+.banner-n { font-size: 16px; line-height: 24px; font-weight: 700; color: var(--color-value); }
+.banner-k { font-size: 12px; line-height: 18px; color: var(--color-label); }
+.banner-f { min-width: 0; }
+.banner-f .l { font-size: 12px; line-height: 18px; color: var(--color-label); }
+.banner-f .v { font-weight: 700; color: var(--color-value); }
+.banner-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.tag { display: inline-block; padding: 0 6px; border: 1px solid var(--color-border-input); border-radius: 3px; font-size: 12px; line-height: 18px; color: var(--color-label); }
+.notice { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-border-input); border-radius: 4px; background: var(--color-surface); color: var(--color-foreground); }
