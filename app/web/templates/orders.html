@@ -76,12 +76,12 @@
 <aside class="side" aria-label="選んだ予約">
 <h2>予約 {{ order.accession_number }} {% include "_status_badge.html" %}</h2>
 <div class="in">
+{% set banner_patient, banner_kind, banner_acc = order.patient, 'r2', order.accession_number %}
+{% set banner_dt = (order.scheduled_date | ymd) ~ ' ' ~ (order.scheduled_time | hhmm) %}
+{% set banner_modality, banner_procedure = order.modality, order.procedure.name %}
+{% set banner_end %}{% include "_status_badge.html" %}{% endset %}
+{% include "_patient_banner.html" %}
 <dl class="kv">
-<dt>氏名</dt><dd>{{ order.patient.name.ideographic | pn }}<br><span class="muted">{{ order.patient.name.phonetic | pn }} / {{ order.patient.name.alphabetic | pn }}</span></dd>
-<dt>患者ID</dt><dd>{{ order.patient.patient_id }}</dd>
-<dt>生年月日</dt><dd>{{ order.patient.birth_date | ymd }}</dd>
-<dt>性別</dt><dd>{{ order.patient.sex }}</dd>
-<dt>予定日時</dt><dd>{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</dd>
 <dt>検査名</dt><dd>{{ order.procedure.name }}（{{ order.procedure.code }}）</dd>
 <dt>装置</dt><dd>{{ order.scheduled_station_label or order.scheduled_station_ae_title }}{% if order.scheduled_station_label %}<br><span class="muted mono">{{ order.scheduled_station_ae_title }}</span>{% endif %}</dd>
 <dt>依頼科</dt><dd>{{ order.requesting_service }}</dd>
@@ -110,7 +110,13 @@
 </aside>
 </div>
 {% else %}
-<p class="empty">条件に合う予約はありません。</p>
-<p><a href="/orders/new">予約作成</a></p>
+<div class="tbl-wrap">
+<table class="orders tbl">
+  <thead>
+    <tr><th>予定日時</th><th>受付番号</th><th>氏名</th><th>モダリティ</th><th>検査名</th><th>状態</th></tr>
+  </thead>
+</table>
+</div>
+<div class="empty"><b>条件に合う予約はありません。</b><span>期間や状態の条件を変えて、もう一度検索してください。</span><a href="/orders" class="btn">条件をクリア</a></div>
 {% endif %}
 {% endblock %}

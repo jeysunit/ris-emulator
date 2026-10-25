@@ -26,11 +26,11 @@
     {% for item in items %}
     {% set mark = mpps_marks.get(item.status, ('plan', item.status)) %}
     <tr>
-      <td class="nowrap">{{ item.received_at }}</td>
+      <td class="nowrap">{{ item.received_at | when }}</td>
       <td><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span></td>
       <td class="mono">{{ item.patient.patient_id }}</td>
       <td class="main-c">{{ item.patient.name.ideographic | pn }}<span class="sub">{{ item.patient.name.phonetic | pn }} / {{ item.patient.name.alphabetic | pn }}</span></td>
-      <td class="nowrap">{{ item.patient.birth_date | ymd }} {{ item.patient.sex }}</td>
+      <td class="nowrap">{{ item.patient.birth_date | ymd }} {{ item.patient.sex | sex }}</td>
       <td>{{ item.modality }}</td>
       <td class="mono">{{ item.station_ae_title }}</td>
       <td class="mono uid-c" title="{{ item.study_instance_uid }}">{{ item.study_instance_uid }}</td>

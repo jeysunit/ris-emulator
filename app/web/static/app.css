@@ -61,6 +61,10 @@ fieldset.sec { min-width: 0; margin: 0; padding: 0; }
 /* 操作の行は区画の外に単独で置くので、四方に枠を付ける */
 .w-form > .formbar { border: 1px solid var(--color-border); border-radius: 6px; }
 
+/* 右の区画（幅 360px）の患者バナー：項目名が升からはみ出さないように切る（値の全文は title） */
+.side .fb { overflow: hidden; }
+.side .fb .f .l { overflow: hidden; text-overflow: ellipsis; }
+
 /* 予約の詳細：項目名と値の表、MWL の属性 */
 .detail { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
 .detail dt { color: var(--color-label); }

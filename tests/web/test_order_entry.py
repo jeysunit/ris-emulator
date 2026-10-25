@@ -75,7 +75,7 @@ def test_entry_sections_in_order(config: AppConfig, service: OrderService) -> No
     assert '<button type="submit" class="btn btn-primary">登録</button>' in page
     # 名簿の患者（患者ID・氏名・生年月日・性別）と新規（架空）
     assert "名簿から選ぶ" in page and "新規（架空）" in page
-    assert "P000002 佐藤 由紀（サトウ ユキ） 1992-08-25 F" in page
+    assert "P000002 佐藤 由紀（サトウ ユキ） 1992/08/25 女" in page
     assert _options(page, "modality") == list(config.orders.modalities)
     assert _options(page, "procedure") == ["CT0001", "CT0002", "CT0003", "CT0004"]
     assert _options(page, "station") == ["CT1号機"]
@@ -288,8 +288,8 @@ def test_submit_buttons_are_guarded(config: AppConfig, service: OrderService) ->
     assert "status === 401" in script and "location.reload()" in script
     # 一覧の主の操作（検索）を、ほかのボタン（前日・本日・翌日）と見分けられるようにする
     assert '<button type="submit" class="btn btn-primary">検索</button>' in listing
-    # 0件の文と予約作成のリンクを分ける
-    assert '<p class="empty">条件に合う予約はありません。</p>' in listing
+    # 0件は空の状態の部品（1 行目に事実）で出す
+    assert '<div class="empty"><b>条件に合う予約はありません。</b>' in listing
 
 
 def test_input_screens_follow_screen_type_c(config: AppConfig, service: OrderService) -> None:

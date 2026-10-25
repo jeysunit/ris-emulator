@@ -1,0 +1,16 @@
+{# 患者バナー（決まった形。値の無い項目も「—」で場所を残す）。使う側が渡す値：
+   banner_patient（患者）・banner_kind（r1＝1 行、r2＝右の区画の 2 行）・banner_label（aria-label）・
+   banner_acc（受付番号）・banner_dt_label と banner_dt（日時）・banner_modality と banner_procedure・banner_end（右端の札） #}
+{% set p = banner_patient %}
+{% set main_name = p.name.ideographic | pn or p.name.alphabetic | pn %}
+<section class="fb {{ banner_kind }}" aria-label="{{ banner_label or '患者' }}">
+  <div class="nm"><div class="n" title="{{ main_name }}">{{ main_name or '—' }}</div><div class="k" title="{{ p.name.phonetic | pn }}">{{ p.name.phonetic | pn }}</div></div>
+  <div class="f pid"><div class="l">患者ID</div><div class="v mono keep">{{ p.patient_id or '—' }}</div></div>
+  {% set born = (p.birth_date | birth) ~ ' ' ~ (p.sex | sex) %}
+  <div class="f birth"><div class="l">生年月日・性別</div>{% if born | trim %}<div class="v">{{ born | trim }}</div>{% else %}<div class="v none">—</div>{% endif %}</div>
+  <div class="f acc"><div class="l">受付番号</div>{% if banner_acc %}<div class="v mono keep">{{ banner_acc }}</div>{% else %}<div class="v none">—</div>{% endif %}</div>
+  <div class="f dt"><div class="l">{{ banner_dt_label or '予定日時' }}</div>{% if banner_dt %}<div class="v">{{ banner_dt }}</div>{% else %}<div class="v none">—</div>{% endif %}</div>
+  {% set exam = ((banner_modality or '') ~ ' ' ~ (banner_procedure or '')) | trim %}
+  <div class="f md"><div class="l">モダリティ・検査名</div>{% if exam %}<div class="v" title="{{ exam }}">{% if banner_modality %}<span class="mod" data-mod="{{ banner_modality }}">{{ banner_modality }}</span> {% endif %}{{ banner_procedure or '' }}</div>{% else %}<div class="v none">—</div>{% endif %}</div>
+  <div class="f end">{{ banner_end }}</div>
+</section>

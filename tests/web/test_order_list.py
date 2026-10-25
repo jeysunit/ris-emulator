@@ -214,15 +214,23 @@ def test_selection_summary_and_panel(config: AppConfig, service: OrderService) -
     assert f'<h2>予約 {second.accession_number}' in chosen
     assert "状態を変える" not in chosen
     assert f'href="/orders/{second.accession_number}" class="btn btn-primary">詳細を開く' in chosen
-    assert re.findall(r'<dt>(.*?)</dt>', default.split("</header>")[1]) == [
-        "氏名", "患者ID", "生年月日", "性別", "予定日時", "検査名", "装置", "依頼科"
+    assert re.findall(r'<dt>(.*?)</dt>', default.split("</header>")[1]) == ["検査名", "装置", "依頼科"]
+    panel_banner = default.split('<section class="fb r2" aria-label="患者">')[1].split("</section>")[0]
+    assert re.findall(r'<div class="l">([^<]+)</div>', panel_banner) == [
+        "患者ID", "生年月日・性別", "受付番号", "予定日時", "モダリティ・検査名"
     ]
+    assert first.patient.patient_id in panel_banner and first.accession_number in panel_banner
     assert first.patient.patient_id in default and first.procedure.code in default
     assert first.scheduled_station_label in default and first.requesting_service in default
     assert _summary(default) == _summary(filtered) == {"すべて": 2, "予定": 1, "実施中": 0, "完了": 1, "取消": 0, "中止": 0}
     assert first.accession_number not in filtered and second.accession_number in filtered
-    assert 'aria-label="選んだ予約"' not in empty and '<table' not in empty
+    # 空の状態：表の見出しの行を残し、その下に事実・次の手・操作 1 つ（条件をクリア）
+    assert 'aria-label="選んだ予約"' not in empty and "<tbody" not in empty and "<thead>" in empty
     assert "条件に合う予約はありません。" in empty and _summary(empty)["すべて"] == 0
+    assert re.search(
+        r'<div class="empty"><b>条件に合う予約はありません。</b><span>[^<]+</span><a href="/orders" class="btn">条件をクリア</a></div>',
+        empty,
+    )
     assert _links(empty)["予約作成"] == "/orders/new"
     assert first.accession_number in patient and second.accession_number not in patient
     assert second.accession_number in accession and first.accession_number not in accession
