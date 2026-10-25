@@ -60,6 +60,8 @@ fieldset.sec { min-width: 0; margin: 0; padding: 0; }
 .sec > .in.ops { flex-direction: column; align-items: stretch; }
 /* 操作の行は区画の外に単独で置くので、四方に枠を付ける */
 .w-form > .formbar { border: 1px solid var(--color-border); border-radius: 6px; }
+/* 押せない入力欄（照合の「名簿から選ぶ」「入力する」の、選んでいない側）は項目名も薄くする */
+.field:has(> :disabled) > .l { opacity: 0.55; }
 
 /* 右の区画（幅 360px）の患者バナー：項目名が升からはみ出さないように切る（値の全文は title） */
 .side .fb { overflow: hidden; }
@@ -78,6 +80,17 @@ fieldset.sec { min-width: 0; margin: 0; padding: 0; }
 .error { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-danger); border-radius: 4px; background: var(--color-surface); color: var(--color-foreground); }
 .error::before { content: "▲"; flex: none; color: var(--color-danger); font-size: 12px; line-height: 21px; }
 .error[hidden] { display: none; }
+
+/* 確認の窓（ui-kit の dialog.dlg・.ft・.btn-danger.fill）の差分：長い中身はスクロール、照合の窓は
+   比べる表があるので広い。題は「対象＋動詞」の疑問、キャンセルを左、実行を右 */
+dialog.dlg { max-height: calc(100vh - 2rem); overflow-y: auto; color: var(--color-foreground); }
+dialog.dlg.dlg-wide { width: min(40rem, calc(100vw - 2rem)); }
+.dlg > * + * { margin-top: 12px; }
+.dlg-list { padding-left: 24px; list-style: decimal; }
+.dlg .ft form { margin: 0; }
+.dlg .tbl td { height: auto; padding: 4px 8px; white-space: normal; overflow-wrap: anywhere; }
+.dlg .tbl tbody th { position: static; height: auto; padding: 4px 8px; background: none; }
+.dlg-compare tr[data-changed] td { background: var(--color-selected); font-weight: 700; color: var(--color-value); }
 
 /* 件数の行（未照合）と空の状態 */
 .count-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }

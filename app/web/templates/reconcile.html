@@ -35,7 +35,7 @@
 {% elif not procedures %}
 <p class="error" role="alert">モダリティ {{ item.modality or '（空）' }} が設定に無いので、照合できません。</p>
 {% else %}
-<form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="w-form">
+<form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="w-form" data-patient-source>
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   {% set patient = values.get('patient', 'roster' if roster else 'manual') %}
   <fieldset class="sec">
@@ -50,6 +50,11 @@
       </div>
       <label class="field span"><span class="l">名簿の患者</span>
         <select name="roster_patient_id"{% if not roster %} disabled{% endif %} class="select">
+          {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
+          {% set chosen = values.get('roster_patient_id', '') %}
+          {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}
+          <option value="" selected>選択してください</option>
+          {% endif %}
           {% for p in roster %}
           <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex | sex }}</option>
           {% endfor %}
@@ -96,4 +101,7 @@
 </form>
 {% endif %}
 </div>
+{% if confirm and not linked %}
+{% include "_reconcile_confirm.html" %}
+{% endif %}
 {% endblock %}
