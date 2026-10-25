@@ -23,7 +23,7 @@ from app.core.patient_input import (
 from app.services.config import AppConfig
 from app.services.store import OrderStore
 from tests.conftest import add_unscheduled_mpps
-from tests.web.test_reconciliation import _client, _post
+from tests.web.test_reconciliation import _client, _post, _reconcile
 
 STATIC_DIR = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
 
@@ -49,7 +49,7 @@ def test_roster_patient_is_not_held_to_the_manual_input_rules(
     ]
     with _client(config, store) as (client, service):
         monkeypatch.setattr(service, "roster_patients", lambda: roster)
-        response = _post(
+        response = _reconcile(
             client,
             f"/reconciliation/{sop_uid}",
             patient="roster",
@@ -116,7 +116,7 @@ def test_utf8_accepts_names_outside_jis(config: AppConfig, store: OrderStore, na
     """予約の文字コードが UTF-8（既定）なら、漢字の氏名を JIS X 0208 で断らない."""
     sop_uid, _ = add_unscheduled_mpps(store)
     with _client(config, store) as (client, service):
-        response = _post(
+        response = _reconcile(
             client, f"/reconciliation/{sop_uid}", **_manual(ideographic_family=name, procedure="")
         )
         assert response.status_code == 303
@@ -131,7 +131,7 @@ def test_hiragana_in_the_phonetic_name_is_saved_as_katakana(
         phonetic_family="さとう", phonetic_given="じろう", birth_date="1975-05-10", procedure=""
     )
     with _client(config, store) as (client, service):
-        response = _post(client, f"/reconciliation/{sop_uid}", **data)
+        response = _reconcile(client, f"/reconciliation/{sop_uid}", **data)
         assert response.status_code == 303
         order = service.list_orders()[0]
         assert order.patient.name.phonetic == "サトウ^ジロウ"
@@ -146,7 +146,7 @@ def test_test_mode_passes_kana_values_through(config: AppConfig, store: OrderSto
         assert "かなの確かめ：試験の形" in page and "data-test-mode" in page
         bad = _post(client, f"/reconciliation/{sop_uid}", **_manual(phonetic_family="ﾔ" * 65))
         assert bad.status_code == 400
-        response = _post(
+        response = _reconcile(
             client,
             f"/reconciliation/{sop_uid}",
             **_manual(phonetic_family="ﾔﾏﾀﾞ", phonetic_given="たろう", procedure=""),
@@ -177,7 +177,7 @@ def test_valid_manual_patient_is_accepted(config: AppConfig, store: OrderStore) 
         procedure="",
     )
     with _client(config, store) as (client, service):
-        response = _post(client, f"/reconciliation/{sop_uid}", **data)
+        response = _reconcile(client, f"/reconciliation/{sop_uid}", **data)
         assert response.status_code == 303
         assert service.count_orders() == 1
 

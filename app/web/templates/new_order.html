@@ -5,7 +5,7 @@
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
-<form method="post" action="/orders" class="form">
+<form method="post" action="/orders" class="w-form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   {% set patient = values.get('patient', 'roster' if roster else 'new') %}
   <fieldset class="sec">
@@ -20,7 +20,7 @@
         <label class="choice"><input type="radio" name="patient" value="new" required{% if patient == 'new' %} checked{% endif %}> 新規（架空）</label>
       </div>
       <label class="field span"><span class="l">名簿の患者</span>
-        <select name="roster_patient_id" data-roster-select{% if not roster %} data-no-roster disabled{% endif %}>
+        <select name="roster_patient_id" data-roster-select{% if not roster %} data-no-roster disabled{% endif %} class="select">
           {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
           {% set chosen = values.get('roster_patient_id', '') %}
           {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}
@@ -37,7 +37,7 @@
     <legend>検査</legend>
     <div class="in grid2">
       <label class="field"><span class="l">モダリティ<span class="req">必須</span></span>
-        <select name="modality" hx-get="/orders/new/exam" hx-target="#exam-options" hx-swap="outerHTML">
+        <select name="modality" hx-get="/orders/new/exam" hx-target="#exam-options" hx-swap="outerHTML" class="select">
           {% for m in catalog %}
           <option value="{{ m }}"{% if m == modality %} selected{% endif %}>{{ m }}</option>
           {% endfor %}
@@ -50,11 +50,11 @@
     <legend>予定</legend>
     <div class="in grid2">
       <label class="field"><span class="l">予定日<span class="req">必須</span></span>
-        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required>
+        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required class="input">
       </label>
       <label class="field"><span class="l">予定時刻</span>
         <span class="time-select">
-          <select name="hour" aria-label="時">
+          <select name="hour" aria-label="時" class="select">
             {% for h in hours %}
             <option value="{{ h }}"{% if values.get('hour', '09') == h %} selected{% endif %}>{{ h }}</option>
             {% endfor %}
@@ -70,14 +70,14 @@
     <legend>依頼</legend>
     <div class="in grid2">
       <label class="field"><span class="l">依頼科<span class="req">必須</span></span>
-        <select name="department" required>
+        <select name="department" required class="select">
           {% for d in departments %}
           <option value="{{ d }}"{% if values.get('department') == d %} selected{% endif %}>{{ d }}</option>
           {% endfor %}
         </select>
       </label>
       <label class="field"><span class="l">文字コード</span>
-        <select name="charset">
+        <select name="charset" class="select">
           {% for c in character_sets %}
           <option value="{{ c.value }}"{% if values.get('charset', default_character_set.value) == c.value %} selected{% endif %}>{{ character_set_labels[c] }}</option>
           {% endfor %}
