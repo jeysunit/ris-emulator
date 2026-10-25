@@ -383,3 +383,43 @@ def test_status_delivery_failure_rolls_back(config, store, monkeypatch):
         service.set_status(result.accession_number, OrderStatus.CANCELLED)
     assert store.get(result.accession_number) == before
     assert store.get_reconciliation(result.accession_number) == result
+
+
+def test_preview_sends_nothing_and_its_key_confirms(config: AppConfig, store: OrderStore) -> None:
+    sop_uid, _ = add_unscheduled_mpps(store)
+    with stub_receiver(_accept_all) as receiver:
+        service = _service(config, store, receiver.port)
+        request = ReconcileRequest(sop_instance_uid=sop_uid, patient=OFFICIAL)
+        preview = service.preview(request)
+        assert preview.deliveries == ("a40", "orm")
+        assert preview.message_types == ["ADT^A40", "ORM^O01"]
+        assert service.orders.count_orders() == 0 and receiver.received == []
+        result = service.reconcile(ReconcileRequest(sop_uid, OFFICIAL, confirmed_key=preview.key))
+    assert _outcomes(result) == [("ADT^A40", "accepted"), ("ORM^O01", "accepted")]
+
+
+def test_key_from_before_a_change_is_refused_in_the_transaction(config: AppConfig, store: OrderStore) -> None:
+    """確かめた後に仮の患者が変われば（N-SET）、確定のトランザクションで断り、何も残さない."""
+    sop_uid, _ = add_unscheduled_mpps(store)
+    service = _service(config, store, _free_port())
+    key = service.preview(ReconcileRequest(sop_uid, OFFICIAL)).key
+    store.update_mpps(sop_uid, None, {"PatientID": {"vr": "LO", "Value": ["ER2026102499"]}})
+    with pytest.raises(ValidationError, match="確かめた後に"):
+        service.reconcile(ReconcileRequest(sop_uid, OFFICIAL, confirmed_key=key))
+    other = OFFICIAL.model_copy(update={"birth_date": "19990101"})
+    fresh = service.preview(ReconcileRequest(sop_uid, OFFICIAL)).key
+    with pytest.raises(ValidationError, match="確かめた後に"):
+        service.reconcile(ReconcileRequest(sop_uid, other, confirmed_key=fresh))
+    assert service.orders.count_orders() == 0
+    assert store.list_unlinked_mpps()[0].sop_instance_uid == sop_uid
+
+
+def test_known_patients_come_from_the_roster_and_orders(config: AppConfig, store: OrderStore) -> None:
+    service = _service(config, store, _free_port())
+    ordered = service.orders.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
+    assert service.known_patients("P000001") == [OFFICIAL.model_copy(update={"weight_kg": 58.5, "size_m": 1.72})]
+    assert service.known_patients(ordered.patient.patient_id) == [ordered.patient]
+    assert service.known_patients("NOPE") == []
+    typed = Patient(patient_id="P000001", name=PersonName(alphabetic="YAMADA^TARO"))
+    assert service.another_patient(typed, service.known_patients("P000001")) is not None
+    assert service.another_patient(OFFICIAL, service.known_patients("P000001")) is None

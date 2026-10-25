@@ -143,4 +143,7 @@
   </div>
 </section>
 </div>
+{% if not is_final(order.status) %}
+{% include "_status_confirm.html" %}
+{% endif %}
 {% endblock %}

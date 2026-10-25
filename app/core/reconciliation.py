@@ -13,7 +13,13 @@ from typing import Any, Literal
 from pydicom.dataset import Dataset
 from pydicom.multival import MultiValue
 
-from app.core.models import OrderStatus, PersonName, validate_ae_title, validate_patient_id
+from app.core.models import (
+    OrderStatus,
+    Patient,
+    PersonName,
+    validate_ae_title,
+    validate_patient_id,
+)
 
 # orm は ORC-1 が NW。orm_ca・orm_dc は、照合で作った予約を取消・中止したときの RAD-13
 DeliveryKind = Literal["a40", "a08", "orm", "orm_ca", "orm_dc"]
@@ -66,6 +72,7 @@ class UnreconciledMpps:
     started_date: str  # YYYYMMDD、読めなければ空
     started_time: str  # HHMMSS、読めなければ空
     problem: str = ""
+    accession_number: str = ""  # モダリティが入れた受付番号（予約の無い撮影では、ふつう空）
 
 
 def read_unreconciled(
@@ -107,6 +114,7 @@ def read_unreconciled(
         started_date=_digits(_text(dataset, "PerformedProcedureStepStartDate"), _DATE, 8),
         started_time=_digits(_text(dataset, "PerformedProcedureStepStartTime"), _TIME, 6),
         problem=problem,
+        accession_number=_scheduled_text(dataset, "AccessionNumber"),
     )
 
 
@@ -128,11 +136,43 @@ def plan_deliveries(
     return ["a08", "orm"] if changed else ["orm"]
 
 
+def looks_like_another_patient(known: Patient, typed: Patient) -> bool:
+    """同じ患者ID の既にある患者と、手で入れた患者が別人に見えるか.
+
+    両方に値のある項目（氏名の表記ごと・生年月日・性別）のどれかが違えば別人と見る。氏名は
+    成分（姓・名）の境目を保ったまま、空白と英字の大小を無視して比べる。氏名に両方に値のある表記が1つも無ければ、同じ人と
+    確かめられないので別人と見る。
+    """
+    pairs = [
+        (_name_key(getattr(known.name, script)), _name_key(getattr(typed.name, script)))
+        for script in ("alphabetic", "ideographic", "phonetic")
+    ]
+    compared = [(a, b) for a, b in pairs if a and b]
+    if not compared or any(a != b for a, b in compared):
+        return True
+    return any(
+        a and b and a != b
+        for a, b in ((known.birth_date, typed.birth_date), (known.sex, typed.sex))
+    )
+
+
+def _name_key(group: str) -> str:
+    """比べるための氏名の表記。成分（`^` の区切り）ごとに空白を除き、英字の大小をそろえる。
+    成分の境目は残す（「大^島太郎」と「大島^太郎」は別の氏名）."""
+    parts = [re.sub(r"[\s　]+", "", part).casefold() for part in group.split("^")]
+    return "^".join(parts).rstrip("^")
+
+
 def _study_instance_uid(dataset: Dataset) -> str:
+    return _scheduled_text(dataset, "StudyInstanceUID")
+
+
+def _scheduled_text(dataset: Dataset, keyword: str) -> str:
+    """Scheduled Step Attributes Sequence の項目のうち、最初に値のある属性の文字列."""
     for item in dataset.get("ScheduledStepAttributesSequence", None) or []:
-        uid = _text(item, "StudyInstanceUID")
-        if uid:
-            return uid
+        value = _text(item, keyword)
+        if value:
+            return value
     return ""
 
 

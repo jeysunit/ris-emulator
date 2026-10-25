@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from datetime import date, time, timedelta
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,7 @@ from app.core.models import (
     OrderStatus,
     Patient,
     PersonName,
+    can_transition,
     is_final,
     selectable_statuses,
 )
@@ -52,7 +54,13 @@ from app.services.order_service import (
     parse_date_option,
     parse_time_option,
 )
-from app.services.reconciliation import DEFAULT_DEPARTMENT, ReconcileRequest, ReconciliationService
+from app.services.reconciliation import (
+    DEFAULT_DEPARTMENT,
+    STATUS_MESSAGES,
+    ReconcilePreview,
+    ReconcileRequest,
+    ReconciliationService,
+)
 
 from .auth import (
     CSRF_FIELD,
@@ -80,6 +88,14 @@ MPPS_MARKS = {
     "IN PROGRESS": ("run", "実施中"),
     "COMPLETED": ("done", "完了"),
     "DISCONTINUED": ("stop", "中止"),
+}
+# 確認の窓で、送る HL7 の種類に添える言葉（docs/spec/07_reconciliation.md 4 章）
+DELIVERY_PURPOSES = {
+    "a40": "患者の統合",
+    "a08": "患者の更新",
+    "orm": "予約",
+    "orm_ca": "予約の取消",
+    "orm_dc": "予約の中止",
 }
 CONTENT_SECURITY_POLICY = "; ".join(
     (
@@ -267,6 +283,12 @@ def create_app(
             date_to=last.isoformat(),
             orders=orders,
             selected_order=chosen,
+            status_confirm=_status_confirm(
+                chosen is not None
+                and reconciliation_service.get_reconciliation(chosen.accession_number) is not None,
+                config,
+            ),
+            status_hx=True,
             selection_links={
                 o.accession_number: link(first, last, number, selection=o.accession_number)
                 for o in orders
@@ -400,7 +422,12 @@ def create_app(
         return _render_detail(request, _get_order(order_service, accession_number))
 
     def _render_detail(
-        request: Request, order: Order, *, error: str = "", status_code: int = 200
+        request: Request,
+        order: Order,
+        *,
+        error: str = "",
+        status_code: int = 200,
+        confirm_status: OrderStatus | None = None,
     ) -> HTMLResponse:
         reconciliation = reconciliation_service.get_reconciliation(order.accession_number)
         before = reconciliation.temporary if reconciliation else {}
@@ -408,6 +435,9 @@ def create_app(
             request,
             "order_detail.html",
             status_code=status_code,
+            confirm_status=confirm_status,
+            status_confirm=_status_confirm(reconciliation is not None, config),
+            status_hx=False,
             order=order,
             temporary_name=PersonName(
                 alphabetic=before.get("alphabetic", ""),
@@ -451,12 +481,24 @@ def create_app(
 
     @app.post("/orders/{accession_number}/status")
     def change_status(
-        request: Request, accession_number: str, status: str = Form(...)
+        request: Request, accession_number: str, status: str = Form(...), confirmed: str = Form("")
     ) -> Response:
         try:
             new_status = OrderStatus(status)
         except ValueError as exc:
             raise HTTPException(HTTP_BAD_REQUEST, "Unknown status") from exc
+        current = _get_order(order_service, accession_number)
+        if (
+            is_final(new_status)
+            and confirmed != "1"
+            and new_status != current.status
+            and can_transition(current.status, new_status)
+        ):
+            # 終わりの状態へは、確認の窓の実行（confirmed=1）でだけ変える。窓を通らない送信は、
+            # 画面なら窓を開いた詳細を出し、htmx なら断る（app.js が窓を開いてから送る）
+            if request.headers.get("hx-request"):
+                raise HTTPException(HTTP_BAD_REQUEST, "Confirmation required")
+            return _render_detail(request, current, confirm_status=new_status)
         try:
             order, _ = reconciliation_service.set_status(accession_number, new_status)
         except OrderNotFoundError as exc:
@@ -492,6 +534,7 @@ def create_app(
         error: str,
         values: dict[str, Any],
         status_code: int = 200,
+        confirm: dict[str, Any] | None = None,
     ) -> HTMLResponse:
         try:
             item, linked = reconciliation_service.get_mpps(sop_instance_uid)
@@ -506,6 +549,7 @@ def create_app(
             request,
             "reconcile.html",
             status_code=status_code,
+            confirm=confirm,
             error=error,
             values=values,
             item=item,
@@ -526,13 +570,29 @@ def create_app(
             department = values.get("department", "").strip()
             if department and department not in config.orders.departments:
                 raise ValidationError("依頼科を選び直してください")
-            result = reconciliation_service.reconcile(
-                ReconcileRequest(
-                    sop_instance_uid=sop_instance_uid,
-                    patient=patient,
-                    procedure_code=values.get("procedure", "").strip() or None,
-                    department=department or None,
+            reconcile_request = ReconcileRequest(
+                sop_instance_uid=sop_instance_uid,
+                patient=patient,
+                procedure_code=values.get("procedure", "").strip() or None,
+                department=department or None,
+            )
+            preview = reconciliation_service.preview(reconcile_request)
+            known = reconciliation_service.known_patients(patient.patient_id)
+            if values.get("patient") == "manual":
+                _refuse_another_patient(patient, known)
+            key = values.get("confirmed_key", "")
+            if not key or key != preview.key:
+                # 確認の窓（照合の内容と送る HL7）を出す。窓の「照合・送信する」で鍵を付けて送り直す。
+                # 鍵が違えば、確かめた後に内容が変わったので、窓を出し直す
+                return _render_reconcile(
+                    request,
+                    sop_instance_uid,
+                    error="確かめた後に内容が変わりました。もう一度確かめてください" if key else "",
+                    values=values,
+                    confirm=_reconcile_confirm(preview, patient, known, config),
                 )
+            result = reconciliation_service.reconcile(
+                replace(reconcile_request, confirmed_key=key)
             )
         except MppsNotFoundError as exc:
             raise HTTPException(HTTP_NOT_FOUND, "MPPS not found") from exc
@@ -691,6 +751,83 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
         first = exc.errors()[0]
         location = ".".join(str(part) for part in first["loc"])
         raise ValidationError(f"患者の値を受け付けられません: {location}: {first['msg']}") from exc
+
+
+def _status_confirm(reconciled: bool, config: AppConfig) -> dict[str, Any]:
+    """状態の確認の窓に出す、送る HL7（照合で作った予約の取消・中止だけ）と送り先."""
+    hl7 = config.hl7
+    sends = {
+        status.value: (message_type, DELIVERY_PURPOSES[kind])
+        for status, (kind, message_type) in STATUS_MESSAGES.items()
+    }
+    return {
+        "sends": sends if reconciled else {},
+        "destination": f"{hl7.receiving_application}（{hl7.host}:{hl7.port}）",
+    }
+
+
+def _person(patient: Any) -> str:  # noqa: ANN401 - Patient と照合前の患者（TemporaryPatient）
+    """確認の窓と誤りの文で患者を見分ける名前（漢字 → 英字 → かなの順で、値のある表記）."""
+    name = patient.name
+    return (name.ideographic or name.alphabetic or name.phonetic).replace("^", " ")
+
+
+def _ymd(value: str) -> str:
+    return f"{value[:4]}-{value[4:6]}-{value[6:]}" if len(value) == 8 else value  # noqa: PLR2004
+
+
+def _refuse_another_patient(patient: Patient, known: list[Patient]) -> None:
+    """手で入れた患者ID が既にある患者のもので、氏名・生年月日・性別が合わなければ断る."""
+    other = ReconciliationService.another_patient(patient, known)
+    if other is not None:
+        facts = " ".join(v for v in (_person(other), _ymd(other.birth_date), other.sex) if v)
+        raise ValidationError(
+            f"患者ID {patient.patient_id} は、既にある患者（{facts}）の患者ID です。"
+            "入力した氏名・生年月日・性別と合いません。名簿から選ぶか、患者ID を確かめてください"
+        )
+
+
+def _reconcile_confirm(
+    preview: ReconcilePreview, patient: Patient, known: list[Patient], config: AppConfig
+) -> dict[str, Any]:
+    """照合の確認の窓に出す内容：仮の患者と正式な患者を並べた表、送る HL7 と送り先."""
+    temporary = preview.unreconciled.patient
+    # 手で入れた患者ID が既にある患者のものなら、その患者も並べる（名簿から選んだ患者は同じ値）
+    existing = next((p for p in known if p != patient), None)
+    fields: list[tuple[str, Callable[[Any], str]]] = [
+        ("患者ID", lambda p: p.patient_id),
+        ("氏名（漢字）", lambda p: p.name.ideographic.replace("^", " ")),
+        ("氏名（かな）", lambda p: p.name.phonetic.replace("^", " ")),
+        ("氏名（英字）", lambda p: p.name.alphabetic.replace("^", " ")),
+        ("生年月日", lambda p: _ymd(p.birth_date)),
+        ("性別", lambda p: p.sex),
+    ]
+    rows = [
+        {
+            "label": label,
+            "before": pick(temporary),
+            "after": pick(patient),
+            "other": pick(existing) if existing else "",
+        }
+        for label, pick in fields
+    ]
+    hl7 = config.hl7
+    return {
+        "title": f"{_person(temporary)}（{temporary.patient_id}）を "
+        f"{_person(patient)}（{patient.patient_id}）に照合しますか？",
+        "rows": rows,
+        "existing": existing is not None,
+        "accession_number": preview.unreconciled.accession_number,
+        "messages": [
+            (message_type, DELIVERY_PURPOSES[kind])
+            for message_type, kind in zip(preview.message_types, preview.deliveries, strict=True)
+        ],
+        "merges": "a40" in preview.deliveries,
+        "destination": f"{hl7.receiving_application}（{hl7.host}:{hl7.port}）",
+        "procedure": preview.procedure,
+        "department": preview.department,
+        "key": preview.key,
+    }
 
 
 def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:
