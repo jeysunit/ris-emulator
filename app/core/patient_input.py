@@ -41,8 +41,9 @@ _ASCII_PRINTABLE_MIN = 0x20
 _ASCII_PRINTABLE_MAX = 0x7E
 _ALPHABETIC_COMPONENT = re.compile(r"[A-Za-z' -]*")
 _DATE = re.compile(r"[0-9]{8}")
-# 全角カタカナ（ァ〜ヺ）・中点・長音・繰り返し記号・空白。成分の区切り `^` は群の中で許す
-_KATAKANA = re.compile(r"[ァ-ヺ・-ヾ ]*")
+# 全角カタカナ（ァ〜ヺ）・中点・長音・繰り返し記号・空白（半角と全角 U+3000）。成分の区切り
+# `^` は群の中で許す
+_KATAKANA = re.compile(r"[ァ-ヺ・-ヾ 　]*")
 _HIRAGANA_TO_KATAKANA_OFFSET = 0x60
 _HIRAGANA_RANGES = ((0x3041, 0x3096), (0x309D, 0x309E))
 # 半角カナ。jis_kana の ISO 2022 IR 13 は表せるが、RIS は漢字の氏名に半角カナを入れない

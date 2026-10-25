@@ -198,7 +198,8 @@
       return !input.hasAttribute("data-charset-jis") || isIdeographic(value);
     }
     if (kind === "phonetic") {
-      return input.hasAttribute("data-test-mode") || isPhonetic(value);
+      // ひらがなは、フォーカスが外れるか送る時にカタカナへ直すので、入力の途中は誤りにしない
+      return input.hasAttribute("data-test-mode") || isPhonetic(toKatakana(value));
     }
     if (kind === "birth-date") {
       return !value || value <= today();
@@ -208,14 +209,17 @@
   // かな：ひらがなをカタカナに直し、直したことを欄の下に知らせる（試験の形では直さない）
   var HIRAGANA = /[ぁ-ゖゝゞ]/g;
   var HIRAGANA_TO_KATAKANA = 0x60;
+  function toKatakana(value) {
+    return value.replace(HIRAGANA, function (char) {
+      return String.fromCharCode(char.charCodeAt(0) + HIRAGANA_TO_KATAKANA);
+    });
+  }
   function convertPhonetic(input) {
     if (input.getAttribute("data-check") !== "phonetic" || input.hasAttribute("data-test-mode")) {
       return;
     }
     var note = document.getElementById("note-phonetic");
-    var converted = input.value.replace(HIRAGANA, function (char) {
-      return String.fromCharCode(char.charCodeAt(0) + HIRAGANA_TO_KATAKANA);
-    });
+    var converted = toKatakana(input.value);
     var changed = converted !== input.value;
     input.value = converted;
     if (note) {
@@ -229,6 +233,18 @@
       checkField(event.target);
     }
   });
+  // 欄にいるまま Enter で送ったとき（focusout が起きない）も、送る前に直して確かめ直す
+  document.addEventListener(
+    "submit",
+    function (event) {
+      var inputs = event.target.querySelectorAll ? event.target.querySelectorAll("input[data-check=phonetic]") : [];
+      for (var i = 0; i < inputs.length; i++) {
+        convertPhonetic(inputs[i]);
+        checkField(inputs[i]);
+      }
+    },
+    true
+  );
   function checkField(input) {
     var kind = input.getAttribute("data-check");
     var note = document.getElementById(input.getAttribute("aria-describedby"));

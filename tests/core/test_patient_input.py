@@ -91,6 +91,11 @@ def test_phonetic_group_test_mode_passes_anything_through() -> None:
     assert check_name_group("phonetic", "かな", "ｱ") == PHONETIC_MESSAGE
 
 
+def test_phonetic_group_accepts_both_widths_of_space() -> None:
+    """長音と空白は可。空白は半角も全角（U+3000）も受ける."""
+    assert check_phonetic_group("サトー　ジロウ サトウ") == ""
+
+
 def test_hiragana_becomes_katakana_and_other_characters_stay() -> None:
     assert to_katakana("さとう じろう") == "サトウ ジロウ"
     assert to_katakana("ゔゝゞ") == "ヴヽヾ"

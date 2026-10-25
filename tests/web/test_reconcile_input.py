@@ -155,6 +155,35 @@ def test_test_mode_passes_kana_values_through(config: AppConfig, store: OrderSto
         assert service.list_orders()[0].patient.name.phonetic == "ﾔﾏﾀﾞ^たろう"
 
 
+def test_test_mode_halfwidth_kana_with_jis_is_refused_by_the_encoding_check(
+    config: AppConfig, store: OrderStore
+) -> None:
+    """試験の形でも、予約の文字コードが jis なら半角カナのかなは、保存の前の符号化の確かめで断る.
+
+    かなの確かめは通る（試験の形）が、jis は半角カナを符号化できない。jis_kana なら通る。
+    """
+    sop_uid, _ = add_unscheduled_mpps(store)
+    mode = _with_orders(
+        config, patient_input_test_mode=True, default_character_set=CharacterSet.JIS
+    )
+    with _client(mode, store) as (client, service):
+        response = _reconcile(
+            client, f"/reconciliation/{sop_uid}", **_manual(phonetic_family="ﾔﾏﾀﾞ", procedure="")
+        )
+        assert response.status_code == 400
+        assert "で書けません" in html_lib.unescape(response.text)
+        assert service.count_orders() == 0
+    kana = _with_orders(
+        config, patient_input_test_mode=True, default_character_set=CharacterSet.JIS_KANA
+    )
+    with _client(kana, store) as (client, service):
+        response = _reconcile(
+            client, f"/reconciliation/{sop_uid}", **_manual(phonetic_family="ﾔﾏﾀﾞ", procedure="")
+        )
+        assert response.status_code == 303
+        assert service.count_orders() == 1
+
+
 def test_refusal_does_not_echo_the_value(config: AppConfig, store: OrderStore) -> None:
     sop_uid, _ = add_unscheduled_mpps(store)
     with _client(config, store) as (client, _):
@@ -272,8 +301,8 @@ def test_script_phonetic_range_matches_the_server(tmp_path: Path) -> None:
     result = subprocess.run(
         [node, "-e", program, str(chars_file)], capture_output=True, text=True, check=True
     )
-    # 画面は全角の空白（U+3000）も通す（サーバーは空白を ^ にしてから確かめる）
-    assert sorted(set(json.loads(result.stdout)) - {"　"}) == sorted(accepted)
+    assert "　" in accepted
+    assert sorted(set(json.loads(result.stdout))) == sorted(accepted)
 
 
 @pytest.mark.parametrize("character_set", [CharacterSet.JIS, CharacterSet.JIS_KANA])
@@ -295,3 +324,18 @@ def test_script_checks_on_input_and_blocks_submit_while_invalid() -> None:
     for marker in ("data-check", "data-message", "setCustomValidity", "aria-invalid", "patient-id",
                    "convertPhonetic", "data-test-mode", "data-charset-jis"):
         assert marker in script, marker
+
+
+def test_script_accepts_hiragana_while_typing_and_converts_before_submit() -> None:
+    """Enter で送ると focusout が起きないので、送る前に直す。入力の途中のひらがなは誤りにしない."""
+    node = _node()
+    source = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    ranges = re.search(r"var PHONETIC_RANGES = .*?\n  }\n", source, re.S)
+    kana = re.search(r"var HIRAGANA = .*?function toKatakana.*?\n  }\n", source, re.S)
+    assert ranges and kana
+    program = ranges.group(0) + kana.group(0)
+    program += "console.log(JSON.stringify([toKatakana('さとうジロー'), isPhonetic(toKatakana('さとう')), isPhonetic(toKatakana('ｻﾄｳ'))]));"
+    result = subprocess.run([node, "-e", program], capture_output=True, text=True, check=True)
+    assert json.loads(result.stdout) == ["サトウジロー", True, False]
+    # 送る前（submit）にも、ひらがなを直して確かめ直す（欄にいるまま Enter で送る場合）
+    assert re.search(r'addEventListener\(\s*"submit",.*?convertPhonetic\(inputs\[i\]\);\s*checkField', source, re.S)
