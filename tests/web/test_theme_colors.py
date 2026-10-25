@@ -94,3 +94,12 @@ def test_app_css_holds_no_tokens_and_reads_after_the_ui_kit() -> None:
     links = re.findall(r'<link rel="stylesheet" href="([^"]+)">', base)
     assert links == ["/static/ui-kit/tokens.css", "/static/ui-kit/components.css", "/static/app.css"]
     assert (STATIC / "ui-kit" / "VERSION").read_text(encoding="utf-8").strip() == "1.0.0"
+
+
+def test_link_hover_keeps_a_readable_color() -> None:
+    """リンクの hover は --color-link のまま（ui-kit の --color-primary-hover は暗い地で読めない）."""
+    themes = _themes()
+    assert _contrast(themes["dark"]["--color-primary-hover"], themes["dark"]["--color-background"]) < 4.5
+    for tokens in themes.values():
+        assert _contrast(tokens["--color-link"], tokens["--color-background"]) >= 4.5
+    assert "a:hover { color: var(--color-link);" in APP_CSS.read_text(encoding="utf-8")

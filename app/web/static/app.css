@@ -5,6 +5,8 @@
 .shell { min-height: 100vh; }
 .topbar { position: sticky; top: 0; z-index: 20; }
 .brand { text-decoration: none; }
+/* リンクの hover は文字の色を変えず下線を太くする（ui-kit の hover の色は暗い地で地との対比が 2:1 を割る） */
+a:hover { color: var(--color-link); text-decoration-thickness: 2px; }
 .version { font-size: 12px; color: var(--color-label); }
 
 /* 上の帯の MWL の札（塗りの札） */
