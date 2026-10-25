@@ -1,0 +1,23 @@
+{# 終わりの状態（完了・取消・中止）へ変える前の確認の窓（標準の dialog）。状態ごとに 1 つ置く。
+   「状態を変える」で終わりの状態を選ぶと、app.js がその状態の窓を開く。窓の実行のボタンだけが
+   confirmed=1 を付けて送る（付いていない変更は、サーバーが窓を出して止める） #}
+{% for s in selectable_statuses(order.status) if is_final(s) and s != order.status %}
+{% set label = status_labels[s] %}
+<dialog id="dlg-status-{{ s.value }}" class="dlg" aria-labelledby="dlg-status-{{ s.value }}-title"{% if confirm_status == s %} data-show-modal open{% endif %}>
+  <h2 id="dlg-status-{{ s.value }}-title" class="dlg-title">{{ order.accession_number }}（{{ order.patient.name.ideographic | pn or order.patient.name.alphabetic | pn }}・{{ order.procedure.name }}）を{{ label }}にしますか？</h2>
+  <p>{{ label }}にすると、ワークリストに出なくなります。状態は戻せません。</p>
+  {% if s.value in status_confirm.sends %}
+  {% set message_type, purpose = status_confirm.sends[s.value] %}
+  <p>{{ status_confirm.destination }}へ{{ purpose }}（<span class="mono">{{ message_type }}</span>）を送ります。前の HL7 が受理されていないときは送らず、送信待ちで残します。</p>
+  {% endif %}
+  <form method="post" action="/orders/{{ order.accession_number }}/status" id="dlg-status-{{ s.value }}-form"{% if status_hx %} hx-post="/orders/{{ order.accession_number }}/status" hx-swap="none"{% endif %}>
+    <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+    <input type="hidden" name="status" value="{{ s.value }}">
+    <input type="hidden" name="confirmed" value="1">
+  </form>
+  <div class="dlg-bar">
+    <form method="dialog"><button type="submit" class="btn" autofocus>キャンセル</button></form>
+    <button type="submit" form="dlg-status-{{ s.value }}-form" class="btn {{ 'btn-primary' if s.value == 'completed' else 'btn-danger' }}">{{ label }}にする</button>
+  </div>
+</dialog>
+{% endfor %}

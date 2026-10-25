@@ -141,4 +141,7 @@
 <pre class="dataset">{{ dataset }}</pre>
   </div>
 </section>
+{% if not is_final(order.status) %}
+{% include "_status_confirm.html" %}
+{% endif %}
 {% endblock %}

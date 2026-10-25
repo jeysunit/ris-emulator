@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -9,7 +11,12 @@ from datetime import datetime
 
 import pydantic
 
-from app.core.exceptions import AlreadyReconciledError, ReconciliationNotFoundError, ValidationError
+from app.core.exceptions import (
+    AlreadyReconciledError,
+    ConfigurationError,
+    ReconciliationNotFoundError,
+    ValidationError,
+)
 from app.core.hl7 import (
     Hl7Message,
     build_adt_a08,
@@ -24,6 +31,7 @@ from app.core.reconciliation import (
     STATUS_DELIVERIES,
     DeliveryKind,
     UnreconciledMpps,
+    looks_like_another_patient,
     plan_deliveries,
     read_unreconciled,
 )
@@ -43,6 +51,10 @@ PRIORITY_EMERGENCY = "STAT"
 DEFAULT_DEPARTMENT = "救急科"
 # 送信の権利（claim_delivery）の有効な時間は、送信の時間切れの 2 倍にこの秒数を足したもの
 CLAIM_MARGIN_SECONDS = 5.0
+# 予約の状態 → 照合で作った予約をその状態に変えたときに送る通の種類とメッセージ型（画面の確認の窓）
+STATUS_MESSAGES: dict[OrderStatus, tuple[DeliveryKind, str]] = {
+    status: (kind, MESSAGE_TYPES[kind]) for status, kind in STATUS_DELIVERIES.items()
+}
 
 Sender = Callable[[Hl7Message, str, int, float], DeliveryResult]
 
@@ -55,6 +67,24 @@ class ReconcileRequest:
     patient: Patient
     procedure_code: str | None = None
     department: str | None = None
+    # 確認の窓で見せた内容の鍵（ReconcilePreview.key）。与えると、確定のときに読み直した撮影で
+    # 作った鍵と違えば断る（確かめた後に仮の患者や送る通が変わっていたら、確かめ直させる）
+    confirmed_key: str | None = None
+
+
+@dataclass(frozen=True)
+class ReconcilePreview:
+    """照合を確定する前に見せる内容：仮の患者（撮影）、送る HL7 の種類、検査名、依頼科."""
+
+    unreconciled: UnreconciledMpps
+    deliveries: tuple[DeliveryKind, ...]
+    procedure: Procedure
+    department: str
+    key: str
+
+    @property
+    def message_types(self) -> list[str]:
+        return [MESSAGE_TYPES[kind] for kind in self.deliveries]
 
 
 class ReconciliationService:
@@ -77,18 +107,59 @@ class ReconciliationService:
         entry = self.config.orders.modalities.get(modality)
         return list(entry.procedures) if entry else []
 
+    def preview(self, request: ReconcileRequest) -> ReconcilePreview:
+        """照合を確定せずに、確認の窓に出す内容を返す。照合できなければ `reconcile` と同じ例外."""
+        unreconciled = self._unlinked(request.sop_instance_uid)
+        self._check(unreconciled, request.patient)
+        procedure = self._procedure(unreconciled.modality, request.procedure_code)
+        department = self._department(request.department)
+        kinds = tuple(_plan(unreconciled, request.patient))
+        return ReconcilePreview(
+            unreconciled=unreconciled,
+            deliveries=kinds,
+            procedure=procedure,
+            department=department,
+            key=_confirmation_key(unreconciled, request.patient, kinds, procedure, department),
+        )
+
+    def known_patients(self, patient_id: str) -> list[Patient]:
+        """同じ患者ID を持つ、名簿と予約の患者（同じ値の重なりを除く）.
+
+        名簿が読めなければ ConfigurationError（名簿にだけある患者を見落とさないよう、予約だけで
+        済ませない）。
+        """
+        try:
+            roster = self.orders.roster_patients()
+        except ConfigurationError as exc:
+            raise ConfigurationError(
+                "名簿を読めないので、患者ID が既にある患者のものかを確かめられません。"
+                "名簿を直してから照合してください",
+                exc.details,
+            ) from exc
+        found = [p for p in roster if p.patient_id == patient_id]
+        found += [
+            order.patient
+            for order in self.orders.list_orders(query=patient_id)
+            if order.patient.patient_id == patient_id
+        ]
+        unique: list[Patient] = []
+        for patient in found:
+            if patient not in unique:
+                unique.append(patient)
+        return unique
+
+    @staticmethod
+    def another_patient(patient: Patient, known: list[Patient]) -> Patient | None:
+        """`known`（同じ患者ID の既にある患者）のうち、`patient` と別人に見える最初の患者."""
+        return next((p for p in known if looks_like_another_patient(p, patient)), None)
+
     def reconcile(self, request: ReconcileRequest) -> Reconciliation:
         """正式な患者と新しい予約を結び、HL7 を送る.
 
         予約・結び付け・送る HL7 の組み立てを1つのトランザクションで行い（誤りがあれば何も
         残さない）、その後で HL7 を順に送る。送信が失敗・拒否でも照合は取り消さない。
         """
-        unreconciled, linked = self.get_mpps(request.sop_instance_uid)
-        if linked:
-            raise AlreadyReconciledError(
-                "この撮影はすでに予約に結び付いています",
-                {"sop_instance_uid": request.sop_instance_uid, "accession_number": linked[0]},
-            )
+        unreconciled = self._unlinked(request.sop_instance_uid)
         self._check(unreconciled, request.patient)
         procedure = self._procedure(unreconciled.modality, request.procedure_code)
         department = self._department(request.department)
@@ -109,13 +180,13 @@ class ReconciliationService:
                 "birth_date": current.patient.birth_date,
                 "sex": current.patient.sex,
             }
-            kinds = plan_deliveries(
-                current.patient,
-                request.patient.patient_id,
-                request.patient.name,
-                request.patient.birth_date,
-                request.patient.sex,
-            )
+            kinds = _plan(current, request.patient)
+            if request.confirmed_key is not None and request.confirmed_key != _confirmation_key(
+                current, request.patient, tuple(kinds), procedure, department
+            ):
+                raise ValidationError(
+                    "確かめた後に、撮影の値か送る HL7 が変わりました。内容を確かめ直してください"
+                )
             order = self._build_order(sequence, current, request.patient, procedure, department)
             deliveries = [self._build_delivery(kind, order, temporary) for kind in kinds]
             return order, deliveries, temporary
@@ -154,6 +225,16 @@ class ReconciliationService:
             # 前の通の送り直しは、再送信の操作に任せる（足した通は送信待ちで残す）
             return order, reconciliation
         return order, self.send_pending(accession_number)
+
+    def _unlinked(self, sop_instance_uid: str) -> UnreconciledMpps:
+        """予約に結び付いていない撮影。結び付いていれば AlreadyReconciledError."""
+        unreconciled, linked = self.get_mpps(sop_instance_uid)
+        if linked:
+            raise AlreadyReconciledError(
+                "この撮影はすでに予約に結び付いています",
+                {"sop_instance_uid": sop_instance_uid, "accession_number": linked[0]},
+            )
+        return unreconciled
 
     def _check(self, unreconciled: UnreconciledMpps, patient: Patient) -> None:
         """照合できる撮影と患者か。できなければ ValidationError."""
@@ -323,6 +404,31 @@ class ReconciliationService:
             control_id=message.control_id,
             text=message.text,
         )
+
+
+def _plan(unreconciled: UnreconciledMpps, patient: Patient) -> list[DeliveryKind]:
+    return plan_deliveries(
+        unreconciled.patient, patient.patient_id, patient.name, patient.birth_date, patient.sex
+    )
+
+
+def _confirmation_key(
+    unreconciled: UnreconciledMpps,
+    patient: Patient,
+    kinds: tuple[DeliveryKind, ...],
+    procedure: Procedure,
+    department: str,
+) -> str:
+    """確認の窓に出した内容（仮の患者・正式な患者・送る通・検査名・依頼科）の鍵."""
+    temporary = unreconciled.patient
+    shown = [
+        list(kinds),
+        [temporary.patient_id, temporary.name.to_dicom(), temporary.birth_date, temporary.sex],
+        [patient.patient_id, patient.name.to_dicom(), patient.birth_date, patient.sex],
+        [unreconciled.study_instance_uid, unreconciled.modality, procedure.code, department],
+    ]
+    text = json.dumps(shown, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(text.encode()).hexdigest()
 
 
 def _read(record: MppsRecord) -> UnreconciledMpps:
