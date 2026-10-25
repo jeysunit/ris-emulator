@@ -5,7 +5,7 @@
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
-<form method="post" action="/orders/batch" class="form form-wide">
+<form method="post" action="/orders/batch" class="w-form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   <fieldset class="sec">
     <legend>モダリティごとの件数（合わせて {{ max_orders }} 件まで）</legend>
@@ -13,11 +13,11 @@
       {% for modality, entry in catalog.items() %}
       <div class="count-cell">
         <label class="field"><span class="l">{{ modality }}</span>
-          <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric">
+          <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric" class="input">
         </label>
         {% if entry.stations | length > 1 %}
         <label class="field"><span class="l">装置</span>
-          <select name="station_{{ modality }}" aria-label="{{ modality }} の装置">
+          <select name="station_{{ modality }}" aria-label="{{ modality }} の装置" class="select">
             <option value="">全装置に振り分け</option>
             {% for station in entry.stations %}
             <option value="{{ station.name }}"{% if values.get('station_' ~ modality) == station.name %} selected{% endif %}>{{ station.name }}（{{ station.ae_title }}）</option>
@@ -33,11 +33,11 @@
     <legend>予定</legend>
     <div class="in grid3">
       <label class="field"><span class="l">予定日<span class="req">必須</span></span>
-        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required>
+        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required class="input">
       </label>
       <label class="field"><span class="l">開始時刻</span>
         <span class="time-select">
-          <select name="hour" aria-label="時">
+          <select name="hour" aria-label="時" class="select">
             {% for h in hours %}
             <option value="{{ h }}"{% if values.get('hour', '09') == h %} selected{% endif %}>{{ h }}</option>
             {% endfor %}
@@ -48,7 +48,7 @@
         </span>
       </label>
       <label class="field"><span class="l">間隔（分）</span>
-        <select name="interval" hx-get="/orders/batch/minutes" hx-target="#minute-select" hx-swap="outerHTML" hx-include="#minute-select">
+        <select name="interval" hx-get="/orders/batch/minutes" hx-target="#minute-select" hx-swap="outerHTML" hx-include="#minute-select" class="select">
           {% for i in intervals %}
           <option value="{{ i }}"{% if i == interval %} selected{% endif %}>{{ i }}</option>
           {% endfor %}
@@ -67,7 +67,7 @@
     <legend>依頼</legend>
     <div class="in grid2">
       <label class="field"><span class="l">依頼科</span>
-        <select name="department">
+        <select name="department" class="select">
           <option value="">ランダム</option>
           {% for d in departments %}
           <option value="{{ d }}"{% if values.get('department') == d %} selected{% endif %}>{{ d }}</option>
@@ -75,7 +75,7 @@
         </select>
       </label>
       <label class="field"><span class="l">文字コード</span>
-        <select name="charset">
+        <select name="charset" class="select">
           {% for c in character_sets %}
           <option value="{{ c.value }}"{% if values.get('charset', default_character_set.value) == c.value %} selected{% endif %}>{{ character_set_labels[c] }}</option>
           {% endfor %}

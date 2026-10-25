@@ -125,7 +125,7 @@ def test_roster_select_follows_the_patient_choice(config: AppConfig, service: Or
     with _client(config, service) as client:
         page = client.get("/orders/new").text
         script = client.get("/static/app.js").text
-    assert re.search(r'<select name="roster_patient_id" data-roster-select>', page)
+    assert re.search(r'<select name="roster_patient_id" data-roster-select class="select">', page)
     # 患者の選択が変わったとき、読み込んだとき、戻るボタンで戻ったときに、無効かどうかを合わせる
     assert "input[name=patient][value=new]" in script
     assert 'name === "patient"' in script and '"pageshow", syncRosterSelect' in script
@@ -276,7 +276,7 @@ def test_entry_station_default_is_first(config: AppConfig, store: OrderStore) ->
         page = client.get("/orders/new").text
     assert _options(page, "station") == ["CT1号機", "CT2号機"]
     # 選ばれた選択肢が無ければ、ブラウザは先頭（台帳の1台目）を選ぶ
-    assert "selected" not in re.search(r'<select name="station">(.*?)</select>', page, re.S).group(1)  # type: ignore[union-attr]
+    assert "selected" not in re.search(r'<select name="station" class="select">(.*?)</select>', page, re.S).group(1)  # type: ignore[union-attr]
 
 
 def test_submit_buttons_are_guarded(config: AppConfig, service: OrderService) -> None:

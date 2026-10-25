@@ -12,16 +12,16 @@
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
 {% set mark = mpps_marks.get(item.status, ('plan', item.status)) %}
-<div class="form-col">
+<div class="w-form">
 <section class="banner" aria-label="仮の患者">
-  <div class="banner-name">
-    <div class="banner-n">{{ item.patient.name.ideographic | pn or item.patient.name.alphabetic | pn }}</div>
-    <div class="banner-k">{{ item.patient.name.phonetic | pn }}</div>
+  <div class="nm">
+    <div class="n">{{ item.patient.name.ideographic | pn or item.patient.name.alphabetic | pn }}</div>
+    <div class="k">{{ item.patient.name.phonetic | pn }}</div>
   </div>
-  <div class="banner-f"><div class="l">患者ID</div><div class="v mono">{{ item.patient.patient_id }}</div></div>
-  <div class="banner-f"><div class="l">生年月日・性別</div><div class="v">{{ item.patient.birth_date | ymd }} {{ item.patient.sex }}</div></div>
-  <div class="banner-f"><div class="l">モダリティ</div><div class="v">{{ item.modality }}</div></div>
-  <div class="banner-end"><span class="tag">仮の患者</span><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span></div>
+  <div class="f"><div class="l">患者ID</div><div class="v mono">{{ item.patient.patient_id }}</div></div>
+  <div class="f"><div class="l">生年月日・性別</div><div class="v">{{ item.patient.birth_date | ymd }} {{ item.patient.sex }}</div></div>
+  <div class="f"><div class="l">モダリティ</div><div class="v">{{ item.modality }}</div></div>
+  <div class="end"><span class="tag">仮の患者</span><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span></div>
 </section>
 <section class="sec">
   <h2 class="sec-title">受けた撮影</h2>
@@ -41,7 +41,7 @@
 {% elif not procedures %}
 <p class="error" role="alert">モダリティ {{ item.modality or '（空）' }} が設定に無いので、照合できません。</p>
 {% else %}
-<form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="form">
+<form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="w-form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   {% set patient = values.get('patient', 'roster' if roster else 'manual') %}
   <fieldset class="sec">
@@ -55,20 +55,20 @@
         <label class="choice"><input type="radio" name="patient" value="manual" required{% if patient == 'manual' %} checked{% endif %}> 入力する</label>
       </div>
       <label class="field span"><span class="l">名簿の患者</span>
-        <select name="roster_patient_id"{% if not roster %} disabled{% endif %}>
+        <select name="roster_patient_id"{% if not roster %} disabled{% endif %} class="select">
           {% for p in roster %}
           <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
           {% endfor %}
         </select>
       </label>
-      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}"></label>
+      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}" class="input"></label>
       {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
-      <label class="field"><span class="l">氏名（{{ label }}）の姓</span><input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}"></label>
-      <label class="field"><span class="l">氏名（{{ label }}）の名</span><input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}"></label>
+      <label class="field"><span class="l">氏名（{{ label }}）の姓</span><input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}" class="input"></label>
+      <label class="field"><span class="l">氏名（{{ label }}）の名</span><input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}" class="input"></label>
       {% endfor %}
-      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}"></label>
+      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}" class="input"></label>
       <label class="field"><span class="l">性別</span>
-        <select name="sex">
+        <select name="sex" class="select">
           {% for value in ('', 'M', 'F', 'O') %}
           <option value="{{ value }}"{% if values.get('sex', '') == value %} selected{% endif %}>{{ value }}</option>
           {% endfor %}
@@ -80,14 +80,14 @@
     <legend>検査</legend>
     <div class="in grid2">
       <label class="field"><span class="l">検査名<span class="req">必須</span></span>
-        <select name="procedure">
+        <select name="procedure" class="select">
           {% for p in procedures %}
           <option value="{{ p.code }}"{% if values.get('procedure') == p.code %} selected{% endif %}>{{ p.name }}（{{ p.code }}）</option>
           {% endfor %}
         </select>
       </label>
       <label class="field"><span class="l">依頼科<span class="req">必須</span></span>
-        <select name="department">
+        <select name="department" class="select">
           {% for d in departments %}
           <option value="{{ d }}"{% if values.get('department', default_department) == d %} selected{% endif %}>{{ d }}</option>
           {% endfor %}

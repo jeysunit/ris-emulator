@@ -1,11 +1,13 @@
-"""画面の色の値（app/web/static/app.css の変数）：グレーは中立で、文字と地の対比は WCAG 2.2 の AA（4.5:1）以上."""
+"""画面の色の値（app/web/static/ui-kit/tokens.css の変数）：グレーは中立で、文字と地の対比は WCAG 2.2 の AA（4.5:1）以上."""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-CSS = Path(__file__).resolve().parents[2] / "app" / "web" / "static" / "app.css"
+STATIC = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
+CSS = STATIC / "ui-kit" / "tokens.css"
+APP_CSS = STATIC / "app.css"
 _DECLARATION = re.compile(r"(--[a-z-]+):\s*(#[0-9a-fA-F]{6});")
 
 # 文字の色と、その文字が乗る地（変数の名前は 3 製品の画面の決まりのトークンと同じ）。状態のバッジ
@@ -32,10 +34,14 @@ _NEUTRAL = (
 
 
 def _themes() -> dict[str, dict[str, str]]:
+    # 暗い地は 2 か所（端末の設定に従うときと、html[data-theme=dark] で選んだとき）にあり、同じ値
     css = CSS.read_text(encoding="utf-8")
     dark_start = css.index("@media (prefers-color-scheme: dark)")
+    chosen_start = css.index(":root[data-theme=dark]")
     light = dict(_DECLARATION.findall(css[:dark_start]))
-    dark = {**light, **dict(_DECLARATION.findall(css[dark_start : css.index("* {", dark_start)]))}
+    dark = {**light, **dict(_DECLARATION.findall(css[dark_start:chosen_start]))}
+    chosen = {**light, **dict(_DECLARATION.findall(css[chosen_start:]))}
+    assert chosen == dark
     return {"light": light, "dark": dark}
 
 
@@ -78,3 +84,13 @@ def test_mr_mark_is_purple_and_there_is_no_dark_chrome_token() -> None:
     for tokens in themes.values():
         assert "--color-chrome" not in tokens
     assert "--color-chrome" not in CSS.read_text(encoding="utf-8")
+    assert "--color-chrome" not in APP_CSS.read_text(encoding="utf-8")
+
+
+def test_app_css_holds_no_tokens_and_reads_after_the_ui_kit() -> None:
+    """色の値は ui-kit の tokens.css だけが持つ。app.css は製品の差分だけで、ui-kit の後に読む."""
+    assert not _DECLARATION.findall(APP_CSS.read_text(encoding="utf-8"))
+    base = (STATIC.parent / "templates" / "base.html").read_text(encoding="utf-8")
+    links = re.findall(r'<link rel="stylesheet" href="([^"]+)">', base)
+    assert links == ["/static/ui-kit/tokens.css", "/static/ui-kit/components.css", "/static/app.css"]
+    assert (STATIC / "ui-kit" / "VERSION").read_text(encoding="utf-8").strip() == "1.0.0"

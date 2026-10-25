@@ -11,16 +11,17 @@
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
+<div class="w-detail">
 <section class="banner" aria-label="患者">
-  <div class="banner-name">
-    <div class="banner-n">{{ order.patient.name.ideographic | pn or order.patient.name.alphabetic | pn }}</div>
-    <div class="banner-k">{{ order.patient.name.phonetic | pn }}</div>
+  <div class="nm">
+    <div class="n">{{ order.patient.name.ideographic | pn or order.patient.name.alphabetic | pn }}</div>
+    <div class="k">{{ order.patient.name.phonetic | pn }}</div>
   </div>
-  <div class="banner-f"><div class="l">患者ID</div><div class="v mono">{{ order.patient.patient_id }}</div></div>
-  <div class="banner-f"><div class="l">生年月日・性別</div><div class="v">{{ order.patient.birth_date | ymd }} {{ order.patient.sex }}</div></div>
-  <div class="banner-f"><div class="l">予定日時</div><div class="v">{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</div></div>
-  <div class="banner-f"><div class="l">モダリティ・検査名</div><div class="v"><span class="mod" data-mod="{{ order.modality }}">{{ order.modality }}</span> {{ order.procedure.name }}</div></div>
-  <div class="banner-end">{% include "_status_badge.html" %}</div>
+  <div class="f"><div class="l">患者ID</div><div class="v mono">{{ order.patient.patient_id }}</div></div>
+  <div class="f"><div class="l">生年月日・性別</div><div class="v">{{ order.patient.birth_date | ymd }} {{ order.patient.sex }}</div></div>
+  <div class="f"><div class="l">予定日時</div><div class="v">{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</div></div>
+  <div class="f"><div class="l">モダリティ・検査名</div><div class="v"><span class="mod" data-mod="{{ order.modality }}">{{ order.modality }}</span> {{ order.procedure.name }}</div></div>
+  <div class="end">{% include "_status_badge.html" %}</div>
 </section>
 <section class="sec">
   <h2>予約の情報</h2>
@@ -62,7 +63,7 @@
 <form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   <label class="field"><span class="l">状態</span>
-    <select name="status">
+    <select name="status" class="select">
       {% for s in selectable_statuses(order.status) %}
       <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
       {% endfor %}
@@ -74,8 +75,8 @@
 {% if can_retake %}
 <form method="post" action="/orders/{{ order.accession_number }}/retake" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-  <label class="field"><span class="l">予定日</span><input type="date" name="date" value="{{ today.isoformat() }}"></label>
-  <label class="field"><span class="l">予定時刻</span><input type="time" name="start" placeholder="空なら今の時刻"></label>
+  <label class="field"><span class="l">予定日</span><input type="date" name="date" value="{{ today.isoformat() }}" class="input"></label>
+  <label class="field"><span class="l">予定時刻</span><input type="time" name="start" placeholder="空なら今の時刻" class="input"></label>
   <button type="submit" class="btn">撮り直しの予約を作る</button>
 </form>
 {% endif %}
@@ -86,8 +87,8 @@
   <h2>MPPS</h2>
   <div class="in">
 {% if mpps_records %}
-<div class="table-wrap">
-<table class="orders">
+<div class="tbl-wrap">
+<table class="orders tbl">
   <thead>
     <tr><th>SOP Instance UID</th><th>状態</th><th>受けた日時</th><th>更新日時</th></tr>
   </thead>
@@ -107,8 +108,8 @@
 <section class="sec">
   <h2>HL7 送信</h2>
   <div class="in">
-<div class="table-wrap">
-<table class="orders">
+<div class="tbl-wrap">
+<table class="orders tbl">
   <thead>
     <tr><th>メッセージ</th><th>状態</th><th>ACK</th><th>詳細</th><th>送信日時</th><th>回数</th></tr>
   </thead>
@@ -141,4 +142,5 @@
 <pre class="dataset">{{ dataset }}</pre>
   </div>
 </section>
+</div>
 {% endblock %}
