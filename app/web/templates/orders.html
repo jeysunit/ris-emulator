@@ -96,6 +96,7 @@
 </select></label>
 <button type="submit" class="btn">状態を変える</button>
 </form>
+{% include "_status_confirm.html" %}
 {% endif %}
 <a href="/orders/{{ order.accession_number }}" class="btn btn-primary">詳細を開く</a>
 {% if can_retake %}

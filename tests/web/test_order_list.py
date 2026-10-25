@@ -149,7 +149,8 @@ def test_status_badges_and_six_columns(config: AppConfig, service: OrderService)
         page = client.get("/orders").text
         row = client.post(
             f"/orders/{orders[1].accession_number}/status",
-            data={"status": "completed"},
+            # 完了（終わりの状態）へは、確認の窓の実行（confirmed=1）で変える
+            data={"status": "completed", "confirmed": "1"},
             headers={"Origin": ORIGIN, "X-CSRF-Token": client.app.state.csrf_token, "HX-Request": "true"},  # type: ignore[attr-defined]
         )
     assert row.status_code == 204 and row.headers["HX-Refresh"] == "true"
