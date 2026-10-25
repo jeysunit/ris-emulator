@@ -103,6 +103,7 @@ Scheduled Procedure Step ID・Study Instance UID など）は英語の属性名�
 | `orders.patient_id_prefix` | `RE` | 乱数で生成する患者ID の接頭辞（英数字 8 文字まで） |
 | `orders.issuer_namespace` | `RIS_EMU` | Issuer of Patient ID・Issuer of Accession Number Sequence（英数字と `_` で 16 文字まで。空なら返さない。ADR-0005） |
 | `orders.default_character_set` | `utf8` | 文字コードの既定値 |
+| `orders.patient_input_test_mode` | `false` | `true`：手で入れた患者の氏名（かな）を確かめず直さずそのまま出す（試験用。[01](01_orders.md) の 3.4） |
 | `orders.roster_path` | `data/patients_sample.yaml` | 名簿 |
 | `orders.departments` | 内科など | 依頼科 |
 | `orders.retake_mode` | `append` | 撮り直しの扱い：`append`（同じ予約の中で追加。RIS は何もしない）・`new_order`（撮り直しの予約を作る）。[01_orders.md](01_orders.md) の 7 章 |

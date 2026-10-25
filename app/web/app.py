@@ -42,9 +42,11 @@ from app.core.models import (
 from app.core.mwl_dataset import order_to_dataset
 from app.core.patient_input import (
     INPUT_MESSAGES,
+    PHONETIC_CONVERTED_NOTE,
     SCRIPT_LABELS,
     check_name_component,
     check_name_group,
+    to_katakana,
     validate_birth_date,
     validate_patient_id_input,
     validate_sex,
@@ -525,6 +527,9 @@ def create_app(
             departments=config.orders.departments,
             default_department=DEFAULT_DEPARTMENT,
             input_messages=INPUT_MESSAGES,
+            phonetic_converted_note=PHONETIC_CONVERTED_NOTE,
+            charset_is_jis=config.orders.default_character_set != CharacterSet.UTF8,
+            test_mode=config.orders.patient_input_test_mode,
         )
 
     @app.post("/reconciliation/{sop_instance_uid}")
@@ -692,8 +697,17 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
         groups[script] = f"{family}^{given}".rstrip("^") if family or given else ""
     if not any(groups.values()):
         raise ValidationError("氏名を入力してください")
+    orders = service.config.orders
+    if not orders.patient_input_test_mode:
+        groups["phonetic"] = to_katakana(groups["phonetic"])
     for script, label in SCRIPT_LABELS.items():
-        message = check_name_group(script, label, groups[script])
+        message = check_name_group(
+            script,
+            label,
+            groups[script],
+            orders.default_character_set,
+            test_mode=orders.patient_input_test_mode,
+        )
         if message:
             raise ValidationError(message)
     birth_date = values.get("birth_date", "").strip().replace("-", "")

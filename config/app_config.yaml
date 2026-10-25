@@ -18,6 +18,7 @@ orders:
   patient_id_prefix: "RE"         # 乱数の患者ID = 接頭辞 + 7 桁
   issuer_namespace: "RIS_EMU"     # Issuer of Patient ID・Issuer of Accession Number Sequence。空なら返さない
   default_character_set: "utf8"   # utf8, jis, jis_kana
+  patient_input_test_mode: false  # true：手で入れた患者の氏名（かな）を確かめず直さず出す（試験用）
   roster_path: "data/patients_sample.yaml"
   departments: ["内科", "外科", "整形外科", "脳神経外科", "呼吸器内科", "消化器内科", "救急科"]
   retake_mode: "append"           # 撮り直し：append（同じ予約の中で追加。IHE）、new_order（撮り直しの予約を作る）

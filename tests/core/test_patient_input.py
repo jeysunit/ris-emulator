@@ -7,16 +7,18 @@ from datetime import date
 import pytest
 
 from app.core.exceptions import ValidationError
-from app.core.models import Patient, PersonName
+from app.core.models import CharacterSet, Patient, PersonName
 from app.core.patient_input import (
     ALPHABETIC_MESSAGE,
     BIRTH_DATE_FUTURE_MESSAGE,
     IDEOGRAPHIC_MESSAGE,
     INPUT_MESSAGES,
     PATIENT_ID_MESSAGE,
+    PHONETIC_MESSAGE,
     check_name_component,
     check_name_group,
     check_phonetic_group,
+    to_katakana,
     validate_birth_date,
     validate_patient_id_input,
     validate_patient_input,
@@ -39,30 +41,67 @@ def test_alphabetic_group_refuses_other_characters(value: str) -> None:
     assert check_name_group("alphabetic", "英字", value) == ALPHABETIC_MESSAGE
 
 
-@pytest.mark.parametrize("value", ["佐藤^次郎", "高橋^あ", "ヤマダ", "佐藤　次郎", "佐藤^JIRO"])
-def test_ideographic_group_accepts_jis_x_0208(value: str) -> None:
+@pytest.mark.parametrize("value", ["佐藤^次郎", "高橋^あ", "ヤマダ", "佐藤　次郎", "佐藤^JIRO", "すゞき"])
+@pytest.mark.parametrize("character_set", list(CharacterSet))
+def test_ideographic_group_accepts_jis_x_0208_in_every_character_set(
+    value: str, character_set: CharacterSet
+) -> None:
+    assert check_name_group("ideographic", "漢字", value, character_set) == ""
+
+
+@pytest.mark.parametrize("value", ["髙橋^太郎", "山﨑^太郎", "𠮷田", "佐藤😀"])
+def test_ideographic_group_utf8_accepts_characters_outside_jis(value: str) -> None:
+    """予約の文字コードが UTF-8 なら、JIS X 0208 に無い字も受ける（既定）."""
     assert check_name_group("ideographic", "漢字", value) == ""
+    assert check_name_group("ideographic", "漢字", value, CharacterSet.UTF8) == ""
 
 
-@pytest.mark.parametrize("value", ["髙橋^太郎", "ﾔﾏﾀﾞ", "佐藤😀", "𠮷田"])
-def test_ideographic_group_refuses_unrepresentable_characters(value: str) -> None:
-    message = check_name_group("ideographic", "漢字", value)
+@pytest.mark.parametrize("value", ["髙橋^太郎", "山﨑^太郎", "ﾔﾏﾀﾞ", "佐藤😀", "𠮷田"])
+@pytest.mark.parametrize("character_set", [CharacterSet.JIS, CharacterSet.JIS_KANA])
+def test_ideographic_group_jis_refuses_unrepresentable_characters(
+    value: str, character_set: CharacterSet
+) -> None:
+    if value == "ﾔﾏﾀﾞ" and character_set is CharacterSet.JIS_KANA:
+        return  # jis_kana は半角カナを表せる
+    message = check_name_group("ideographic", "漢字", value, character_set)
     assert message == IDEOGRAPHIC_MESSAGE
-    assert not any(char in message for char in "髙橋太郎😀𠮷田")
+    assert "この文字コードでは表せない字" in message
+    assert not any(char in message for char in "髙橋太郎😀𠮷田山﨑")
 
 
-def test_phonetic_group_is_not_restricted_yet() -> None:
-    """ひらがな・カタカナ・半角カナのどれを許すかは未決。今は種類を見ない."""
-    for value in ("さとう^じろう", "サトウ^ジロウ", "ｻﾄｳ^ｼﾞﾛｳ", "Sato"):
-        assert check_phonetic_group(value) == ""
-        assert check_name_group("phonetic", "かな", value) == ""
+@pytest.mark.parametrize("value", ["サトウ^ジロウ", "サトウ", "ア ー", "ガッコウ・ヴ", "ヽヾ"])
+def test_phonetic_group_accepts_full_width_katakana(value: str) -> None:
+    assert check_phonetic_group(value) == ""
+    assert check_name_group("phonetic", "かな", value) == ""
+
+
+@pytest.mark.parametrize("value", ["ｻﾄｳ", "ｻﾄｳ^ｼﾞﾛｳ", "さとう", "サトウ佐", "Sato", "サトウ1", "ｱ"])
+def test_phonetic_group_refuses_everything_else(value: str) -> None:
+    assert check_phonetic_group(value) == PHONETIC_MESSAGE
+    assert PHONETIC_MESSAGE == "氏名（かな）は全角のカタカナで入力してください。"
+
+
+def test_phonetic_group_test_mode_passes_anything_through() -> None:
+    """試験の形：半角カナ・ひらがな・混ざった値をそのまま通す（長さと禁止の字は見る）."""
+    for value in ("ｻﾄｳ^ｼﾞﾛｳ", "さとう^じろう", "サトウ^じろう", "ｱあア", "Sato"):
+        assert check_phonetic_group(value, test_mode=True) == ""
+        assert check_name_group("phonetic", "かな", value, test_mode=True) == ""
+    assert check_name_group("phonetic", "かな", "あ" * 65, test_mode=True)
+    assert check_name_group("phonetic", "かな", "あ\\い", test_mode=True)
+    assert check_name_group("phonetic", "かな", "ｱ") == PHONETIC_MESSAGE
+
+
+def test_hiragana_becomes_katakana_and_other_characters_stay() -> None:
+    assert to_katakana("さとう じろう") == "サトウ ジロウ"
+    assert to_katakana("ゔゝゞ") == "ヴヽヾ"
+    assert to_katakana("ﾔﾏﾀﾞ山A") == "ﾔﾏﾀﾞ山A"
 
 
 def test_phonetic_group_still_gets_common_checks() -> None:
-    assert "64 字以内" in check_name_group("phonetic", "かな", "あ" * 65)
-    assert check_name_group("phonetic", "かな", "あ\\い")
-    assert check_name_group("phonetic", "かな", "あ\x1bい")
-    assert check_name_group("phonetic", "かな", "あ=い")
+    assert "64 字以内" in check_name_group("phonetic", "かな", "ア" * 65)
+    assert check_name_group("phonetic", "かな", "ア\\イ")
+    assert check_name_group("phonetic", "かな", "ア\x1bイ")
+    assert check_name_group("phonetic", "かな", "ア=イ")
 
 
 def test_group_limits() -> None:
@@ -83,8 +122,14 @@ def test_validate_person_name_names_the_failing_group() -> None:
     validate_person_name(PersonName(ideographic="佐藤^次郎"))
     with pytest.raises(ValidationError, match="氏名（英字）は半角"):
         validate_person_name(PersonName(alphabetic="佐藤"))
-    with pytest.raises(ValidationError, match="氏名（漢字）に使えない字"):
-        validate_person_name(PersonName(alphabetic="TAKAHASHI", ideographic="髙橋"))
+    with pytest.raises(ValidationError, match="氏名（漢字）に、この文字コードでは表せない字"):
+        validate_person_name(
+            PersonName(alphabetic="TAKAHASHI", ideographic="髙橋"), CharacterSet.JIS
+        )
+    validate_person_name(PersonName(alphabetic="TAKAHASHI", ideographic="髙橋"))
+    with pytest.raises(ValidationError, match="氏名（かな）は全角のカタカナ"):
+        validate_person_name(PersonName(alphabetic="SATO", phonetic="さとう"))
+    validate_person_name(PersonName(alphabetic="SATO", phonetic="ｻﾄｳ"), test_mode=True)
 
 
 @pytest.mark.parametrize("value", ["P000001", "ID-1.2_3/4", "A" * 64])
@@ -136,4 +181,6 @@ def test_validate_patient_input_checks_a_patient_made_directly() -> None:
 
 
 def test_screen_messages_cover_the_checked_kinds() -> None:
-    assert set(INPUT_MESSAGES) == {"patient-id", "alphabetic", "ideographic", "birth-date"}
+    assert set(INPUT_MESSAGES) == {
+        "patient-id", "alphabetic", "ideographic", "phonetic", "birth-date"
+    }

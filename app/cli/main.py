@@ -47,6 +47,7 @@ from app.core.mwl_dataset import order_to_dataset
 from app.core.patient_input import (
     SCRIPT_LABELS,
     check_name_group,
+    to_katakana,
     validate_birth_date,
     validate_patient_id_input,
     validate_sex,
@@ -54,7 +55,7 @@ from app.core.patient_input import (
 from app.core.reconciliation import DELIVERY_LABELS
 from app.hl7.mllp import send_message
 from app.mwl.server import MwlServer
-from app.services.config import AppConfig, load_config
+from app.services.config import AppConfig, OrdersConfig, load_config
 from app.services.order_service import (
     MAX_INTERVAL_MINUTES,
     OrderRequest,
@@ -376,7 +377,7 @@ def _build_pir_message(args: argparse.Namespace, config: AppConfig) -> Hl7Messag
         )
     if not args.patient_id or not args.name:
         raise ValidationError(f"{args.kind} には --patient-id と --name が要ります")
-    patient = _patient_from_args(args)
+    patient = _patient_from_args(args, config.orders)
     namespace = config.orders.issuer_namespace
     if args.kind == "a08":
         return build_adt_a08(
@@ -395,15 +396,17 @@ def _build_pir_message(args: argparse.Namespace, config: AppConfig) -> Hl7Messag
         patient,
         namespace=namespace,
         prior_patient_id=args.prior_patient_id,
-        prior_name=_parse_person_name(args.prior_name) if args.prior_name else None,
+        prior_name=(
+            _parse_person_name(args.prior_name, config.orders) if args.prior_name else None
+        ),
         now=now,
     )
 
 
-def _patient_from_args(args: argparse.Namespace) -> Patient:
+def _patient_from_args(args: argparse.Namespace, orders: OrdersConfig) -> Patient:
     # pydantic の英語の文より先に、日本語の文で断る（入力の確かめは app/core/patient_input.py）
     validate_patient_id_input(args.patient_id)
-    name = _parse_person_name(args.name)
+    name = _parse_person_name(args.name, orders)
     validate_birth_date(args.birth_date)
     validate_sex(args.sex)
     try:
@@ -417,13 +420,21 @@ def _patient_from_args(args: argparse.Namespace) -> Patient:
         raise ValidationError(_first_error(exc)) from exc
 
 
-def _parse_person_name(text: str) -> PersonName:
-    """`英字=漢字=かな` を PersonName にする（PS3.5 6.2.1 の PN の形）."""
+def _parse_person_name(text: str, orders: OrdersConfig) -> PersonName:
+    """`英字=漢字=かな` を PersonName にする（PS3.5 6.2.1 の PN の形）。かなのひらがなはカタカナに直す."""
     groups = text.split("=")
     if len(groups) > 3:
         raise ValidationError("氏名は 英字=漢字=かな の 3 グループまでです", {"value": text})
+    if len(groups) == 3 and not orders.patient_input_test_mode:
+        groups[2] = to_katakana(groups[2])
     for (script, label), group in zip(SCRIPT_LABELS.items(), groups):
-        message = check_name_group(script, label, group)
+        message = check_name_group(
+            script,
+            label,
+            group,
+            orders.default_character_set,
+            test_mode=orders.patient_input_test_mode,
+        )
         if message:
             raise ValidationError(message)
     try:
@@ -493,7 +504,7 @@ def reconcile_run_command(args: argparse.Namespace) -> int:
         if patient is None:
             raise ValidationError(f"名簿に無い患者ID です: {args.roster_patient_id}")
     elif args.patient_id and args.name:
-        patient = _patient_from_args(args)
+        patient = _patient_from_args(args, service.config.orders)
     else:
         raise ValidationError("--roster-patient-id か、--patient-id と --name のどちらかが要ります")
     result = ReconciliationService(service).reconcile(

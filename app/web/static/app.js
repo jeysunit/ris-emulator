@@ -68,8 +68,8 @@
 
   // 患者の入力欄：入力のたびに確かめ、誤りの文を欄の下に出す（読み上げない。画面の上の知らせ
   // だけが読み上げる）。文は data-message（サーバーと同じ文。app/core/patient_input.py）。
-  // 漢字の氏名は JIS X 0208 の字かどうかの近似（半角カナ・拡張の字を断る）で、最後の判定は
-  // サーバーが行う。誤りがあるうちは setCustomValidity で送信を止める
+  // 漢字の氏名は、文字コードが JIS のときだけ JIS X 0208 の字かどうかを近似で確かめる（半角カナ・
+  // 拡張の字を断る）。最後の判定はサーバーが行う。誤りがあるうちは setCustomValidity で送信を止める
   var PATIENT_ID_CHARS = /^[\x20-\x7E]*$/;
   var PATIENT_ID_DELIMITERS = /[\\^~&|]/;
   var ALPHABETIC_CHARS = /^[A-Za-z' -]*$/;
@@ -94,7 +94,17 @@
     var day = ("0" + now.getDate()).slice(-2);
     return now.getFullYear() + "-" + month + "-" + day;
   }
-  function isAcceptable(kind, value) {
+  // かな：全角カタカナ（ァ〜ヾ）と空白だけ。半角カナは断る
+  var PHONETIC_RANGES = [[0x20, 0x20], [0x3000, 0x3000], [0x30a1, 0x30fe]];
+  function isPhonetic(value) {
+    return Array.from(value).every(function (char) {
+      var code = char.codePointAt(0);
+      return PHONETIC_RANGES.some(function (range) {
+        return code >= range[0] && code <= range[1];
+      });
+    });
+  }
+  function isAcceptable(input, kind, value) {
     if (kind === "patient-id") {
       return PATIENT_ID_CHARS.test(value) && !PATIENT_ID_DELIMITERS.test(value);
     }
@@ -102,20 +112,48 @@
       return ALPHABETIC_CHARS.test(value);
     }
     if (kind === "ideographic") {
-      return isIdeographic(value);
+      // 文字コードが UTF-8 なら制限しない。JIS のときだけ JIS X 0208 の範囲で確かめる
+      return !input.hasAttribute("data-charset-jis") || isIdeographic(value);
+    }
+    if (kind === "phonetic") {
+      return input.hasAttribute("data-test-mode") || isPhonetic(value);
     }
     if (kind === "birth-date") {
       return !value || value <= today();
     }
     return true;
   }
+  // かな：ひらがなをカタカナに直し、直したことを欄の下に知らせる（試験の形では直さない）
+  var HIRAGANA = /[ぁ-ゖゝゞ]/g;
+  var HIRAGANA_TO_KATAKANA = 0x60;
+  function convertPhonetic(input) {
+    if (input.getAttribute("data-check") !== "phonetic" || input.hasAttribute("data-test-mode")) {
+      return;
+    }
+    var note = document.getElementById("note-phonetic");
+    var converted = input.value.replace(HIRAGANA, function (char) {
+      return String.fromCharCode(char.charCodeAt(0) + HIRAGANA_TO_KATAKANA);
+    });
+    var changed = converted !== input.value;
+    input.value = converted;
+    if (note) {
+      note.textContent = changed ? input.getAttribute("data-note") || "" : "";
+      note.hidden = !changed;
+    }
+  }
+  document.addEventListener("focusout", function (event) {
+    if (event.target instanceof HTMLInputElement) {
+      convertPhonetic(event.target);
+      checkField(event.target);
+    }
+  });
   function checkField(input) {
     var kind = input.getAttribute("data-check");
     var note = document.getElementById(input.getAttribute("aria-describedby"));
     if (!kind || !note) {
       return;
     }
-    var ok = isAcceptable(kind, input.value);
+    var ok = isAcceptable(input, kind, input.value);
     var message = ok ? "" : input.getAttribute("data-message");
     input.setCustomValidity(message);
     if (ok) {
