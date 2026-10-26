@@ -164,7 +164,7 @@ def test_reconcile_with_roster_patient_sends_and_shows_the_result(config: AppCon
     assert order.study_instance_uid == study_uid and order.patient.patient_id == ROSTER_ID
     assert (order.procedure.code, order.requesting_service) == ("CT0002", "外科")
     assert "<h2>HL7 送信</h2>" in detail
-    assert re.findall(r"<td>(送信完了|送信待ち|拒否|送信失敗)</td>", detail) == ["送信完了", "送信完了"]
+    assert re.findall(r'<td><span class="st" data-k="(?:ok|plan|ng)">(送信完了|送信待ち|拒否|送信失敗)</span></td>',detail) == ["送信完了", "送信完了"]
     assert "<dt>照合前の患者ID</dt><dd class=\"mono\">ER2026102400</dd>" in detail
     assert "UNKNOWN^MALE=不明^男性=フメイ^ダンセイ" in detail
     assert "再送信" not in detail
@@ -267,11 +267,11 @@ def test_rejected_message_is_shown_and_can_be_sent_again(config: AppConfig, stor
         before = client.get(location).text
         resend = _post(client, f"{location}/hl7/resend")
         after = client.get(location).text
-    assert re.findall(r"<td>(送信完了|送信待ち|拒否|送信失敗)</td>", before) == ["拒否", "送信待ち"]
+    assert re.findall(r'<td><span class="st" data-k="(?:ok|plan|ng)">(送信完了|送信待ち|拒否|送信失敗)</span></td>',before) == ["送信失敗", "送信待ち"]
     assert "unknown patient" in before and "<td class=\"mono\">AE</td>" in before
     assert 'action="' + location + '/hl7/resend"' in before and "再送信</button>" in before
     assert resend.status_code == 303 and resend.headers["location"] == location
-    assert re.findall(r"<td>(送信完了|送信待ち|拒否|送信失敗)</td>", after) == ["送信完了", "送信完了"]
+    assert re.findall(r'<td><span class="st" data-k="(?:ok|plan|ng)">(送信完了|送信待ち|拒否|送信失敗)</span></td>',after) == ["送信完了", "送信完了"]
     assert "再送信" not in after
     assert receiver.received[0] == receiver.received[1]
 
@@ -281,7 +281,7 @@ def test_unreachable_receiver_shows_failure(config: AppConfig, store: OrderStore
     with _client(config, store, port=1) as (client, _):
         location = _reconcile(client, f"/reconciliation/{sop_uid}", **_roster()).headers["location"]
         page = client.get(location).text
-    assert re.findall(r"<td>(送信完了|送信待ち|拒否|送信失敗)</td>", page) == ["送信失敗", "送信待ち"]
+    assert re.findall(r'<td><span class="st" data-k="(?:ok|plan|ng)">(送信完了|送信待ち|拒否|送信失敗)</span></td>',page) == ["送信失敗", "送信待ち"]
     assert "再送信</button>" in page
 
 
@@ -342,15 +342,19 @@ def test_reconcile_screen_follows_screen_type_c(config: AppConfig, store: OrderS
     order = [
         page.index('<ol class="crumbs">'),
         page.index('<div class="pagehead"><h1>照合</h1></div>'),
-        page.index('<section class="banner" aria-label="仮の患者">'),
+        page.index('<section class="fb r1" aria-label="仮の患者">'),
         page.index('<h2 class="sec-title">受けた撮影</h2>'),
         page.index("<legend>正式な患者</legend>"),
         page.index("<legend>検査</legend>"),
         page.index('<div class="formbar">'),
     ]
     assert order == sorted(order)
-    banner = page.split('<section class="banner"', 1)[1].split("</section>", 1)[0]
+    banner = page.split('<section class="fb r1"', 1)[1].split("</section>", 1)[0]
     assert '<span class="st" data-k="run">実施中</span>' in banner and "ER2026102400" in banner
+    assert '<span class="st" data-k="note">仮の患者</span>' in banner
+    # 生年月日の無い仮の患者も、項目の場所を残して「—」を出す。性別は DICOM の値を出さない
+    assert '<div class="l">生年月日・性別</div><div class="v">男</div>' in banner
+    assert '<div class="l">受付番号</div><div class="v none">—</div>' in banner
     assert "IN PROGRESS" not in page
     bar = page.split('<div class="formbar">')[1].split("</div>")[0]
     assert re.findall(r'<(?:a|button)[^>]*class="([^"]+)"[^>]*>([^<]+)<', bar) == [
@@ -387,8 +391,8 @@ def test_reconcile_shows_the_confirm_dialog_and_sends_nothing(config: AppConfig,
         ("氏名（漢字）", "不明 男性", "田中 博", "違う"),
         ("氏名（かな）", "フメイ ダンセイ", "タナカ ヒロシ", "違う"),
         ("氏名（英字）", "UNKNOWN MALE", "TANAKA HIROSHI", "違う"),
-        ("生年月日", "", "1998-03-12", "違う"),
-        ("性別", "M", "M", ""),
+        ("生年月日", "", "1998/03/12", "違う"),
+        ("性別", "男", "男", ""),
         ("受付番号", "なし", "照合で新しく付ける", ""),
     ]
     assert re.findall(r'<li><span class="mono">([^<]+)</span> ([^<]+)</li>', dialog) == [
@@ -458,7 +462,7 @@ def test_typed_patient_id_of_another_patient_is_refused(config: AppConfig, store
         assert service.count_orders() == 1
     assert roster.status_code == 400 and "<dialog" not in roster.text
     assert (
-        "患者ID P000001 は、既にある患者（田中 博 1998-03-12 M）の患者ID です。"
+        "患者ID P000001 は、既にある患者（田中 博 1998/03/12 男）の患者ID です。"
         "入力した氏名・生年月日・性別と合いません。名簿から選ぶか、患者ID を確かめてください"
     ) in roster.text
     assert order.status_code == 400 and f"患者ID {ordered.patient.patient_id} は、既にある患者" in order.text

@@ -13,21 +13,15 @@
 {% endif %}
 {% set mark = mpps_marks.get(item.status, ('plan', item.status)) %}
 <div class="w-form">
-<section class="banner" aria-label="仮の患者">
-  <div class="nm">
-    <div class="n">{{ item.patient.name.ideographic | pn or item.patient.name.alphabetic | pn }}</div>
-    <div class="k">{{ item.patient.name.phonetic | pn }}</div>
-  </div>
-  <div class="f"><div class="l">患者ID</div><div class="v mono">{{ item.patient.patient_id }}</div></div>
-  <div class="f"><div class="l">生年月日・性別</div><div class="v">{{ item.patient.birth_date | ymd }} {{ item.patient.sex }}</div></div>
-  <div class="f"><div class="l">モダリティ</div><div class="v">{{ item.modality }}</div></div>
-  <div class="end"><span class="tag">仮の患者</span><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span></div>
-</section>
+{% set banner_patient, banner_kind, banner_label = item.patient, 'r1', '仮の患者' %}
+{% set banner_dt_label, banner_dt, banner_modality = '受けた日時', item.received_at | when, item.modality %}
+{% set banner_end %}<span class="st" data-k="note">仮の患者</span><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span>{% endset %}
+{% include "_patient_banner.html" %}
 <section class="sec">
   <h2 class="sec-title">受けた撮影</h2>
   <div class="in">
     <dl class="kv">
-      <dt>受けた日時</dt><dd>{{ item.received_at }}</dd>
+      <dt>受けた日時</dt><dd>{{ item.received_at | when }}</dd>
       <dt>氏名</dt><dd class="mono">{{ item.patient.name.to_dicom() }}</dd>
       <dt>予定の AEタイトル</dt><dd class="mono">{{ item.station_ae_title }}</dd>
       <dt>Study Instance UID</dt><dd class="mono">{{ item.study_instance_uid }}</dd>
@@ -62,7 +56,7 @@
           <option value="" selected>選択してください</option>
           {% endif %}
           {% for p in roster %}
-          <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex }}</option>
+          <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex | sex }}</option>
           {% endfor %}
         </select>
       </label>

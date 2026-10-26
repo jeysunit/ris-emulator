@@ -6,7 +6,7 @@ import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
@@ -99,6 +99,15 @@ MPPS_MARKS = {
     "IN PROGRESS": ("run", "実施中"),
     "COMPLETED": ("done", "完了"),
     "DISCONTINUED": ("stop", "中止"),
+}
+# 性別の DICOM・HL7 の値は画面に出さない（空と知らない値は空のまま）
+SEX_LABELS = {"M": "男", "F": "女", "O": "その他", "U": "不明"}
+# HL7 の送信の状態の札（ACK で断られたときも送信失敗。理由は詳細の列に出す）
+DELIVERY_MARKS = {
+    "pending": ("plan", "送信待ち"),
+    "accepted": ("ok", "送信完了"),
+    "rejected": ("ng", "送信失敗"),
+    "failed": ("ng", "送信失敗"),
 }
 # 確認の窓で、送る HL7 の種類に添える言葉（docs/spec/07_reconciliation.md 4 章）
 DELIVERY_PURPOSES = {
@@ -637,13 +646,39 @@ def create_app(
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
     templates.env.filters["date_param"] = date_param
     templates.env.filters["hhmm"] = lambda value: f"{value[:2]}:{value[2:4]}" if value else ""
-    templates.env.filters["ymd"] = (
-        lambda value: f"{value[:4]}-{value[4:6]}-{value[6:]}" if len(value) == 8 else value
-    )
+    templates.env.filters["ymd"] = ymd
     templates.env.filters["md"] = lambda value: f"{value[4:6]}/{value[6:]}" if len(value) == 8 else value
     templates.env.filters["pn"] = lambda value: value.replace("^", " ")
+    templates.env.filters["sex"] = lambda value: SEX_LABELS.get(value, "")
+    templates.env.filters["when"] = when
+    templates.env.filters["birth"] = lambda value: birth(value, order_service.today())
     templates.env.globals["mpps_marks"] = MPPS_MARKS
+    templates.env.globals["delivery_marks"] = DELIVERY_MARKS
     return app
+
+
+def ymd(value: str) -> str:
+    """画面の日付：DICOM の DA（YYYYMMDD）→ yyyy/MM/dd。形の合わない値はそのまま."""
+    return f"{value[:4]}/{value[4:6]}/{value[6:]}" if len(value) == 8 and value.isdigit() else value
+
+
+def when(value: str) -> str:
+    """画面の日時：記録の ISO 8601（秒・時差つき）→ yyyy/MM/dd HH:mm（その時差のまま）。読めない値はそのまま."""
+    try:
+        moment = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return value
+    return moment.strftime("%Y/%m/%d %H:%M")
+
+
+def birth(value: str, today: date) -> str:
+    """生年月日と年齢：19700401 → 1970/04/01（56 歳）。日付として読めなければ ymd と同じ."""
+    try:
+        born = datetime.strptime(value, "%Y%m%d").date()
+    except (TypeError, ValueError):
+        return ymd(value)
+    age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+    return f"{ymd(value)}（{age} 歳）" if age >= 0 else ymd(value)
 
 
 def date_param(value: str | date) -> str:
@@ -809,15 +844,11 @@ def _person(patient: Any) -> str:  # noqa: ANN401 - Patient と照合前の患�
     return (name.ideographic or name.alphabetic or name.phonetic).replace("^", " ")
 
 
-def _ymd(value: str) -> str:
-    return f"{value[:4]}-{value[4:6]}-{value[6:]}" if len(value) == 8 else value  # noqa: PLR2004
-
-
 def _refuse_another_patient(patient: Patient, known: list[Patient]) -> None:
     """手で入れた患者ID が既にある患者のもので、氏名・生年月日・性別が合わなければ断る."""
     other = ReconciliationService.another_patient(patient, known)
     if other is not None:
-        facts = " ".join(v for v in (_person(other), _ymd(other.birth_date), other.sex) if v)
+        facts = " ".join(v for v in (_person(other), ymd(other.birth_date), SEX_LABELS.get(other.sex, "")) if v)
         raise ValidationError(
             f"患者ID {patient.patient_id} は、既にある患者（{facts}）の患者ID です。"
             "入力した氏名・生年月日・性別と合いません。名簿から選ぶか、患者ID を確かめてください"
@@ -836,8 +867,8 @@ def _reconcile_confirm(
         ("氏名（漢字）", lambda p: p.name.ideographic.replace("^", " ")),
         ("氏名（かな）", lambda p: p.name.phonetic.replace("^", " ")),
         ("氏名（英字）", lambda p: p.name.alphabetic.replace("^", " ")),
-        ("生年月日", lambda p: _ymd(p.birth_date)),
-        ("性別", lambda p: p.sex),
+        ("生年月日", lambda p: ymd(p.birth_date)),
+        ("性別", lambda p: SEX_LABELS.get(p.sex, "")),
     ]
     rows = [
         {

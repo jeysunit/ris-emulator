@@ -88,7 +88,9 @@ def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) 
     listing = listing.split("</header>")[1]
     detail = detail.split("</header>")[1]
     panel_items = re.findall(r"<dt>([^<]+)</dt>", listing)
-    assert panel_items == ["氏名", "患者ID", "生年月日", "性別", "予定日時", "検査名", "装置", "依頼科"]
+    # 患者と予定日時は患者バナー（.fb.r2）に出し、項目名と値の表には残りを出す
+    assert panel_items == ["検査名", "装置", "依頼科"]
+    assert '<section class="fb r2" aria-label="患者">' in listing
     assert set(panel_items) <= SCREEN_TERMS | OTHER_HEADINGS
     items = re.findall(r"<dt>([^<]+)</dt>", detail)
     assert {"予定日時", "モダリティ", "予定の AEタイトル", "予定の装置名", "検査名", "依頼科",
@@ -388,7 +390,10 @@ def test_detail_shows_mpps(config: AppConfig, service: OrderService) -> None:
     service.store.update_mpps("1.2.392.1", "COMPLETED", {})
     with _client(config, service) as client:
         detail = client.get(f"/orders/{order.accession_number}").text
-    assert "1.2.392.1" in detail and "COMPLETED" in detail
+    # MPPS の状態は札で出し、英語の値を出さない
+    mpps = detail.split("<h2>MPPS</h2>")[1].split("</section>")[0]
+    assert "1.2.392.1" in mpps and '<span class="st" data-k="done">完了</span>' in mpps
+    assert "COMPLETED" not in mpps
     # MPPS で完了になったので、終わりの状態の表示になる
     assert "状態を変える" not in detail
 
@@ -447,16 +452,22 @@ def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: 
     positions = [
         page.index('<ol class="crumbs">'),
         page.index(f"<h1>予約 {order.accession_number}</h1>"),
-        page.index('<section class="banner" aria-label="患者">'),
+        page.index('<section class="fb r1" aria-label="患者">'),
         page.index("<h2>予約の情報</h2>"),
         page.index("<h2>操作</h2>"),
         page.index("<h2>MPPS</h2>"),
         page.index("<h2>MWL の属性</h2>"),
     ]
     assert positions == sorted(positions)
-    banner = page.split('<section class="banner"', 1)[1].split("</section>", 1)[0]
+    banner = page.split('<section class="fb r1"', 1)[1].split("</section>", 1)[0]
     assert '<span class="st" data-k="plan">予定</span>' in banner
-    assert order.patient.patient_id in banner
+    assert order.patient.patient_id in banner and order.accession_number in banner
+    # 患者バナーの升は決まった形（氏名・患者ID・生年月日と性別・受付番号・予定日時・モダリティと検査名・札）
+    cells = re.findall(r'<div class="(nm|f [a-z]+)">', banner)
+    assert cells == ["nm", "f pid", "f birth", "f acc", "f dt", "f md", "f end"]
+    born = order.patient.birth_date
+    assert f"{born[:4]}/{born[4:6]}/{born[6:]}（" in banner and " 歳）" in banner
+    assert re.search(r"歳） (男|女|その他|不明)</div>", banner)
     # 状態の変更は区画「操作」の中にあり、項目名を欄の上に小さく出す
     ops = page.split("<h2>操作</h2>")[1].split("</section>")[0]
     assert "状態を変える" in ops and '<span class="l">状態</span>' in ops

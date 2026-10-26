@@ -63,6 +63,10 @@ fieldset.sec { min-width: 0; margin: 0; padding: 0; }
 /* 押せない入力欄（照合の「名簿から選ぶ」「入力する」の、選んでいない側）は項目名も薄くする */
 .field:has(> :disabled) > .l { opacity: 0.55; }
 
+/* 右の区画（幅 360px）の患者バナー：項目名が升からはみ出さないように切る（値の全文は title） */
+.side .fb { overflow: hidden; }
+.side .fb .f .l { overflow: hidden; text-overflow: ellipsis; }
+
 /* 予約の詳細：項目名と値の表、MWL の属性 */
 .detail { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
 .detail dt { color: var(--color-label); }
