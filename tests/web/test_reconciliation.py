@@ -15,6 +15,7 @@ from app.services.store import OrderStore
 from app.web.app import create_app
 from tests.conftest import NOW, TODAY, add_unscheduled_mpps
 from tests.hl7.stub import ack, stub_receiver
+from tests.web.html_attrs import has_tag
 
 ORIGIN = "http://127.0.0.1:8081"
 ROSTER_ID = "P000001"
@@ -91,7 +92,7 @@ def test_list_shows_mpps_state_as_marks(config: AppConfig, store: OrderStore) ->
     add_unscheduled_mpps(store)
     add_unscheduled_mpps(store, patient_id="ER2026102401", status="COMPLETED")
     with _client(config, store) as (client, _):
-        page = client.get("/reconciliation").text
+        page = client.get("/reconciliation").text.split("</header>")[1]
     assert '<b class="count-n">2</b>' in page
     marks = re.findall(r'<span class="st" data-k="([a-z]+)">([^<]+)</span>', page)
     assert sorted(marks) == [("done", "完了"), ("run", "実施中")]
@@ -522,5 +523,7 @@ def test_patient_source_form_is_marked_for_the_script(config: AppConfig, store: 
     with _client(config, store) as (client, _):
         page = client.get(f"/reconciliation/{sop_uid}").text
         script = client.get("/static/app.js").text
-    assert f'action="/reconciliation/{sop_uid}" class="w-form" data-patient-source>' in page
+    assert has_tag(
+        page, "form", action=f"/reconciliation/{sop_uid}", **{"class": "w-form", "data-patient-source": None}
+    )
     assert "form[data-patient-source]" in script and "syncPatientSource" in script

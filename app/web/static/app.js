@@ -1,5 +1,46 @@
 // 画面の小さな動き。インラインのスクリプトは CSP で止めるので、ここに置く
 (function () {
+  var root = document.documentElement;
+  function remember(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      // 覚えられなくても、いまのページの表示は変わる
+    }
+  }
+
+  // ナビの開閉：theme.js が読んだ覚え（html の data-nav）を外枠に写す
+  var shell = document.querySelector(".shell");
+  var navButton = document.querySelector("[data-act=nav]");
+  function setNav(closed) {
+    if (!shell || !navButton) {
+      return;
+    }
+    shell.classList.toggle("collapsed", closed);
+    navButton.setAttribute("aria-expanded", closed ? "false" : "true");
+  }
+  setNav(root.getAttribute("data-nav") === "closed");
+
+  // 上の帯の押しボタン：表示（明るい地と暗い地）とナビの開閉。押すたびに替えて覚える
+  document.addEventListener("click", function (event) {
+    var theme = event.target.closest("[data-act=theme]");
+    if (theme) {
+      var dark = root.getAttribute("data-theme")
+        ? root.getAttribute("data-theme") === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var next = dark ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      remember("ris-theme", next);
+      return;
+    }
+    if (event.target.closest("[data-act=nav]")) {
+      var closed = !shell.classList.contains("collapsed");
+      setNav(closed);
+      root.setAttribute("data-nav", closed ? "closed" : "open");
+      remember("ris-nav", closed ? "closed" : "open");
+    }
+  });
+
   // htmx の要求が失敗したとき、画面の上にエラーを出す。選んだ予約の状態の変更なら、選択を保存済みの
   // 状態に戻す（失敗した応答は区画を置き換えない（base.html の responseHandling）ので、戻さないと
   // 未保存の値が残る）。エラーは画面を読み直すまで残す（別の予約の変更が成功しても消さない）

@@ -84,6 +84,9 @@ def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) 
     ]  # fmt: skip
     for header in headers:
         assert all(part in SCREEN_TERMS | OTHER_HEADINGS for part in header.split("・")), header
+    # 上の帯の接続の状態（popover）の項目は、別の試験で見る
+    listing = listing.split("</header>")[1]
+    detail = detail.split("</header>")[1]
     panel_items = re.findall(r"<dt>([^<]+)</dt>", listing)
     assert panel_items == ["氏名", "患者ID", "生年月日", "性別", "予定日時", "検査名", "装置", "依頼科"]
     assert set(panel_items) <= SCREEN_TERMS | OTHER_HEADINGS

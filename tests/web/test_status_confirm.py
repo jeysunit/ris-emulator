@@ -11,6 +11,7 @@ from app.services.config import AppConfig
 from app.services.order_service import OrderRequest, OrderService
 from app.web.app import create_app
 from tests.conftest import TODAY
+from tests.web.html_attrs import has_tag
 
 ORIGIN = "http://127.0.0.1:8081"
 
@@ -99,7 +100,7 @@ def test_list_panel_dialog_posts_with_htmx(config: AppConfig, service: OrderServ
     assert f'hx-post="/orders/{order.accession_number}/status" hx-swap="none"' in dialog
     assert "取消にする" in dialog
     # 検索の帯（GET）にも状態の選択がある。窓を開くのは POST の状態の変更のフォームだけ
-    assert '<form method="get" action="/orders" class="searchband">' in page
+    assert has_tag(page, "form", method="get", action="/orders", **{"class": "searchband"})
     with _client(config, service) as client:
         script = client.get("/static/app.js").text
     assert 'form.method.toLowerCase() !== "post"' in script

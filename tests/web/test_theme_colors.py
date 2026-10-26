@@ -10,9 +10,8 @@ CSS = STATIC / "ui-kit" / "tokens.css"
 APP_CSS = STATIC / "app.css"
 _DECLARATION = re.compile(r"(--[a-z-]+):\s*(#[0-9a-fA-F]{6});")
 
-# 文字の色と、その文字が乗る地（変数の名前は 3 製品の画面の決まりのトークンと同じ）。状態のバッジ
-# （白い字と --color-success・--color-label）は、状態の色を前の値のまま にする方針のため対象外
-# （暗い地の --color-success は白い字で AA に届かない）
+# 文字の色と、その文字が乗る地（変数の名前は 3 製品の画面の決まりのトークンと同じ）。状態の札
+# （.st）の字は --color-foreground（取消だけ --color-label）で、状態の色は枠と印だけに使う
 _TEXT_PAIRS = [
     ("--color-foreground", "--color-background"),
     ("--color-foreground", "--color-surface"),
@@ -63,6 +62,21 @@ def test_text_contrast_is_at_least_aa() -> None:
             assert ratio >= 4.5, (theme, foreground, background, round(ratio, 2))
 
 
+# 文字でない部品（状態の札の枠と印、入力欄の枠）の色と地。対比は WCAG 2.2 の 1.4.11 の 3:1 以上
+_NON_TEXT = (
+    "--color-border-input", "--color-success", "--color-warning", "--color-danger",
+)  # fmt: skip
+
+
+def test_non_text_contrast_is_at_least_3_to_1_on_both_themes() -> None:
+    """状態の札の枠・印と入力欄の枠は、明るい地でも暗い地でも、地（background・surface）に対し 3:1 以上."""
+    for theme, tokens in _themes().items():
+        for name in _NON_TEXT:
+            for ground in ("--color-background", "--color-surface"):
+                ratio = _contrast(tokens[name], tokens[ground])
+                assert ratio >= 3.0, (theme, name, ground, round(ratio, 2))
+
+
 def test_greys_are_neutral() -> None:
     for theme, tokens in _themes().items():
         for name in _NEUTRAL:
@@ -93,4 +107,4 @@ def test_app_css_holds_no_tokens_and_reads_after_the_ui_kit() -> None:
     base = (STATIC.parent / "templates" / "base.html").read_text(encoding="utf-8")
     links = re.findall(r'<link rel="stylesheet" href="([^"]+)">', base)
     assert links == ["/static/ui-kit/tokens.css", "/static/ui-kit/components.css", "/static/app.css"]
-    assert (STATIC / "ui-kit" / "VERSION").read_text(encoding="utf-8").strip() == "1.0.0"
+    assert (STATIC / "ui-kit" / "VERSION").read_text(encoding="utf-8").strip() == "1.0.1"

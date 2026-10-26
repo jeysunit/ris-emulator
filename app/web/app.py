@@ -185,6 +185,7 @@ def create_app(
             csrf_field=CSRF_FIELD,
             mwl=mwl,
             mwl_config=config.mwl,
+            hl7_config=config.hl7,
             status_labels=STATUS_LABELS,
             selectable_statuses=selectable_statuses,
             is_final=is_final,
