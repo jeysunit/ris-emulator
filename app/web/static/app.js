@@ -147,4 +147,129 @@
       buttons[i].disabled = false;
     }
   });
+
+  // 患者の入力欄：入力のたびに確かめ、誤りの文を欄の下に出す（読み上げない。画面の上の知らせ
+  // だけが読み上げる）。文は data-message（サーバーと同じ文。app/core/patient_input.py）。
+  // 漢字の氏名は、文字コードが JIS のときだけ JIS X 0208 の字かどうかを近似で確かめる（半角カナ・
+  // 拡張の字を断る）。最後の判定はサーバーが行う。誤りがあるうちは setCustomValidity で送信を止める
+  var PATIENT_ID_CHARS = /^[\x20-\x7E]*$/;
+  var PATIENT_ID_DELIMITERS = /[\\^~&|]/;
+  var ALPHABETIC_CHARS = /^[A-Za-z' -]*$/;
+  // JIS X 0208 の字を全部含む範囲（含みすぎてよい。サーバーが正確に判定する。正しい氏名を
+  // 画面で止めないため、範囲を狭めない）
+  var IDEOGRAPHIC_RANGES = [
+    [0x20, 0x7e], [0xa0, 0xf7], [0x391, 0x3c9], [0x401, 0x451], [0x2010, 0x23ff],
+    [0x2500, 0x266f], [0x3000, 0x303f], [0x3041, 0x3096], [0x309b, 0x309e],
+    [0x30a1, 0x30fe], [0x4e00, 0x9fff], [0xff01, 0xff5e], [0xffe0, 0xffe5],
+  ];
+  function isIdeographic(value) {
+    return Array.from(value).every(function (char) {
+      var code = char.codePointAt(0);
+      return IDEOGRAPHIC_RANGES.some(function (range) {
+        return code >= range[0] && code <= range[1];
+      });
+    });
+  }
+  function today() {
+    var now = new Date();
+    var month = ("0" + (now.getMonth() + 1)).slice(-2);
+    var day = ("0" + now.getDate()).slice(-2);
+    return now.getFullYear() + "-" + month + "-" + day;
+  }
+  // かな：全角カタカナ（ァ〜ヾ）と空白だけ。半角カナは断る
+  var PHONETIC_RANGES = [[0x20, 0x20], [0x3000, 0x3000], [0x30a1, 0x30fe]];
+  function isPhonetic(value) {
+    return Array.from(value).every(function (char) {
+      var code = char.codePointAt(0);
+      return PHONETIC_RANGES.some(function (range) {
+        return code >= range[0] && code <= range[1];
+      });
+    });
+  }
+  function isAcceptable(input, kind, value) {
+    if (kind === "patient-id") {
+      return PATIENT_ID_CHARS.test(value) && !PATIENT_ID_DELIMITERS.test(value);
+    }
+    if (kind === "alphabetic") {
+      return ALPHABETIC_CHARS.test(value);
+    }
+    if (kind === "ideographic") {
+      // 文字コードが UTF-8 なら制限しない。JIS のときだけ JIS X 0208 の範囲で確かめる
+      return !input.hasAttribute("data-charset-jis") || isIdeographic(value);
+    }
+    if (kind === "phonetic") {
+      // ひらがなは、フォーカスが外れるか送る時にカタカナへ直すので、入力の途中は誤りにしない
+      return input.hasAttribute("data-test-mode") || isPhonetic(toKatakana(value));
+    }
+    if (kind === "birth-date") {
+      return !value || value <= today();
+    }
+    return true;
+  }
+  // かな：ひらがなをカタカナに直し、直したことを欄の下に知らせる（試験の形では直さない）
+  var HIRAGANA = /[ぁ-ゖゝゞ]/g;
+  var HIRAGANA_TO_KATAKANA = 0x60;
+  function toKatakana(value) {
+    return value.replace(HIRAGANA, function (char) {
+      return String.fromCharCode(char.charCodeAt(0) + HIRAGANA_TO_KATAKANA);
+    });
+  }
+  function convertPhonetic(input) {
+    if (input.getAttribute("data-check") !== "phonetic" || input.hasAttribute("data-test-mode")) {
+      return;
+    }
+    var note = document.getElementById("note-phonetic");
+    var converted = toKatakana(input.value);
+    var changed = converted !== input.value;
+    input.value = converted;
+    if (note) {
+      note.textContent = changed ? input.getAttribute("data-note") || "" : "";
+      note.hidden = !changed;
+    }
+  }
+  document.addEventListener("focusout", function (event) {
+    if (event.target instanceof HTMLInputElement) {
+      convertPhonetic(event.target);
+      checkField(event.target);
+    }
+  });
+  // 欄にいるまま Enter で送ったとき（focusout が起きない）も、送る前に直して確かめ直す
+  document.addEventListener(
+    "submit",
+    function (event) {
+      var inputs = event.target.querySelectorAll ? event.target.querySelectorAll("input[data-check=phonetic]") : [];
+      for (var i = 0; i < inputs.length; i++) {
+        convertPhonetic(inputs[i]);
+        checkField(inputs[i]);
+      }
+    },
+    true
+  );
+  function checkField(input) {
+    var kind = input.getAttribute("data-check");
+    var note = document.getElementById(input.getAttribute("aria-describedby"));
+    if (!kind || !note) {
+      return;
+    }
+    var ok = isAcceptable(input, kind, input.value);
+    var message = ok ? "" : input.getAttribute("data-message");
+    input.setCustomValidity(message);
+    if (ok) {
+      input.removeAttribute("aria-invalid");
+    } else {
+      input.setAttribute("aria-invalid", "true");
+    }
+    note.textContent = message;
+    note.hidden = ok;
+  }
+  document.addEventListener("input", function (event) {
+    if (event.target instanceof HTMLInputElement) {
+      checkField(event.target);
+    }
+  });
+  document.addEventListener("change", function (event) {
+    if (event.target instanceof HTMLInputElement) {
+      checkField(event.target);
+    }
+  });
 })();

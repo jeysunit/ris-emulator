@@ -136,6 +136,9 @@ class OrdersConfig(BaseModel):
     # 空なら返さない（docs/spec/04_identifiers.md の 2 章、ADR-0005）
     issuer_namespace: str = "RIS_EMU"
     default_character_set: CharacterSet = CharacterSet.UTF8
+    # 試験の形：手で入れた患者の氏名（かな）を確かめず、直さず、そのまま DICOM と HL7 に出す
+    # （半角カナ・ひらがな・混ざった値の受け側の試験用。docs/spec/01_orders.md 3.4）。false が通常
+    patient_input_test_mode: bool = False
     roster_path: str = "data/patients_sample.yaml"
     departments: list[str] = Field(default_factory=lambda: ["内科"], min_length=1)
     modalities: dict[str, ModalityCatalog] = Field(..., min_length=1)

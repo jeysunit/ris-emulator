@@ -66,12 +66,18 @@
           {% endfor %}
         </select>
       </label>
-      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}" class="input"></label>
+      {# 欄の下の誤りは入力のたびにスクリプトが出す（読み上げない。画面の上の知らせだけが role="alert"） #}
+      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}" class="input" data-check="patient-id" data-message="{{ input_messages['patient-id'] }}" aria-describedby="error-patient-id"><span class="error" id="error-patient-id" hidden></span></label>
       {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
-      <label class="field"><span class="l">氏名（{{ label }}）の姓</span><input type="text" name="{{ script }}_family" maxlength="30" value="{{ values.get(script ~ '_family', '') }}" class="input"></label>
-      <label class="field"><span class="l">氏名（{{ label }}）の名</span><input type="text" name="{{ script }}_given" maxlength="30" value="{{ values.get(script ~ '_given', '') }}" class="input"></label>
+      {% for part, part_label in (('family', '姓'), ('given', '名')) %}
+      <label class="field"><span class="l">氏名（{{ label }}）の{{ part_label }}</span><input type="text" name="{{ script }}_{{ part }}" maxlength="30" value="{{ values.get(script ~ '_' ~ part, '') }}" class="input"{% if script in input_messages %} data-check="{{ script }}" data-message="{{ input_messages[script] }}" aria-describedby="error-{{ script }}-{{ part }}"{% endif %}{% if script == 'ideographic' and charset_is_jis %} data-charset-jis{% endif %}{% if script == 'phonetic' %} data-note="{{ phonetic_converted_note }}"{% if test_mode %} data-test-mode{% endif %}{% endif %}>{% if script in input_messages %}<span class="error" id="error-{{ script }}-{{ part }}" hidden></span>{% endif %}</label>
       {% endfor %}
-      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}" class="input"></label>
+      {% if script == 'phonetic' %}
+      <p class="fieldnote span" id="note-phonetic" aria-live="polite" hidden></p>
+      <p class="fieldnote span" id="mode-phonetic">{% if test_mode %}かなの確かめ：試験の形（半角カナ・ひらがなもそのまま送る）{% else %}かなの確かめ：全角カタカナ{% endif %}</p>
+      {% endif %}
+      {% endfor %}
+      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}" class="input" data-check="birth-date" data-message="{{ input_messages['birth-date'] }}" aria-describedby="error-birth-date"><span class="error" id="error-birth-date" hidden></span></label>
       <label class="field"><span class="l">性別</span>
         <select name="sex" class="select">
           {% for value in ('', 'M', 'F', 'O') %}

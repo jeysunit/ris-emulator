@@ -131,7 +131,15 @@ def test_input_values_with_control_characters_are_not_printed_raw(
         "pir", "send", "--kind", "a08", "--patient-id", "RE1", "--name", "YAMADA‮^TARO",
         "--visit-number", "V1", "--dry-run", "--config", str(config_file),
     )  # fmt: skip
-    assert code == 0 and "‮" not in out and "\\u202e" in out
+    # 氏名の書式文字は、入力の確かめで断る（誤りの文にも入れた字を出さない）
+    assert code == 2 and "‮" not in out and "‮" not in err
+
+    code, out, err = _run(
+        capsys,
+        "pir", "send", "--kind", "a08", "--patient-id", "RE1", "--name", NAME,
+        "--visit-number", "V1", "--dry-run", "--config", str(config_file),
+    )  # fmt: skip
+    assert code == 0
     assert len(out.splitlines()) == 4
 
     code, out, err = _run(
@@ -163,9 +171,9 @@ def test_exit_6_when_receiver_is_down(config_file: Path, capsys: pytest.CaptureF
         (["--kind", "a40", "--patient-id", "RE1", "--name", NAME], "--prior-patient-id"),
         (["--kind", "a40", "--patient-id", "RE1", "--name", NAME, "--prior-patient-id", "RE1"], "A08"),
         (["--kind", "a08", "--patient-id", "RE1", "--name", NAME], "PV1-19"),
-        (["--kind", "a08", "--patient-id", "RE|1", "--name", NAME, "--visit-number", "V1"], "patient_id"),
+        (["--kind", "a08", "--patient-id", "RE|1", "--name", NAME, "--visit-number", "V1"], "患者ID は半角の英数字"),
         (["--kind", "a08", "--patient-id", "RE1", "--name", "A=B=C=D", "--visit-number", "V1"], "3 グループ"),
-        (["--kind", "a08", "--patient-id", "RE1", "--name", "A\\B", "--visit-number", "V1"], "alphabetic"),
+        (["--kind", "a08", "--patient-id", "RE1", "--name", "A\\B", "--visit-number", "V1"], "氏名（英字）"),
         (["--kind", "orm"], "--accession"),
         (
             ["--kind", "a08", "--patient-id", "RE1", "--name", NAME, "--visit-number", "V1", "--order-control", "CA"],

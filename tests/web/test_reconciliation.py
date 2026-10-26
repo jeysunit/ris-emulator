@@ -211,7 +211,7 @@ def test_input_errors_are_shown_and_nothing_is_created(config: AppConfig, store:
         ),
         (
             {"patient": "manual", "patient_id": "X^1", "alphabetic_family": "A"},
-            "患者の値を受け付けられません",
+            "患者ID は半角の英数字",
         ),
         (_roster(procedure="CT9999"), "CT9999"),
     ]
