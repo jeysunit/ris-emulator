@@ -18,7 +18,7 @@
       <th>モダリティ</th>
       <th>予定の AEタイトル</th>
       <th>Study Instance UID</th>
-      <th><span class="sr">操作</span></th>
+      <th class="act"><span class="sr">操作</span></th>
     </tr>
   </thead>
   {% if items %}
@@ -34,7 +34,7 @@
       <td>{{ item.modality }}</td>
       <td class="mono">{{ item.station_ae_title }}</td>
       <td class="mono uid-c" title="{{ item.study_instance_uid }}">{{ item.study_instance_uid }}</td>
-      <td class="nowrap"><a href="/reconciliation/{{ item.sop_instance_uid }}" class="btn btn-row">照合</a></td>
+      <td class="nowrap act"><a href="/reconciliation/{{ item.sop_instance_uid }}" class="btn btn-row">照合</a></td>
     </tr>
     {% endfor %}
   </tbody>

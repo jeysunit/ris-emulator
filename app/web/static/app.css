@@ -33,6 +33,18 @@
 .mod[data-mod=MG] { --m: var(--color-mod-mg); }
 .mod[data-mod=SR] { --m: var(--color-mod-sr); }
 
+/* 一覧の表：頁と上の帯を横に動かさない。狭い画面（ui-kit は列を 1fr にするので、表の最小の幅で
+   格子が広がる）でも、列は minmax(0, 1fr) にして、表の包みの中だけを横に動かす */
+@media (max-width: 900px) { .split-h { grid-template-columns: minmax(0, 1fr); } }
+@container (max-width: 1000px) { .split-h { grid-template-columns: minmax(0, 1fr); } }
+/* 行の操作の列：表が包みより広くて横に動くときも、右端に固定して見えて押せるようにする。
+   地は行の地（通常・hover・選んだ行）にそろえる。見出しは上にも固定なので、角を前に出す */
+.tbl th.act, .tbl td.act { position: sticky; right: 0; }
+.tbl td.act { z-index: 1; background: var(--color-background); }
+.tbl th.act { z-index: 2; }
+.tbl tbody tr:hover td.act { background: var(--color-muted); }
+.tbl tbody tr[data-selected=true] td.act { background: var(--color-selected); }
+
 /* 検索の帯の日の送り（リンクの押しボタン）と、状態の要約（リンクで絞る） */
 .seg a { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; text-decoration: none; border-right: 1px solid var(--color-border); }
 .seg a:last-child { border-right: 0; }
