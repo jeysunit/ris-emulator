@@ -36,6 +36,7 @@
 /* 一覧の表：頁と上の帯を横に動かさない。狭い画面（ui-kit は列を 1fr にするので、表の最小の幅で
    格子が広がる）でも、列は minmax(0, 1fr) にして、表の包みの中だけを横に動かす */
 @media (max-width: 900px) { .split-h { grid-template-columns: minmax(0, 1fr); } }
+@container (max-width: 1000px) { .split-h { grid-template-columns: minmax(0, 1fr); } }
 /* 行の操作の列：表が包みより広くて横に動くときも、右端に固定して見えて押せるようにする。
    地は行の地（通常・hover・選んだ行）にそろえる。見出しは上にも固定なので、角を前に出す */
 .tbl th.act, .tbl td.act { position: sticky; right: 0; }

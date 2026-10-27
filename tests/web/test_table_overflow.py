@@ -40,6 +40,8 @@ def test_narrow_layout_keeps_the_column_shrinkable() -> None:
     # 狭い画面で右の区画が一覧の下へ回るとき、列を 1fr のままにすると表の幅で頁が広がる
     narrow = re.sub(r"\s+", "", APP_CSS.read_text(encoding="utf-8"))
     assert "@media(max-width:900px){.split-h{grid-template-columns:minmax(0,1fr);}}" in narrow
+    # ui-kit は本文の幅が 1000px 未満のとき（@container）にも 1fr にするので、こちらも覆う
+    assert "@container(max-width:1000px){.split-h{grid-template-columns:minmax(0,1fr);}}" in narrow
 
 
 def test_reconciliation_table_marks_its_action_column(config: AppConfig, store: OrderStore) -> None:
