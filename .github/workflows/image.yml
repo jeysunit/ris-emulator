@@ -45,6 +45,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # 版を git のタグから作るので、履歴とタグを全部取る
+          fetch-depth: 0
+      - id: version
+        name: 版を git から作る（タグの上は X.Y.Z、タグより後は X.Y.Z+N.gHASH）
+        run: echo "value=$(sh scripts/app-version.sh)" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - if: github.event_name == 'push'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -70,6 +75,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           # 「バージョン情報」の画面に出す（commit は公開の値）
           build-args: |
+            APP_VERSION=${{ steps.version.outputs.value }}
             BUILD_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

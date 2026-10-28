@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pydantic
 
-from app import __version__
 from app.core.exceptions import (
     ConfigurationError,
     MppsNotFoundError,
@@ -66,6 +65,7 @@ from app.services.order_service import (
 )
 from app.services.reconciliation import ReconcileRequest, ReconciliationService
 from app.services.store import Reconciliation
+from app.version import app_version
 
 DEFAULT_CONFIG = "config/app_config.yaml"
 EXIT_OK = 0
@@ -249,7 +249,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def version_command(args: argparse.Namespace) -> int:
-    print(f"ris-emulator {__version__}")
+    print(f"ris-emulator {app_version()}")
     return EXIT_OK
 
 

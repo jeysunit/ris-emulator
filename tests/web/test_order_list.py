@@ -8,12 +8,11 @@ from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
-from app import __version__
 from app.core.models import OrderStatus
 from app.services.config import AppConfig
 from app.services.order_service import OrderRequest, OrderService
 from app.web.app import create_app
-from tests.conftest import TODAY
+from tests.conftest import TEST_VERSION, TODAY
 
 ORIGIN = "http://127.0.0.1:8081"
 TOMORROW = TODAY + timedelta(days=1)
@@ -50,7 +49,7 @@ def test_titles_and_nav(config: AppConfig, service: OrderService) -> None:
         assert "予約の一覧" not in head and "予約を作る" not in head
         # 帯は無く、版は上の帯に出ない（左のナビの「バージョン情報」で見る）
         assert "<footer" not in page and "開発・試験用" not in page
-        assert __version__ not in page.split("</header>")[0]
+        assert TEST_VERSION not in page.split("</header>")[0]
     assert "<h1>予約 <small>2026/10/21</small></h1>" in pages["予約"]
     assert "<h1>予約作成</h1>" in pages["予約作成"]
     # 詳細からの戻り先は、パンくずの「予約」（予定日を保つ）

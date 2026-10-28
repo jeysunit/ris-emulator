@@ -17,6 +17,13 @@ from app.services.store import OrderStore
 ROOT = Path(__file__).resolve().parent.parent
 TODAY = date(2026, 10, 21)
 NOW = datetime(2026, 10, 21, 14, 37, 52)
+# 画面と CLI に出す版。git の状態に左右されないよう、試験では環境変数で固定する（app/version.py）
+TEST_VERSION = "0.2.0+37.g60970f9"
+
+
+@pytest.fixture(autouse=True)
+def fixed_app_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_VERSION", TEST_VERSION)
 
 
 @pytest.fixture
