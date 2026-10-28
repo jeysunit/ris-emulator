@@ -38,6 +38,10 @@ RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin ris \
   && mkdir -p state \
   && chown ris:ris state
 
+# 「バージョン情報」の画面に出すビルドの commit（イメージを作る側が渡す。渡さなければ画面は行ごと出さない）
+ARG BUILD_COMMIT=""
+ENV BUILD_COMMIT=${BUILD_COMMIT}
+
 USER 10001
 
 # 8081: Web 画面、11112: MWL（DICOM）

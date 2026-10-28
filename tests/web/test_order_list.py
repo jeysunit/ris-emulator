@@ -41,16 +41,16 @@ def test_titles_and_nav(config: AppConfig, service: OrderService) -> None:
         }
     for title, page in pages.items():
         nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
-        assert re.findall(r'<span class="t">([^<]+)</span></a>', nav) == ["予約", "予約作成", "一括作成", "未照合"]
+        assert re.findall(r'<span class="t">([^<]+)</span></a>', nav) == ["予約", "予約作成", "一括作成", "未照合", "バージョン情報"]
         assert f"<title>{title} - ris-emulator</title>" in page
         selected_nav = re.findall(r'<a href="([^"]+)" class="nav-i" aria-current="page"', nav)
         assert selected_nav == ["/orders/new" if title == "予約作成" else "/orders"]
         assert '<nav' not in page.split('</header>')[0]
         head = page.split("</h1>")[0]
         assert "予約の一覧" not in head and "予約を作る" not in head
-        # 帯は無く、版はヘッダーにだけ出る
+        # 帯は無く、版は上の帯に出ない（左のナビの「バージョン情報」で見る）
         assert "<footer" not in page and "開発・試験用" not in page
-        assert f'<span class="ver">{__version__}</span>' in page.split("</header>")[0]
+        assert __version__ not in page.split("</header>")[0]
     assert "<h1>予約 <small>2026/10/21</small></h1>" in pages["予約"]
     assert "<h1>予約作成</h1>" in pages["予約作成"]
     # 詳細からの戻り先は、パンくずの「予約」（予定日を保つ）
