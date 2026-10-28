@@ -19,7 +19,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import __version__
 from app.core.exceptions import (
     AlreadyReconciledError,
     ConfigurationError,
@@ -72,6 +71,7 @@ from app.services.reconciliation import (
     ReconcileRequest,
     ReconciliationService,
 )
+from app.version import app_version
 
 from .auth import (
     CSRF_FIELD,
@@ -200,7 +200,7 @@ def create_app(
             status_labels=STATUS_LABELS,
             selectable_statuses=selectable_statuses,
             is_final=is_final,
-            version=__version__,
+            version=app_version(),
         )
         return templates.TemplateResponse(request, name, context, status_code=status_code)
 

@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app import __version__
 from app.services.config import AppConfig
 from app.services.order_service import OrderService
 from app.web.app import create_app
+from tests.conftest import TEST_VERSION
 
 ORIGIN = "http://127.0.0.1:8081"
 STATIC = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
@@ -33,7 +33,7 @@ def test_topbar_order_and_connection_popover(config: AppConfig, service: OrderSe
         header.index('data-act="theme"'),
     ]
     assert order == sorted(order)
-    assert 'class="ver"' not in header and __version__ not in header
+    assert 'class="ver"' not in header and TEST_VERSION not in header
     assert 'aria-expanded="true" aria-controls="sidenav"' in header
     # 閉じているときは全体の状態の札 1 つ。中身は標準の popover で、MWL の待ち受けと HL7 の送信先
     button = header.split('popovertarget="conn-pop"')[1].split("</button>")[0]
@@ -88,7 +88,7 @@ def test_version_page_is_in_the_admin_group_and_shows_name_and_version(
     assert version.status_code == 200
     assert "<title>バージョン情報 - ris-emulator</title>" in version.text
     assert '<h1>バージョン情報</h1>' in version.text
-    assert f'<dd data-testid="app-version">{__version__}</dd>' in version.text
+    assert f'<dd data-testid="app-version">{TEST_VERSION}</dd>' in version.text
     # 項目名と値の一覧は、3 製品共通の部品（kv）で組む
     assert '<dl class="kv" data-testid="version-info">' in version.text
     # 今いる頁の印は、この頁の項目だけに付く。ビルドの commit は渡されていないので出さない
