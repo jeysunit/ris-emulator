@@ -89,6 +89,8 @@ def test_version_page_is_in_the_admin_group_and_shows_name_and_version(
     assert "<title>バージョン情報 - ris-emulator</title>" in version.text
     assert '<h1>バージョン情報</h1>' in version.text
     assert f'<dd data-testid="app-version">{__version__}</dd>' in version.text
+    # 項目名と値の一覧は、3 製品共通の部品（kv）で組む
+    assert '<dl class="kv" data-testid="version-info">' in version.text
     # 今いる頁の印は、この頁の項目だけに付く。ビルドの commit は渡されていないので出さない
     current = re.findall(r'<a href="([^"]+)" class="nav-i" aria-current="page"', version.text)
     assert current == ["/version"]
