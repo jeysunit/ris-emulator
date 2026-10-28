@@ -81,6 +81,7 @@ from .auth import (
     is_loopback,
     new_csrf_token,
 )
+from .build_info import build_commit
 
 BASE_DIR = Path(__file__).resolve().parent
 HTTP_BAD_REQUEST = 400
@@ -187,6 +188,7 @@ def create_app(
                 "batch_order.html": "batch",
                 "reconciliation_list.html": "reconciliation",
                 "reconcile.html": "reconciliation",
+                "version.html": "version",
             }.get(name, "orders"),
         )
         context.update(
@@ -537,6 +539,10 @@ def create_app(
         if request.headers.get("hx-request"):
             return Response(status_code=204, headers={"HX-Refresh": "true"})
         return RedirectResponse(f"/orders/{order.accession_number}", status_code=HTTP_SEE_OTHER)
+
+    @app.get("/version", response_class=HTMLResponse)
+    def version_page(request: Request) -> HTMLResponse:
+        return render(request, "version.html", build_commit=build_commit())
 
     @app.get("/reconciliation", response_class=HTMLResponse)
     def reconciliation_list(request: Request) -> HTMLResponse:

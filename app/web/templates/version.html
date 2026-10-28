@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}バージョン情報{% endblock %}
+{% block content %}
+<div class="pagehead"><h1>バージョン情報</h1></div>
+<div class="w-settings">
+<dl class="kv" data-testid="version-info">
+  <dt>アプリ</dt><dd>ris-emulator</dd>
+  <dt>バージョン</dt><dd data-testid="app-version">{{ version }}</dd>
+  {% if build_commit %}
+  <dt>ビルド</dt><dd class="mono" data-testid="build-commit">{{ build_commit }}</dd>
+  {% endif %}
+</dl>
+</div>
+{% endblock %}

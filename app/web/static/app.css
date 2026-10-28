@@ -79,10 +79,7 @@ fieldset.sec { min-width: 0; margin: 0; padding: 0; }
 .side .fb { overflow: hidden; }
 .side .fb .f .l { overflow: hidden; text-overflow: ellipsis; }
 
-/* 予約の詳細：項目名と値の表、MWL の属性 */
-.detail { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
-.detail dt { color: var(--color-label); }
-.detail dd { overflow-wrap: anywhere; }
+/* 予約の詳細：MWL の属性 */
 .dataset { margin: 0; padding: 12px; overflow-x: auto; font-size: 12px; background: var(--color-background); border: 1px solid var(--color-border); border-radius: 6px; }
 
 /* 患者バナーの札 */
@@ -121,5 +118,7 @@ dialog.dlg.dlg-wide { width: min(40rem, calc(100vw - 2rem)); }
   .nav-g { width: 100%; }
   .main { padding: 12px 16px 24px; }
   .side { position: static; }
-  .topbar .ver { display: none; }
 }
+
+/* バージョン情報：設定の幅（共通の決まり） */
+.w-settings { max-width: var(--w-settings); }
