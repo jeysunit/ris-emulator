@@ -75,6 +75,8 @@
   開く。窓には、受付番号・氏名・検査名、戻せないこと、照合で作った予約なら送る ORM^O01（CA・DC）と
   送り先を書く。サーバーは窓の実行が付ける `confirmed=1` が無い終わりの状態への変更を行わない
   （htmx は 400、画面の送信は窓を開いた詳細を出す。openspec の order-status）
+- 誤りの知らせは `.notice[data-k=err]`（印と文。画面の上の誤りだけ `role="alert"`、ほかは `role="status"`）、
+  空の状態は `.empty`（事実と次の手の 2 行）、状態の件数は `button.sum`（`aria-pressed`）で出す
 - 「詳細を開く」は詳細へ移る。撮り直しは詳細と同じ条件で、本日・空の時刻を送る
 - 実装：FastAPI・Jinja2・htmx（v2.0.9。リポジトリに同梱し、バージョンと sha256 を
   `scripts/fetch_web_assets.sh` に固定）。CSS はビルド工程なしで、3 製品で共通の ui-kit の写し

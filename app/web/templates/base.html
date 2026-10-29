@@ -43,7 +43,7 @@
     <a href="/version" class="nav-i"{% if nav_current == "version" %} aria-current="page"{% endif %} title="バージョン情報"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-info"/></svg><span class="t">バージョン情報</span></a>
   </nav>
   <main class="main">
-    <p id="request-error" class="error" role="alert" hidden></p>
+    <div id="request-error" class="notice" data-k="err" role="alert" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><div></div></div>
     {% block content %}{% endblock %}
   </main>
   </div>

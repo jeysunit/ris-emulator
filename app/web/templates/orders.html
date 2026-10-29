@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_notice.html" import err %}
 {% block title %}予約{% endblock %}
 {% block content %}
 <div class="pagehead"><h1>予約 <small>{{ period_label }}</small></h1><a href="/orders/new" class="btn btn-primary">予約作成</a></div>
@@ -35,13 +36,13 @@
   <button type="submit" class="btn btn-primary">検索</button>
   <a href="/orders" class="btn">条件をクリア</a>
 </form>
-<div class="sumrow" aria-label="状態の要約">
+<div class="sumrow" role="group" aria-label="状態の件数">
 {% for value, label, count, url in summary %}
-<a href="{{ url }}" class="sum"{% if value == status %} aria-current="true"{% endif %}>{{ label }} <span class="nbr">{{ count }}</span></a>
+<button type="button" class="sum" aria-pressed="{{ 'true' if value == status else 'false' }}" data-href="{{ url }}"><span>{{ label }}</span><span class="nbr">{{ count }}</span></button>
 {% endfor %}
 </div>
 {% if error %}
-<p class="error" role="alert">{{ error }}</p>
+{{ err(error, alert=true) }}
 {% elif orders %}
 <div class="split-h">
 <section>

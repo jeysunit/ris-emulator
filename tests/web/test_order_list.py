@@ -172,7 +172,7 @@ def test_status_select_guards_against_unsaved_values(config: AppConfig, service:
     assert select is not None
     assert 'hx-disabled-elt="find select, find button"' in page
     assert 'hx-swap="none"' in page and 'data-current="scheduled"' in select.group(0)
-    assert '<p id="request-error" class="error" role="alert" hidden></p>' in page
+    assert re.search(r'<div id="request-error" class="notice" data-k="err" role="alert" hidden>.*?<div></div></div>', page)
     assert '<script src="/static/app.js" defer></script>' in page
     assert script.status_code == 200
     assert "htmx:responseError" in script.text and "htmx:sendError" in script.text
@@ -189,7 +189,7 @@ def test_unreadable_date_message_uses_screen_format(config: AppConfig, service: 
 
 def _summary(page: str) -> dict[str, int]:
     return {label.strip(): int(count) for label, count in re.findall(
-        r'class="sum"[^>]*>([^<]+)<span class="nbr">(\d+)</span>', page
+        r'class="sum"[^>]*><span>([^<]+)</span><span class="nbr">(\d+)</span>', page
     )}
 
 
@@ -257,7 +257,8 @@ def test_query_and_status_survive_links(config: AppConfig, service: OrderService
     for label in ("前日", "翌日", "前のページ"):
         url = _links(last)[label]
         assert f"q={query}" in url and "status=scheduled" in url and "modality=CT" in url
-    summary_links = re.findall(r'<a href="([^"]+)" class="sum"', first)
+    summary_links = re.findall(r'<button type="button" class="sum" aria-pressed="[a-z]+" data-href="([^"]+)"', first)
     assert len(summary_links) == 6
     assert all(f"q={query}" in url and "modality=CT" in url for url in summary_links)
-    assert 'class="sum" aria-current="true">予定' in first
+    assert re.search(r'class="sum" aria-pressed="true" data-href="[^"]+"><span>予定</span>', first)
+    assert len(re.findall(r'class="sum" aria-pressed="true"', first)) == 1

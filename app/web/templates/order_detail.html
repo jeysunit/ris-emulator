@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_notice.html" import err %}
 {% block title %}{{ order.accession_number }}{% endblock %}
 {% block content %}
 <nav aria-label="いまの場所">
@@ -9,7 +10,7 @@
 </nav>
 <div class="pagehead"><h1>予約 {{ order.accession_number }}</h1></div>
 {% if error %}
-<p class="error" role="alert">{{ error }}</p>
+{{ err(error, alert=true) }}
 {% endif %}
 <div class="w-detail">
 {% set banner_patient, banner_kind, banner_acc = order.patient, 'r1', order.accession_number %}

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from "_notice.html" import err %}
 {% block title %}一括作成{% endblock %}
 {% block content %}
 <div class="pagehead"><h1>一括作成</h1></div>
 {% if error %}
-<p class="error" role="alert">{{ error }}</p>
+{{ err(error, alert=true) }}
 {% endif %}
 <form method="post" action="/orders/batch" class="w-form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">

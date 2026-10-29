@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_notice.html" import err %}
 {% block title %}照合{% endblock %}
 {% block content %}
 <nav aria-label="いまの場所">
@@ -9,7 +10,7 @@
 </nav>
 <div class="pagehead"><h1>照合</h1></div>
 {% if error %}
-<p class="error" role="alert">{{ error }}</p>
+{{ err(error, alert=true) }}
 {% endif %}
 {% set mark = mpps_marks.get(item.status, ('plan', item.status)) %}
 <div class="w-form">
@@ -31,9 +32,9 @@
 {% if linked %}
 <p class="notice">予約 <a href="/orders/{{ linked }}" class="mono">{{ linked }}</a> に結び付いています。</p>
 {% elif item.problem %}
-<p class="error" role="alert">{{ item.problem }}。</p>
+{{ err(item.problem ~ '。') }}
 {% elif not procedures %}
-<p class="error" role="alert">モダリティ {{ item.modality or '（空）' }} が設定に無いので、照合できません。</p>
+{{ err('モダリティ ' ~ (item.modality or '（空）') ~ ' が設定に無いので、照合できません。') }}
 {% else %}
 <form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="w-form" data-patient-source>
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
@@ -42,7 +43,7 @@
     <legend>正式な患者</legend>
     <div class="in grid2">
       {% if roster_error %}
-      <p class="error span" role="alert">{{ roster_error }}</p>
+      {{ err(roster_error, span=true) }}
       {% endif %}
       <div class="span choices">
         <label class="choice"><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
@@ -61,17 +62,17 @@
         </select>
       </label>
       {# 欄の下の誤りは入力のたびにスクリプトが出す（読み上げない。画面の上の知らせだけが role="alert"） #}
-      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}" class="input" data-check="patient-id" data-message="{{ input_messages['patient-id'] }}" aria-describedby="error-patient-id"><span class="error" id="error-patient-id" hidden></span></label>
+      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}" class="input" data-check="patient-id" data-message="{{ input_messages['patient-id'] }}" aria-describedby="error-patient-id"><span class="msg" id="error-patient-id" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span></span></span></label>
       {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
       {% for part, part_label in (('family', '姓'), ('given', '名')) %}
-      <label class="field"><span class="l">氏名（{{ label }}）の{{ part_label }}</span><input type="text" name="{{ script }}_{{ part }}" maxlength="30" value="{{ values.get(script ~ '_' ~ part, '') }}" class="input"{% if script in input_messages %} data-check="{{ script }}" data-message="{{ input_messages[script] }}" aria-describedby="error-{{ script }}-{{ part }}"{% endif %}{% if script == 'ideographic' and charset_is_jis %} data-charset-jis{% endif %}{% if script == 'phonetic' %} data-note="{{ phonetic_converted_note }}"{% if test_mode %} data-test-mode{% endif %}{% endif %}>{% if script in input_messages %}<span class="error" id="error-{{ script }}-{{ part }}" hidden></span>{% endif %}</label>
+      <label class="field"><span class="l">氏名（{{ label }}）の{{ part_label }}</span><input type="text" name="{{ script }}_{{ part }}" maxlength="30" value="{{ values.get(script ~ '_' ~ part, '') }}" class="input"{% if script in input_messages %} data-check="{{ script }}" data-message="{{ input_messages[script] }}" aria-describedby="error-{{ script }}-{{ part }}"{% endif %}{% if script == 'ideographic' and charset_is_jis %} data-charset-jis{% endif %}{% if script == 'phonetic' %} data-note="{{ phonetic_converted_note }}"{% if test_mode %} data-test-mode{% endif %}{% endif %}>{% if script in input_messages %}<span class="msg" id="error-{{ script }}-{{ part }}" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span></span></span>{% endif %}</label>
       {% endfor %}
       {% if script == 'phonetic' %}
       <p class="fieldnote span" id="note-phonetic" aria-live="polite" hidden></p>
       <p class="fieldnote span" id="mode-phonetic">{% if test_mode %}かなの確かめ：試験の形（半角カナ・ひらがなもそのまま送る）{% else %}かなの確かめ：全角カタカナ{% endif %}</p>
       {% endif %}
       {% endfor %}
-      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}" class="input" data-check="birth-date" data-message="{{ input_messages['birth-date'] }}" aria-describedby="error-birth-date"><span class="error" id="error-birth-date" hidden></span></label>
+      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}" class="input" data-check="birth-date" data-message="{{ input_messages['birth-date'] }}" aria-describedby="error-birth-date"><span class="msg" id="error-birth-date" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span></span></span></label>
       <label class="field"><span class="l">性別</span>
         <select name="sex" class="select">
           {% for value in ('', 'M', 'F', 'O') %}
