@@ -36,11 +36,14 @@
   <button type="submit" class="btn btn-primary">検索</button>
   <a href="/orders" class="btn">条件をクリア</a>
 </form>
-<div class="sumrow" role="group" aria-label="状態の件数">
-{% for value, label, count, url in summary %}
-<button type="button" class="sum" aria-pressed="{{ 'true' if value == status else 'false' }}" data-href="{{ url }}"><span>{{ label }}</span><span class="nbr">{{ count }}</span></button>
+<form class="sumrow" method="get" action="/orders" role="group" aria-label="状態の件数">
+{% for key, carried in summary_carry %}
+<input type="hidden" name="{{ key }}" value="{{ carried }}">
 {% endfor %}
-</div>
+{% for value, label, count in summary %}
+<button type="submit" class="sum" name="status" value="{{ value }}" aria-pressed="{{ 'true' if value == status else 'false' }}"><span>{{ label }}</span><span class="nbr">{{ count }}</span></button>
+{% endfor %}
+</form>
 {% if error %}
 {{ err(error, alert=true) }}
 {% elif orders %}

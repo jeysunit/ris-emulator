@@ -43,14 +43,6 @@
     }
   });
 
-  // 状態の件数のボタン：押した状態の絞り込みの画面へ移る（リンクの先は data-href に持つ）
-  document.addEventListener("click", function (event) {
-    var sum = event.target.closest("button.sum[data-href]");
-    if (sum) {
-      window.location.assign(sum.getAttribute("data-href"));
-    }
-  });
-
   // htmx の要求が失敗したとき、画面の上にエラーを出す。選んだ予約の状態の変更なら、選択を保存済みの
   // 状態に戻す（失敗した応答は区画を置き換えない（base.html の responseHandling）ので、戻さないと
   // 未保存の値が残る）。エラーは画面を読み直すまで残す（別の予約の変更が成功しても消さない）

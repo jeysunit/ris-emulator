@@ -316,10 +316,15 @@ def create_app(
                 o.accession_number: link(first, last, number, selection=o.accession_number)
                 for o in orders
             },
-            summary=[("", "すべて", sum(counts.values()), link(first, last, chosen_status=""))]
-            + [
-                (s.value, STATUS_LABELS[s], counts[s], link(first, last, chosen_status=s.value))
-                for s in OrderStatus
+            summary=[("", "すべて", sum(counts.values()))]
+            + [(s.value, STATUS_LABELS[s], counts[s]) for s in OrderStatus],
+            summary_carry=[
+                (key, value)
+                for key, value in (
+                    ("date_from", first.isoformat()), ("date_to", last.isoformat()),
+                    ("modality", modality), ("q", q),
+                )
+                if value
             ],
             period_label=first.strftime("%Y/%m/%d")
             + ("〜" + last.strftime("%Y/%m/%d") if first != last else ""),

@@ -30,7 +30,7 @@
   </div>
 </section>
 {% if linked %}
-<p class="notice">予約 <a href="/orders/{{ linked }}" class="mono">{{ linked }}</a> に結び付いています。</p>
+<div class="notice" data-k="info" role="status"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-info"/></svg><div>予約 <a href="/orders/{{ linked }}" class="mono">{{ linked }}</a> に結び付いています。</div></div>
 {% elif item.problem %}
 {{ err(item.problem ~ '。') }}
 {% elif not procedures %}

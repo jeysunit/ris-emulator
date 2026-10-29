@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import re
 from datetime import timedelta
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -257,8 +258,25 @@ def test_query_and_status_survive_links(config: AppConfig, service: OrderService
     for label in ("前日", "翌日", "前のページ"):
         url = _links(last)[label]
         assert f"q={query}" in url and "status=scheduled" in url and "modality=CT" in url
-    summary_links = re.findall(r'<button type="button" class="sum" aria-pressed="[a-z]+" data-href="([^"]+)"', first)
-    assert len(summary_links) == 6
-    assert all(f"q={query}" in url and "modality=CT" in url for url in summary_links)
-    assert re.search(r'class="sum" aria-pressed="true" data-href="[^"]+"><span>予定</span>', first)
-    assert len(re.findall(r'class="sum" aria-pressed="true"', first)) == 1
+    form = re.search(r'<form class="sumrow" method="get"[^>]*>(.*?)</form>', first, re.S)
+    assert form is not None
+    assert len(re.findall(r'<button type="submit" class="sum" name="status" value="[a-z_]*"', form.group(1))) == 6
+    assert "data-href" not in first
+    # 絞り込みの他の条件は、フォームの hidden で送信に引き継ぐ
+    carried = dict(re.findall(r'<input type="hidden" name="(\w+)" value="([^"]*)">', form.group(1)))
+    assert carried["q"] == query and carried["modality"] == "CT" and {"date_from", "date_to"} <= carried.keys()
+    assert re.search(r'class="sum" name="status" value="scheduled" aria-pressed="true"><span>予定</span>', first)
+    assert len(re.findall(r'class="sum" name="status" value="[a-z_]*" aria-pressed="true"', first)) == 1
+
+
+def test_summary_buttons_filter_without_javascript(config: AppConfig, service: OrderService) -> None:
+    """状態の件数は form＋button の送信で絞り込み、JavaScript で移動先を組み立てない（CodeQL の指摘）."""
+    static = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
+    script = (static / "app.js").read_text(encoding="utf-8")
+    assert "location.assign" not in script and "data-href" not in script
+    service.create_orders(OrderRequest(counts={"CT": 2}, scheduled_date=TODAY, seed=1))
+    with _client(config, service) as client:
+        everything = client.get("/orders", params={"status": ""}).text
+        filtered = client.get("/orders", params={"status": "scheduled"}).text
+    assert 'name="status" value="" aria-pressed="true"' in everything
+    assert 'name="status" value="scheduled" aria-pressed="true"' in filtered
