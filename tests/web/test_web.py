@@ -466,8 +466,12 @@ def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: 
     cells = re.findall(r'<div class="(nm|f [a-z]+)">', banner)
     assert cells == ["nm", "f pid", "f birth", "f acc", "f dt", "f md", "f end"]
     born = order.patient.birth_date
-    assert f"{born[:4]}/{born[4:6]}/{born[6:]}（" in banner and " 歳）" in banner
-    assert re.search(r"歳） (男|女|その他|不明)</div>", banner)
+    day = f"{born[:4]}/{born[4:6]}/{born[6:]}"
+    assert re.search(
+        rf'<div class="v" title="{day}（[明大昭平令]\d+・\d+歳）(男|女|その他|不明)">{day}'
+        r'<span class="unit">（[明大昭平令]\d+・\d+歳）(男|女|その他|不明)</span></div>',
+        banner,
+    )
     # 状態の変更は区画「操作」の中にあり、項目名を欄の上に小さく出す
     ops = page.split("<h2>操作</h2>")[1].split("</section>")[0]
     assert "状態を変える" in ops and '<span class="l">状態</span>' in ops

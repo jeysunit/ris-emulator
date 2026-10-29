@@ -16,6 +16,7 @@
 <div class="w-form">
 {% set banner_patient, banner_kind, banner_label = item.patient, 'r1', '仮の患者' %}
 {% set banner_dt_label, banner_dt, banner_modality = '受けた日時', item.received_at | when, item.modality %}
+{% set banner_on = item | study_day %}
 {% set banner_end %}<span class="st" data-k="note">仮の患者</span><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span>{% endset %}
 {% include "_patient_banner.html" %}
 <section class="sec">
