@@ -90,7 +90,7 @@ def test_headings_follow_screen_terms(config: AppConfig, service: OrderService) 
     panel_items = re.findall(r"<dt>([^<]+)</dt>", listing)
     # 患者と予定日時は患者バナー（.fb.r2）に出し、項目名と値の表には残りを出す
     assert panel_items == ["検査名", "装置", "依頼科"]
-    assert '<section class="fb r2" aria-label="患者">' in listing
+    assert '<section class="fb r2 narrow" aria-label="患者">' in listing
     assert set(panel_items) <= SCREEN_TERMS | OTHER_HEADINGS
     items = re.findall(r"<dt>([^<]+)</dt>", detail)
     assert {"予定日時", "モダリティ", "予定の AEタイトル", "予定の装置名", "検査名", "依頼科",

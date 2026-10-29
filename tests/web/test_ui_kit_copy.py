@@ -33,3 +33,9 @@ def test_product_css_and_templates_do_not_keep_the_old_parts() -> None:
     for template in (static.parent / "templates").glob("*.html"):
         text = template.read_text(encoding="utf-8")
         assert not re.search(r'class="[^"]*\b(error|empty-box)\b', text), template.name
+
+
+def test_product_css_does_not_restyle_the_patient_banner() -> None:
+    """患者バナーの幅・切り方は ui-kit の .fb が持つ。製品の app.css で上書きしない."""
+    css = (KIT.parent / "app.css").read_text(encoding="utf-8")
+    assert not re.search(r"\.fb\b", css)

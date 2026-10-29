@@ -216,7 +216,7 @@ def test_selection_summary_and_panel(config: AppConfig, service: OrderService) -
     assert "状態を変える" not in chosen
     assert f'href="/orders/{second.accession_number}" class="btn btn-primary">詳細を開く' in chosen
     assert re.findall(r'<dt>(.*?)</dt>', default.split("</header>")[1]) == ["検査名", "装置", "依頼科"]
-    panel_banner = default.split('<section class="fb r2" aria-label="患者">')[1].split("</section>")[0]
+    panel_banner = default.split('<section class="fb r2 narrow" aria-label="患者">')[1].split("</section>")[0]
     assert re.findall(r'<div class="l">([^<]+)</div>', panel_banner) == [
         "患者ID", "生年月日・性別", "受付番号", "予定日時", "モダリティ・検査名"
     ]
