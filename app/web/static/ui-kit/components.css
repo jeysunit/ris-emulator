@@ -1,4 +1,4 @@
-/* ui-kit 1.2.2（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
+/* ui-kit 1.2.3（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
 /* 部品の CSS。tokens.css の後に読む。クラスの名前と構造は system/parts.md */
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -304,7 +304,7 @@ dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
 /* 検査の詳細の見出し：決まった形の患者バナー（中身で大きさを変えない） */
 .fb{display:grid;align-items:start;gap:2px 16px;padding:6px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:6px}
 .fb.r2{grid-template-columns:110px minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr);grid-template-rows:minmax(40px,auto) minmax(40px,auto)}
-.fb.r1{grid-template-columns:minmax(120px,1fr) minmax(0,1fr) minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.5fr) max-content;grid-template-rows:minmax(40px,auto)}
+.fb.r1{grid-template-columns:minmax(120px,1fr) minmax(0,1fr) minmax(0,2.1fr) minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.1fr) max-content;grid-template-rows:minmax(40px,auto)}
 .fb .f .v.keep{overflow:visible;white-space:normal;overflow-wrap:anywhere}
 .fb .nm{grid-row:1/-1}
 .fb .nm .n{font-size:16px;line-height:24px;font-weight:700;color:var(--color-value);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -329,6 +329,7 @@ dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
 .fb.r2.narrow .f.pid,.fb.r2.narrow .f.birth,.fb.r2.narrow .f.acc,.fb.r2.narrow .f.dt,.fb.r2.narrow .f.md{grid-row:auto;grid-column:1/-1;display:grid;grid-template-columns:120px minmax(0,1fr);column-gap:8px;align-items:baseline;min-height:24px}
 .fb.r2.narrow .f .l,.fb.r2.narrow .f .v{line-height:24px}
 .fb.r2.narrow .f .v{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.fb .f.birth .unit{display:inline-block;max-width:100%}
 .finfo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:40px 40px;gap:2px 16px}
 .finfo .l{font-size:12px;line-height:18px;color:var(--color-label)}
 .finfo .v{font-weight:700;color:var(--color-value);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -358,7 +359,7 @@ dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
 /* 一覧＋右に区画：本文が 1000px に足りないときは右の区画を一覧の下へ */
 @container (max-width:1000px){.split-h{grid-template-columns:1fr}}
 /* 患者バナーの縮めた形（確かめの欄・確認の窓の中だけ） */
-.fb.r1.mini{grid-template-columns:minmax(120px,1fr) minmax(0,1fr) minmax(0,1.7fr)}
+.fb.r1.mini{grid-template-columns:minmax(120px,1fr) minmax(0,1fr) minmax(0,2.1fr)}
 /* 本文の幅の包みの中も、区画の間は 12px */
 .w-detail,.w-form,.w-settings{display:flex;flex-direction:column;gap:12px}
 /* 知らせ（良し悪しのない知らせ）・選択欄の誤り */

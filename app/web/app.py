@@ -54,6 +54,7 @@ from app.core.patient_input import (
     validate_sex,
 )
 from app.core.reconciliation import DELIVERY_LABELS
+from app.core.wareki import birth_cell, birth_text
 from app.mwl.server import MwlServer
 from app.services.config import MINUTE_STEPS, AppConfig
 from app.services.order_service import (
@@ -685,7 +686,8 @@ def create_app(
     templates.env.filters["pn"] = lambda value: value.replace("^", " ")
     templates.env.filters["sex"] = lambda value: SEX_LABELS.get(value, "")
     templates.env.filters["when"] = when
-    templates.env.filters["birth"] = lambda value: birth(value, order_service.today())
+    templates.env.filters["birth_parts"] = lambda patient: birth_parts(patient, order_service.today())
+    templates.env.filters["birth_cell"] = lambda value: birth_cell(value, order_service.today())
     templates.env.globals["mpps_marks"] = MPPS_MARKS
     templates.env.globals["delivery_marks"] = DELIVERY_MARKS
     return app
@@ -705,14 +707,15 @@ def when(value: str) -> str:
     return moment.strftime("%Y/%m/%d %H:%M")
 
 
-def birth(value: str, today: date) -> str:
-    """生年月日と年齢：19700401 → 1970/04/01（56 歳）。日付として読めなければ ymd と同じ."""
-    try:
-        born = datetime.strptime(value, "%Y%m%d").date()
-    except (TypeError, ValueError):
-        return ymd(value)
-    age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-    return f"{ymd(value)}（{age} 歳）" if age >= 0 else ymd(value)
+def birth_parts(patient: Any, today: date) -> tuple[str, str]:
+    """患者バナーの生年月日と性別：（1975/05/14, （昭50・51歳）男）。前は西暦、後ろは `.unit` で包む部分.
+
+    日付として読めなければ年齢と元号を付けない。生年月日が無いときは前が空で、性別だけを返す.
+    """
+    day, inside = birth_text(patient.birth_date, today)
+    sex = SEX_LABELS.get(patient.sex, "")
+    tail = inside + sex
+    return day, (f" {tail}" if tail and not inside and day else tail)
 
 
 def date_param(value: str | date) -> str:
