@@ -80,7 +80,7 @@
 <aside class="side" aria-label="選んだ予約">
 <h2>予約 {{ order.accession_number }} {% include "_status_badge.html" %}</h2>
 <div class="in">
-{% set banner_patient, banner_kind, banner_acc = order.patient, 'r2', order.accession_number %}
+{% set banner_patient, banner_kind, banner_acc = order.patient, 'r2 narrow', order.accession_number %}
 {% set banner_dt = (order.scheduled_date | ymd) ~ ' ' ~ (order.scheduled_time | hhmm) %}
 {% set banner_modality, banner_procedure = order.modality, order.procedure.name %}
 {% set banner_end %}{% include "_status_badge.html" %}{% endset %}
