@@ -66,6 +66,9 @@ def test_topbar_structure_follows_the_ui_kit(config: AppConfig, service: OrderSe
     # HL7 の送信先は状態を持たないので、札は「—」
     pop = header.split('<div id="conn-pop" popover class="pop"')[1]
     assert re.search(rf"<b>{re.escape(config.hl7.receiving_application)}</b> <span class=\"st\" data-k=\"plan\">—</span>", pop)
+    # 開いた中身に 「接続確認」（結果は読み上げる欄へ）と 接続先への道
+    assert '<p class="sr" role="status" aria-live="polite"></p>' in pop
+    assert ">接続確認</button>" in pop and '<a class="btn btn-sm" href="/connections">接続先を開く</a>' in pop
 
 
 def test_topbar_when_mwl_is_stopped(config: AppConfig, service: OrderService) -> None:
