@@ -74,8 +74,9 @@
 - 「詳細を開く」は詳細へ移る。撮り直しは詳細と同じ条件で、本日・空の時刻を送る
 - 実装：FastAPI・Jinja2・htmx（v2.0.9。リポジトリに同梱し、バージョンと sha256 を
   `scripts/fetch_web_assets.sh` に固定）。CSS はビルド工程なしで、3 製品で共通の ui-kit の写し
-  （`app/web/static/ui-kit/` の `tokens.css`・`components.css`。版は `VERSION`。製品の側で直さず、版が上がったら
-  写し直す）の後に、この製品にしか無い部品の差分の `app.css` を読む
+  （`app/web/static/ui-kit/` の `tokens.css`・`components.css`・`icons.svg`。版は `VERSION`、指紋は
+  `SHA256SUMS`。製品の側で直さず、版が上がったら写し直す。写しが指紋と合うことは試験で確かめる）の後に、
+  この製品にしか無い部品の差分の `app.css` を読む。線の絵は ui-kit の `icons.svg`（`<use href="/static/ui-kit/icons.svg#i-…">`）
 - 本文の幅は画面の型ごとに 1 つで、左寄せ：一覧は幅いっぱい、予約の詳細は最大 1200px（`.w-detail`）、
   予約作成・一括作成・照合は最大 900px（`.w-form`）
 - 一覧の表は、幅が足りなくても頁と上の帯を横に動かさない。表が包み（`.tbl-wrap`）の幅に収まらないときは、

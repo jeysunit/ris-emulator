@@ -12,3 +12,5 @@ config:
 ignores:
   - ".claude/commands/opsx/**"
   - ".claude/skills/openspec-*/**"
+# AGENTS.md を取り込む 1 行だけのファイル（見出しを置けない）
+  - "CLAUDE.md"

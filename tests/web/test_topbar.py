@@ -57,14 +57,14 @@ def test_nav_items_have_icons_and_theme_is_remembered(config: AppConfig, service
     app = create_app(config, password=None, service=service, start_mwl=False)
     with TestClient(app, base_url=ORIGIN) as client:
         page = client.get("/orders").text
-        sprite = client.get("/static/icons/icons.svg").text
+        sprite = client.get("/static/ui-kit/icons.svg").text
         theme = client.get("/static/theme.js").text
         script = client.get("/static/app.js").text
     nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
-    icons = re.findall(r'<use href="/static/icons/icons.svg#([a-z]+)"/></svg><span class="t">', nav)
-    assert icons == ["orders", "new", "batch", "reconciliation", "version"]
-    for name in [*icons, "menu", "sun", "moon"]:
-        assert f'<symbol id="{name}" viewBox="0 0 24 24">' in sprite
+    icons = re.findall(r'<use href="/static/ui-kit/icons.svg#(i-[a-z]+)"/></svg><span class="t">', nav)
+    assert icons == ["i-list", "i-plus", "i-plus", "i-inbox", "i-info"]
+    for name in [*icons, "i-menu", "i-sun", "i-moon"]:
+        assert f'<symbol id="{name}" viewBox="0 0 24 24"' in sprite
     # 地は描く前に決める（head の同期の script）。覚えが無ければ端末の設定に従う
     head = page.split("</head>")[0]
     assert head.index('<script src="/static/theme.js"></script>') < head.index("/static/ui-kit/tokens.css")
