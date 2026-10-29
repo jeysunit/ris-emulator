@@ -47,6 +47,27 @@ def test_topbar_order_and_connection_popover(config: AppConfig, service: OrderSe
     assert "badge" not in header and f":{config.mwl.port}" not in outside
 
 
+def test_topbar_structure_follows_the_ui_kit(config: AppConfig, service: OrderService) -> None:
+    header = _header(config, service, start_mwl=True)
+    # ナビの開閉：ハンバーガー固定・名前固定。状態は aria-expanded が持ち、title だけ替える
+    nav_button = re.search(r'<button [^>]*data-act="nav"[^>]*>(.*?)</button>', header, re.S)
+    assert nav_button is not None
+    attrs, inner = nav_button.group(0), nav_button.group(1)
+    assert 'class="iconbtn"' in attrs and 'aria-controls="sidenav"' in attrs
+    assert 'aria-label="ナビを開閉する"' in attrs and 'title="ナビを閉じる"' in attrs
+    assert "icons.svg#i-menu" in inner
+    # 接続の状態：枠つきボタンの中に 「接続の状態」→ 札 → シェブロン の順。見える文字が名前になる
+    button = re.search(r'<button [^>]*popovertarget="conn-pop"[^>]*>(.*?)</button>', header, re.S)
+    assert button is not None
+    assert "aria-label" not in button.group(0) and 'class="connbtn"' in button.group(0)
+    parts = re.findall(r'<span class="cl">接続の状態</span>|<span class="st"|<svg class="ic chev"', button.group(1))
+    assert parts == ['<span class="cl">接続の状態</span>', '<span class="st"', '<svg class="ic chev"']
+    assert "icons.svg#i-chevd" in button.group(1)
+    # HL7 の送信先は状態を持たないので、札は「—」
+    pop = header.split('<div id="conn-pop" popover class="pop"')[1]
+    assert re.search(rf"<b>{re.escape(config.hl7.receiving_application)}</b> <span class=\"st\" data-k=\"plan\">—</span>", pop)
+
+
 def test_topbar_when_mwl_is_stopped(config: AppConfig, service: OrderService) -> None:
     header = _header(config, service, start_mwl=False)
     assert '<span class="st" data-k="ng">一部が接続不可</span>' in header
@@ -70,6 +91,7 @@ def test_nav_items_have_icons_and_theme_is_remembered(config: AppConfig, service
     assert head.index('<script src="/static/theme.js"></script>') < head.index("/static/ui-kit/tokens.css")
     assert 'localStorage.getItem("ris-theme")' in theme and 'localStorage.getItem("ris-nav")' in theme
     assert '"ris-theme"' in script and 'classList.toggle("collapsed"' in script
+    assert '"ナビを開く"' in script and '"ナビを閉じる"' in script
     assert (STATIC / "theme.js").is_file()
 
 

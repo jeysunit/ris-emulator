@@ -18,6 +18,8 @@
     }
     shell.classList.toggle("collapsed", closed);
     navButton.setAttribute("aria-expanded", closed ? "false" : "true");
+    // 読み上げの名前（aria-label）と絵は替えず、ホバーの title だけ替える
+    navButton.setAttribute("title", closed ? "ナビを開く" : "ナビを閉じる");
   }
   setNav(root.getAttribute("data-nav") === "closed");
 
