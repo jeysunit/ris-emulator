@@ -2,6 +2,7 @@
 
 規則は 1 つ：生年月日が元号の表のどの期間に入るかを日付で決め、年 ＝ 西暦の年 − 元号の始まりの年 ＋ 1。
 明治より前（1868/10/22 以前）は元号を出さず、年齢だけを出す。元年は短い表示では数字の 1。
+年齢は `on`（年齢を数える日）の満年齢。検査に結び付く画面は検査日、結び付かない画面は開いた日を渡す。
 """
 
 from __future__ import annotations
@@ -26,9 +27,9 @@ def parse_date(value: str) -> date | None:
         return None
 
 
-def age_on(born: date, today: date) -> int:
-    """today に画面を開いたときの満年齢（誕生日の当日に上がる。2/29 生まれは平年は 3/1）."""
-    return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+def age_on(born: date, on: date) -> int:
+    """on の時点の満年齢（誕生日の当日に上がる。2/29 生まれは平年は 3/1）."""
+    return on.year - born.year - ((on.month, on.day) < (born.month, born.day))
 
 
 def era_label(born: date, letter: bool = False) -> str:
@@ -39,26 +40,26 @@ def era_label(born: date, letter: bool = False) -> str:
     return ""
 
 
-def _parts(value: str, today: date, letter: bool) -> tuple[str, str]:
+def _parts(value: str, on: date, letter: bool) -> tuple[str, str]:
     """（西暦の日付, 括弧の中身）。日付として読めなければ（そのままの値, 空）."""
     born = parse_date(value)
     if born is None:
         return (f"{value[:4]}/{value[4:6]}/{value[6:]}" if len(value) == 8 and value.isdigit() else value, "")
     items = [era_label(born, letter)]
-    age = age_on(born, today)
+    age = age_on(born, on)
     if age >= 0:
         items.append(f"{age}歳")
     inside = "・".join(item for item in items if item)
     return born.strftime("%Y/%m/%d"), inside
 
 
-def birth_text(value: str, today: date) -> tuple[str, str]:
+def birth_text(value: str, on: date) -> tuple[str, str]:
     """患者バナーの生年月日（漢字 1 字）：（1975/05/14, （昭50・51歳））。括弧は全角."""
-    day, inside = _parts(value, today, letter=False)
+    day, inside = _parts(value, on, letter=False)
     return day, f"（{inside}）" if inside else ""
 
 
-def birth_cell(value: str, today: date) -> str:
+def birth_cell(value: str, on: date) -> str:
     """一覧の表の生年月日の列（英字 1 字）：1975/05/14 (S50・51歳)。括弧は半角で前に半角の空白."""
-    day, inside = _parts(value, today, letter=True)
+    day, inside = _parts(value, on, letter=True)
     return f"{day} ({inside})" if inside else day

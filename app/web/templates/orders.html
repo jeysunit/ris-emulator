@@ -82,6 +82,7 @@
 <div class="in">
 {% set banner_patient, banner_kind, banner_acc = order.patient, 'r2 narrow', order.accession_number %}
 {% set banner_dt = (order.scheduled_date | ymd) ~ ' ' ~ (order.scheduled_time | hhmm) %}
+{% set banner_on = order.scheduled_date %}
 {% set banner_modality, banner_procedure = order.modality, order.procedure.name %}
 {% set banner_end %}{% include "_status_badge.html" %}{% endset %}
 {% include "_patient_banner.html" %}
