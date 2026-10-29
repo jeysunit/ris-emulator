@@ -61,3 +61,33 @@ def test_unreconciled_list_and_banner_count_the_age_on_the_mpps_start_day(
         banner = client.get(f"/reconciliation/{sop_uid}").text
     assert "1975/10/22 (S50・50歳)" in listing and "51歳" not in listing
     assert "（昭50・50歳）" in banner and "51歳" not in banner
+
+
+def test_order_list_side_banner_follows_the_scheduled_day(config: AppConfig, store: OrderStore) -> None:
+    client, service = _client(config, store)
+    first = date(TODAY.year + 10, TODAY.month, TODAY.day)
+    later = date(TODAY.year + 11, TODAY.month, TODAY.day)
+    ages = []
+    for scheduled in (first, later):
+        order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=scheduled, seed=1))[0]
+        born = parse_date(order.patient.birth_date)
+        assert born is not None
+        with client:
+            page = client.get(f"/orders?date_from={scheduled:%Y%m%d}&date_to={scheduled:%Y%m%d}").text
+        ages.append(age_on(born, scheduled))
+        assert order.accession_number in page
+        assert f"・{ages[-1]}歳）" in page
+        assert f"・{age_on(born, OPENED)}歳）" not in page
+    assert ages[0] != ages[1]
+
+
+def test_birth_after_the_count_day_shows_the_era_without_an_age(config: AppConfig, store: OrderStore) -> None:
+    # 生年月日 2027/06/15 は MPPS の開始日 2026/10/21 より後。年齢は出さず、元号の括弧だけにする
+    sop_uid, _ = add_unscheduled_mpps(store, birth_date="20270615")
+    client, _ = _client(config, store)
+    with client:
+        listing = client.get("/reconciliation").text
+        banner = client.get(f"/reconciliation/{sop_uid}").text
+    assert "2027/06/15 (R9)" in listing
+    assert "（令9）" in banner
+    assert "歳）" not in banner
