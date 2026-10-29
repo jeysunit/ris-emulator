@@ -72,10 +72,52 @@
       window.location.reload();
       return;
     }
+    if (isConnCheck(event)) {
+      announceUnreadable();
+      return;
+    }
     fail(event, "（" + status + "）。画面を読み直してください");
   });
   document.addEventListener("htmx:sendError", function (event) {
+    if (isConnCheck(event)) {
+      announceUnreadable();
+      return;
+    }
     fail(event, "。接続を確かめて、画面を読み直してください");
+  });
+
+  // 上の帯の「接続確認」の結果の読み上げ（部品集の 3 つの型）。結果の 1 文は読み上げの欄
+  // （#conn-result。popover の中）の data-result で届く。欄は中身ごと差し替わるので、差し替えた後に、
+  // 先に空にしてから入れる（同じ文が続いても読み直される）。ボタンも差し替わるので、焦点を戻す
+  function announceConn(text) {
+    var result = document.getElementById("conn-result");
+    if (!result || !text) {
+      return;
+    }
+    result.textContent = "";
+    window.setTimeout(function () {
+      result.textContent = text;
+    }, 50);
+  }
+  function isConnCheck(event) {
+    var config = event.detail && event.detail.requestConfig;
+    return !!config && config.path === "/connection/check";
+  }
+  // 要求が届かない・断られたときは、差し替わらない欄に「確かめられなかった」の型を入れる
+  function announceUnreadable() {
+    var result = document.getElementById("conn-result");
+    announceConn(result ? result.getAttribute("data-unreadable") : null);
+  }
+  document.addEventListener("htmx:afterSwap", function (event) {
+    var result = document.getElementById("conn-result");
+    if (!isConnCheck(event) || !result) {
+      return;
+    }
+    announceConn(result.getAttribute("data-result"));
+    var button = document.getElementById("conn-check");
+    if (button) {
+      button.focus();
+    }
   });
 
   // 予約作成：「新規（架空）」を選んでいる間は、名簿の患者の選択肢を選べなくする。
