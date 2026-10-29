@@ -1,0 +1,4 @@
+{# 知らせ（誤り）：ui-kit の .notice。画面の上の誤りだけ alert にし、ほかは status にする #}
+{% macro err(text, alert=false, span=false) -%}
+<div class="notice{% if span %} span{% endif %}" data-k="err" role="{{ 'alert' if alert else 'status' }}"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><div>{{ text }}</div></div>
+{%- endmacro %}

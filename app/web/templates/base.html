@@ -16,34 +16,34 @@
   <div class="shell">
   {# 上の帯：ナビの開閉・製品名（アプリの名前だけ。版は左のナビの「バージョン情報」）、右に 接続の状態 → 表示 #}
   <header class="topbar">
-    <button type="button" class="iconbtn" data-act="nav" aria-expanded="true" aria-controls="sidenav" aria-label="ナビを開閉する"><svg class="ic" aria-hidden="true"><use href="/static/icons/icons.svg#menu"/></svg></button>
+    <button type="button" class="iconbtn" data-act="nav" aria-expanded="true" aria-controls="sidenav" aria-label="ナビを開閉する" title="ナビを閉じる"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-menu"/></svg></button>
     <a href="/orders" class="brand">ris-emulator</a>
     <span class="sp"></span>
     {% set mwl_kind = 'listen' if mwl.running else 'ng' %}
     <span class="connwrap">
-      <button type="button" class="connbtn" popovertarget="conn-pop" aria-label="接続の状態を開く">接続の状態 <span class="st" data-k="{{ 'ok' if mwl.running else 'ng' }}">{{ '接続中' if mwl.running else '一部が接続不可' }}</span></button>
+      <button type="button" class="connbtn" popovertarget="conn-pop"><span class="cl">接続の状態</span><span class="st" data-k="{{ 'ok' if mwl.running else 'ng' }}">{{ '接続中' if mwl.running else '一部が接続不可' }}</span><svg class="ic chev" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-chevd"/></svg></button>
       <div id="conn-pop" popover class="pop" aria-label="接続の状態">
         <h3>接続の状態</h3>
         <dl class="kv">
           <dt>待ち受け MWL</dt>
           <dd><b>{{ mwl_config.ae_title }}</b> <span class="st" data-k="{{ mwl_kind }}">{{ '待ち受け中' if mwl.running else '停止' }}</span>{% if mwl.running %} <span class="xs label mono">{{ mwl_config.bind_address }}:{{ mwl.port }}</span>{% endif %}</dd>
           <dt>送信先 HL7</dt>
-          <dd><b>{{ hl7_config.receiving_application }}</b> <span class="xs label mono">{{ hl7_config.host }}:{{ hl7_config.port }}</span></dd>
+          <dd><b>{{ hl7_config.receiving_application }}</b> <span class="label">—</span> <span class="xs label mono">{{ hl7_config.host }}:{{ hl7_config.port }}</span></dd>
         </dl>
       </div>
     </span>
-    <button type="button" class="iconbtn" data-act="theme" aria-label="明るい地と暗い地を切り替える" title="明るい地と暗い地を切り替える"><svg class="ic show-light" aria-hidden="true"><use href="/static/icons/icons.svg#sun"/></svg><svg class="ic show-dark" aria-hidden="true"><use href="/static/icons/icons.svg#moon"/></svg></button>
+    <button type="button" class="iconbtn" data-act="theme" aria-label="明るい地と暗い地を切り替える" title="明るい地と暗い地を切り替える"><svg class="ic show-light" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-sun"/></svg><svg class="ic show-dark" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-moon"/></svg></button>
   </header>
   <nav class="sidenav" id="sidenav" aria-label="ページ">
     <p class="nav-g">業務</p>
-    {% for key, url, label in [("orders", "/orders", "予約"), ("new", "/orders/new", "予約作成"), ("batch", "/orders/batch", "一括作成"), ("reconciliation", "/reconciliation", "未照合")] %}
-    <a href="{{ url }}" class="nav-i"{% if nav_current == key %} aria-current="page"{% endif %} title="{{ label }}"><svg class="ic" aria-hidden="true"><use href="/static/icons/icons.svg#{{ key }}"/></svg><span class="t">{{ label }}</span></a>
+    {% for key, url, label, icon in [("orders", "/orders", "予約", "i-list"), ("new", "/orders/new", "予約作成", "i-plus"), ("batch", "/orders/batch", "一括作成", "i-list-plus"), ("reconciliation", "/reconciliation", "未照合", "i-inbox")] %}
+    <a href="{{ url }}" class="nav-i"{% if nav_current == key %} aria-current="page"{% endif %} title="{{ label }}"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#{{ icon }}"/></svg><span class="t">{{ label }}</span></a>
     {% endfor %}
     <p class="nav-g">管理</p>
-    <a href="/version" class="nav-i"{% if nav_current == "version" %} aria-current="page"{% endif %} title="バージョン情報"><svg class="ic" aria-hidden="true"><use href="/static/icons/icons.svg#version"/></svg><span class="t">バージョン情報</span></a>
+    <a href="/version" class="nav-i"{% if nav_current == "version" %} aria-current="page"{% endif %} title="バージョン情報"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-info"/></svg><span class="t">バージョン情報</span></a>
   </nav>
   <main class="main">
-    <p id="request-error" class="error" role="alert" hidden></p>
+    <div id="request-error" class="notice" data-k="err" role="alert" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><div></div></div>
     {% block content %}{% endblock %}
   </main>
   </div>

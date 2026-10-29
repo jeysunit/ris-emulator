@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from "_notice.html" import err %}
 {% block title %}予約作成{% endblock %}
 {% block content %}
 <div class="pagehead"><h1>予約作成</h1></div>
 {% if error %}
-<p class="error" role="alert">{{ error }}</p>
+{{ err(error, alert=true) }}
 {% endif %}
 <form method="post" action="/orders" class="w-form">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
@@ -12,7 +13,7 @@
     <legend>患者</legend>
     <div class="in grid2">
       {% if roster_error %}
-      <p class="error span" role="alert">{{ roster_error }}</p>
+      {{ err(roster_error, span=true) }}
       {% endif %}
       {# 名簿を選んで送った後に名簿が読めなくなったときは、どちらも選ばずに出す（黙って新規に切り替えない） #}
       <div class="span choices">

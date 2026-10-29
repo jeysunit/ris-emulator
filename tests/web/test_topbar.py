@@ -47,6 +47,28 @@ def test_topbar_order_and_connection_popover(config: AppConfig, service: OrderSe
     assert "badge" not in header and f":{config.mwl.port}" not in outside
 
 
+def test_topbar_structure_follows_the_ui_kit(config: AppConfig, service: OrderService) -> None:
+    header = _header(config, service, start_mwl=True)
+    # ナビの開閉：ハンバーガー固定・名前固定。状態は aria-expanded が持ち、title だけ替える
+    nav_button = re.search(r'<button [^>]*data-act="nav"[^>]*>(.*?)</button>', header, re.S)
+    assert nav_button is not None
+    attrs, inner = nav_button.group(0), nav_button.group(1)
+    assert 'class="iconbtn"' in attrs and 'aria-controls="sidenav"' in attrs
+    assert 'aria-label="ナビを開閉する"' in attrs and 'title="ナビを閉じる"' in attrs
+    assert "icons.svg#i-menu" in inner
+    # 接続の状態：枠つきボタンの中に 「接続の状態」→ 札 → シェブロン の順。見える文字が名前になる
+    button = re.search(r'<button [^>]*popovertarget="conn-pop"[^>]*>(.*?)</button>', header, re.S)
+    assert button is not None
+    assert "aria-label" not in button.group(0) and 'class="connbtn"' in button.group(0)
+    parts = re.findall(r'<span class="cl">接続の状態</span>|<span class="st"|<svg class="ic chev"', button.group(1))
+    assert parts == ['<span class="cl">接続の状態</span>', '<span class="st"', '<svg class="ic chev"']
+    assert "icons.svg#i-chevd" in button.group(1)
+    # HL7 の送信先は状態を持たない相手なので、札を出さず素の「—」（補助の色）
+    pop = header.split('<div id="conn-pop" popover class="pop"')[1]
+    assert re.search(rf"<b>{re.escape(config.hl7.receiving_application)}</b> <span class=\"label\">—</span>", pop)
+    assert "未確認" not in pop
+
+
 def test_topbar_when_mwl_is_stopped(config: AppConfig, service: OrderService) -> None:
     header = _header(config, service, start_mwl=False)
     assert '<span class="st" data-k="ng">一部が接続不可</span>' in header
@@ -57,19 +79,20 @@ def test_nav_items_have_icons_and_theme_is_remembered(config: AppConfig, service
     app = create_app(config, password=None, service=service, start_mwl=False)
     with TestClient(app, base_url=ORIGIN) as client:
         page = client.get("/orders").text
-        sprite = client.get("/static/icons/icons.svg").text
+        sprite = client.get("/static/ui-kit/icons.svg").text
         theme = client.get("/static/theme.js").text
         script = client.get("/static/app.js").text
     nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
-    icons = re.findall(r'<use href="/static/icons/icons.svg#([a-z]+)"/></svg><span class="t">', nav)
-    assert icons == ["orders", "new", "batch", "reconciliation", "version"]
-    for name in [*icons, "menu", "sun", "moon"]:
-        assert f'<symbol id="{name}" viewBox="0 0 24 24">' in sprite
+    icons = re.findall(r'<use href="/static/ui-kit/icons.svg#(i-[a-z-]+)"/></svg><span class="t">', nav)
+    assert icons == ["i-list", "i-plus", "i-list-plus", "i-inbox", "i-info"]
+    for name in [*icons, "i-menu", "i-sun", "i-moon"]:
+        assert f'<symbol id="{name}" viewBox="0 0 24 24"' in sprite
     # 地は描く前に決める（head の同期の script）。覚えが無ければ端末の設定に従う
     head = page.split("</head>")[0]
     assert head.index('<script src="/static/theme.js"></script>') < head.index("/static/ui-kit/tokens.css")
     assert 'localStorage.getItem("ris-theme")' in theme and 'localStorage.getItem("ris-nav")' in theme
     assert '"ris-theme"' in script and 'classList.toggle("collapsed"' in script
+    assert '"ナビを開く"' in script and '"ナビを閉じる"' in script
     assert (STATIC / "theme.js").is_file()
 
 

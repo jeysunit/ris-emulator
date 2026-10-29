@@ -18,6 +18,8 @@
     }
     shell.classList.toggle("collapsed", closed);
     navButton.setAttribute("aria-expanded", closed ? "false" : "true");
+    // 読み上げの名前（aria-label）と絵は替えず、ホバーの title だけ替える
+    navButton.setAttribute("title", closed ? "ナビを開く" : "ナビを閉じる");
   }
   setNav(root.getAttribute("data-nav") === "closed");
 
@@ -56,8 +58,9 @@
       select.value = select.dataset.current;
     }
     var box = document.getElementById("request-error");
-    if (box) {
-      box.textContent =
+    var text = box && box.querySelector("div");
+    if (text) {
+      text.textContent =
         (isStatus ? "状態を変更できませんでした" : "選択肢を読み込めませんでした") + detail;
       box.hidden = false;
     }
@@ -300,7 +303,8 @@
     } else {
       input.setAttribute("aria-invalid", "true");
     }
-    note.textContent = message;
+    var text = note.querySelector("span");
+    (text || note).textContent = message;
     note.hidden = ok;
   }
   document.addEventListener("input", function (event) {

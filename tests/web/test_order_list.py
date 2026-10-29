@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import re
 from datetime import timedelta
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -172,7 +173,7 @@ def test_status_select_guards_against_unsaved_values(config: AppConfig, service:
     assert select is not None
     assert 'hx-disabled-elt="find select, find button"' in page
     assert 'hx-swap="none"' in page and 'data-current="scheduled"' in select.group(0)
-    assert '<p id="request-error" class="error" role="alert" hidden></p>' in page
+    assert re.search(r'<div id="request-error" class="notice" data-k="err" role="alert" hidden>.*?<div></div></div>', page)
     assert '<script src="/static/app.js" defer></script>' in page
     assert script.status_code == 200
     assert "htmx:responseError" in script.text and "htmx:sendError" in script.text
@@ -189,7 +190,7 @@ def test_unreadable_date_message_uses_screen_format(config: AppConfig, service: 
 
 def _summary(page: str) -> dict[str, int]:
     return {label.strip(): int(count) for label, count in re.findall(
-        r'class="sum"[^>]*>([^<]+)<span class="nbr">(\d+)</span>', page
+        r'class="sum"[^>]*><span>([^<]+)</span><span class="nbr">(\d+)</span>', page
     )}
 
 
@@ -257,7 +258,25 @@ def test_query_and_status_survive_links(config: AppConfig, service: OrderService
     for label in ("前日", "翌日", "前のページ"):
         url = _links(last)[label]
         assert f"q={query}" in url and "status=scheduled" in url and "modality=CT" in url
-    summary_links = re.findall(r'<a href="([^"]+)" class="sum"', first)
-    assert len(summary_links) == 6
-    assert all(f"q={query}" in url and "modality=CT" in url for url in summary_links)
-    assert 'class="sum" aria-current="true">予定' in first
+    form = re.search(r'<form class="sumrow" method="get"[^>]*>(.*?)</form>', first, re.S)
+    assert form is not None
+    assert len(re.findall(r'<button type="submit" class="sum" name="status" value="[a-z_]*"', form.group(1))) == 6
+    assert "data-href" not in first
+    # 絞り込みの他の条件は、フォームの hidden で送信に引き継ぐ
+    carried = dict(re.findall(r'<input type="hidden" name="(\w+)" value="([^"]*)">', form.group(1)))
+    assert carried["q"] == query and carried["modality"] == "CT" and {"date_from", "date_to"} <= carried.keys()
+    assert re.search(r'class="sum" name="status" value="scheduled" aria-pressed="true"><span>予定</span>', first)
+    assert len(re.findall(r'class="sum" name="status" value="[a-z_]*" aria-pressed="true"', first)) == 1
+
+
+def test_summary_buttons_filter_without_javascript(config: AppConfig, service: OrderService) -> None:
+    """状態の件数は form＋button の送信で絞り込み、JavaScript で移動先を組み立てない（CodeQL の指摘）."""
+    static = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
+    script = (static / "app.js").read_text(encoding="utf-8")
+    assert "location.assign" not in script and "data-href" not in script
+    service.create_orders(OrderRequest(counts={"CT": 2}, scheduled_date=TODAY, seed=1))
+    with _client(config, service) as client:
+        everything = client.get("/orders", params={"status": ""}).text
+        filtered = client.get("/orders", params={"status": "scheduled"}).text
+    assert 'name="status" value="" aria-pressed="true"' in everything
+    assert 'name="status" value="scheduled" aria-pressed="true"' in filtered

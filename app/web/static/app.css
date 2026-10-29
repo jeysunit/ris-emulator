@@ -45,12 +45,10 @@
 .tbl tbody tr:hover td.act { background: var(--color-muted); }
 .tbl tbody tr[data-selected=true] td.act { background: var(--color-selected); }
 
-/* 検索の帯の日の送り（リンクの押しボタン）と、状態の要約（リンクで絞る） */
+/* 検索の帯の日の送り（リンクの押しボタン） */
 .seg a { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; text-decoration: none; border-right: 1px solid var(--color-border); }
 .seg a:last-child { border-right: 0; }
 .seg a:hover { background: var(--color-muted); }
-.sum { color: var(--color-foreground); text-decoration: none; }
-.sum[aria-current=true] { border-color: var(--color-primary); background: var(--color-selected); box-shadow: inset 0 -2px 0 var(--color-primary); }
 .page-links { display: inline-flex; gap: 16px; }
 
 /* 右の区画：上の帯の下に留める */
@@ -85,10 +83,6 @@ fieldset.sec { min-width: 0; margin: 0; padding: 0; }
 /* 患者バナーの札 */
 .banner .tag { display: inline-block; padding: 0 6px; border: 1px solid var(--color-border-input); border-radius: 3px; font-size: 12px; line-height: 18px; color: var(--color-label); }
 
-/* 知らせ（誤り）：左に 4px の状態の色、印と文字。画面の上の誤りだけに使う */
-.error { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-danger); border-radius: 4px; background: var(--color-surface); color: var(--color-foreground); }
-.error::before { content: "▲"; flex: none; color: var(--color-danger); font-size: 12px; line-height: 21px; }
-.error[hidden] { display: none; }
 .fieldnote { margin: 0; color: var(--color-label); font-size: 12px; line-height: 18px; }
 .fieldnote[hidden] { display: none; }
 
@@ -103,13 +97,11 @@ dialog.dlg.dlg-wide { width: min(40rem, calc(100vw - 2rem)); }
 .dlg .tbl tbody th { position: static; height: auto; padding: 4px 8px; background: none; }
 .dlg-compare tr[data-changed] td { background: var(--color-selected); font-weight: 700; color: var(--color-value); }
 
-/* 件数の行（未照合）と空の状態 */
+/* 件数の行（未照合） */
 .count-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
 .count-n { font-size: 16px; font-weight: 700; color: var(--color-value); }
 .muted { color: var(--color-label); font-size: 13px; }
 .nowrap { white-space: nowrap; }
-.empty-box { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; text-align: center; border: 1px dashed var(--color-border-input); border-radius: 6px; color: var(--color-label); }
-.empty-box b { font-weight: 700; color: var(--color-value); }
 
 /* 狭い画面：ナビを上に並べ、右の区画を一覧の下へ */
 @media (max-width: 900px) {

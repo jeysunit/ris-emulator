@@ -324,4 +324,5 @@ def test_error_is_shown_as_notice_with_text(config: AppConfig, service: OrderSer
     with _client(config, service) as client:
         response = _post(client, "/orders", {**ENTRY, "patient": "roster", "roster_patient_id": ""})
     assert response.status_code == 400
-    assert re.search(r'<p class="error" role="alert">[^<]+</p>', response.text)
+    assert re.search(r'<div class="notice" data-k="err" role="alert"><svg [^>]*>.*?</svg><div>[^<]+</div></div>', response.text)
+    assert 'class="error"' not in response.text

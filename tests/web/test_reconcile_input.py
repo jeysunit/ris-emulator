@@ -107,7 +107,7 @@ def test_jis_refuses_unrepresentable_ideographic_names(
         assert IDEOGRAPHIC_MESSAGE in text
         assert service.count_orders() == 0
         # 誤りの文には、入れた字を出さない
-        alert = text.split('role="alert"', 1)[1].split("</p>", 1)[0]
+        alert = text.split('role="alert"', 1)[1].split("</div>", 1)[0]
         assert name not in alert
 
 
@@ -189,7 +189,7 @@ def test_refusal_does_not_echo_the_value(config: AppConfig, store: OrderStore) -
     with _client(config, store) as (client, _):
         text = _post(client, f"/reconciliation/{sop_uid}", **_manual(phonetic_family="ﾔﾏﾀﾞ")).text
         # 入れ直しのために欄には残るが、誤りの文には出さない
-        alert = text.split('role="alert"', 1)[1].split("</p>", 1)[0]
+        alert = text.split('role="alert"', 1)[1].split("</div>", 1)[0]
         assert "ﾔ" not in alert
 
 
