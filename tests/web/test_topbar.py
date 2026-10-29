@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import re
+import threading
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.mwl.server import MwlServer
 from app.services.config import AppConfig
 from app.services.order_service import OrderService
 from app.web.app import create_app
+from app.web.connection import CHECK_UNREADABLE, check_summary
 from tests.conftest import TEST_VERSION
 
 ORIGIN = "http://127.0.0.1:8081"
@@ -37,7 +40,7 @@ def test_topbar_order_and_connection_popover(config: AppConfig, service: OrderSe
     assert 'aria-expanded="true" aria-controls="sidenav"' in header
     # 閉じているときは全体の状態の札 1 つ。中身は標準の popover で、MWL の待ち受けと HL7 の送信先
     button = header.split('popovertarget="conn-pop"')[1].split("</button>")[0]
-    assert '<span class="st" data-k="ok">接続中</span>' in button
+    assert '<span class="st" id="conn-state" data-k="ok">接続中</span>' in button
     pop = header.split('<div id="conn-pop" popover class="pop"')[1].split("</div>")[0]
     assert re.findall(r"<dt>([^<]+)</dt>", pop) == ["待ち受け MWL", "送信先 HL7"]
     assert f"<b>{config.mwl.ae_title}</b>" in pop and '<span class="st" data-k="listen">待ち受け中</span>' in pop
@@ -71,8 +74,116 @@ def test_topbar_structure_follows_the_ui_kit(config: AppConfig, service: OrderSe
 
 def test_topbar_when_mwl_is_stopped(config: AppConfig, service: OrderService) -> None:
     header = _header(config, service, start_mwl=False)
-    assert '<span class="st" data-k="ng">一部が接続不可</span>' in header
+    assert re.search(r'<span class="st" id="conn-state" data-k="ng">一部が接続不可</span>', header)
     assert '<span class="st" data-k="ng">停止</span>' in header
+
+
+def _check(client: TestClient):  # noqa: ANN202
+    """上の帯の「接続確認」を htmx の要求で押す."""
+    return client.post(
+        "/connection/check",
+        headers={
+            "Origin": ORIGIN,
+            "X-CSRF-Token": client.app.state.csrf_token,  # type: ignore[attr-defined]
+            "HX-Request": "true",
+        },
+    )
+
+
+def test_popover_has_the_check_button_and_a_reading_area(config: AppConfig, service: OrderService) -> None:
+    header = _header(config, service, start_mwl=True)
+    pop = header.split('<div id="conn-pop" popover class="pop"')[1]
+    # 結果を読み上げる欄は popover の中（閉じると読まれない）。押す前は空で、データ属性に「確かめられなかった」の文だけ持つ
+    assert re.search(
+        r'<p class="sr" id="conn-result" role="status" aria-live="polite" '
+        r'data-unreadable="接続を確かめられませんでした。"></p>',
+        pop,
+    )
+    button = re.search(r'<button [^>]*id="conn-check"[^>]*>(.*?)</button>', pop, re.S)
+    assert button is not None
+    assert 'class="btn btn-sm"' in button.group(0) and 'hx-post="/connection/check"' in button.group(0)
+    assert re.sub(r"<[^>]+>|\s", "", button.group(1)) == "接続確認"
+    # 接続先の画面は無いので、その道は置かない
+    assert "/connections" not in pop and "接続先を開く" not in pop
+
+
+def test_check_succeeds_when_the_mwl_answers(config: AppConfig, service: OrderService) -> None:
+    app = create_app(config, password=None, service=service, start_mwl=True)
+    with TestClient(app, base_url=ORIGIN) as client:
+        response = _check(client)
+        after = client.get("/orders").text.split("</header>")[0]
+    assert response.status_code == 200
+    body = response.text
+    # 中身は結果の 1 文を持ち、MWL の行は「待ち受け中」に確かめた時刻が付く
+    assert 'data-result="1 件すべてに接続できました。"' in body
+    assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
+    # 帯の全体の札も同じ応答で差し替える
+    assert '<span class="st" id="conn-state" data-k="ok" hx-swap-oob="true">接続中</span>' in body
+    # 結果は覚えていて、読み直した画面にも時刻が残る
+    assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', after)
+    # HL7 の送信先には札を出さず、時刻も付けない
+    assert re.search(rf"<b>{re.escape(config.hl7.receiving_application)}</b> <span class=\"label\">—</span>", body)
+
+
+def test_check_fails_when_the_mwl_is_stopped(config: AppConfig, service: OrderService) -> None:
+    app = create_app(config, password=None, service=service, start_mwl=False)
+    with TestClient(app, base_url=ORIGIN) as client:
+        body = _check(client).text
+    assert 'data-result="1 件のうち 1 件に接続できませんでした。"' in body
+    assert re.search(r'data-k="ng">停止</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
+    assert 'data-k="ng" hx-swap-oob="true">一部が接続不可</span>' in body
+
+
+def test_check_fails_when_a_listening_mwl_does_not_answer(
+    config: AppConfig, service: OrderService, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(MwlServer, "echo", lambda self, timeout=0: False)
+    app = create_app(config, password=None, service=service, start_mwl=True)
+    with TestClient(app, base_url=ORIGIN) as client:
+        body = _check(client).text
+        after = client.get("/orders").text.split("</header>")[0]
+    # 待ち受けているのに応答が無いときは、札「失敗」。全体の札も「一部が接続不可」
+    assert 'data-result="1 件のうち 1 件に接続できませんでした。"' in body
+    assert 'data-k="ng">失敗</span>' in body
+    assert 'id="conn-state" data-k="ng">一部が接続不可</span>' in after
+
+
+def test_check_needs_the_csrf_token(config: AppConfig, service: OrderService) -> None:
+    app = create_app(config, password=None, service=service, start_mwl=True)
+    with TestClient(app, base_url=ORIGIN) as client:
+        response = client.post("/connection/check", headers={"Origin": ORIGIN, "HX-Request": "true"})
+    assert response.status_code == 403
+
+
+def test_check_does_not_overlap(config: AppConfig, service: OrderService) -> None:
+    app = create_app(config, password=None, service=service, start_mwl=True)
+    with TestClient(app, base_url=ORIGIN) as client:
+        # 確かめている最中に届いた要求は、重ねて送らず 204 で何も差し替えない
+        entered = threading.Event()
+        release = threading.Event()
+
+        def slow_echo(self: MwlServer, timeout: float = 0) -> bool:
+            entered.set()
+            release.wait(5)
+            return True
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(MwlServer, "echo", slow_echo)
+            first = threading.Thread(target=lambda: _check(client))
+            first.start()
+            assert entered.wait(5)
+            second = _check(client)
+            release.set()
+            first.join(5)
+    assert second.status_code == 204 and second.text == ""
+
+
+def test_check_summary_follows_the_three_sentences() -> None:
+    assert check_summary([True]) == "1 件すべてに接続できました。"
+    assert check_summary([True, True]) == "2 件すべてに接続できました。"
+    assert check_summary([True, False, False]) == "3 件のうち 2 件に接続できませんでした。"
+    # 要求が届かなかったときの文は、読み上げの欄の data-unreadable を app.js が入れる
+    assert CHECK_UNREADABLE == "接続を確かめられませんでした。"
 
 
 def test_nav_items_have_icons_and_theme_is_remembered(config: AppConfig, service: OrderService) -> None:

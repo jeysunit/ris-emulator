@@ -35,6 +35,17 @@ STATUS_CANCEL = 0xFE00
 STATUS_OUT_OF_RESOURCES = 0xA700
 STATUS_UNABLE_TO_PROCESS = 0xC001
 
+# 画面の「接続確認」が自分の待ち受けにかける C-ECHO の、呼び元の AEタイトルと待つ秒数
+ECHO_CALLING_AE_TITLE = "RIS_CHECK"
+ECHO_TIMEOUT_SECONDS = 3.0
+
+_WILDCARD_TO_LOOPBACK = {"0.0.0.0": "127.0.0.1", "::": "::1"}
+
+
+def _loopback_of(bind_address: str) -> str:
+    """待ち受けのアドレスへつなぐ住所（全部のアドレスで待ち受けているときはループバック）."""
+    return _WILDCARD_TO_LOOPBACK.get(bind_address, bind_address)
+
 
 def find_worklist(
     request: Dataset, store: OrderStore, config: MwlConfig
@@ -135,6 +146,28 @@ class MwlServer:
     @property
     def running(self) -> bool:
         return self._server is not None
+
+    def echo(self, timeout: float = ECHO_TIMEOUT_SECONDS) -> bool:
+        """自分の待ち受けに、ループバックから C-ECHO を 1 回かけ、成功なら True.
+
+        待ち受けが止まっているときは送らず False。画面の「接続確認」が使う
+        （docs/spec/03_web_cli.md 3.1）。
+        """
+        if self._server is None:
+            return False
+        ae = AE(ae_title=ECHO_CALLING_AE_TITLE)
+        ae.add_requested_context(Verification)
+        ae.acse_timeout = ae.dimse_timeout = ae.network_timeout = ae.connection_timeout = timeout
+        assoc = ae.associate(
+            _loopback_of(self.config.bind_address), self.port, ae_title=self.config.ae_title
+        )
+        if not assoc.is_established:
+            return False
+        try:
+            status = assoc.send_c_echo()
+        finally:
+            assoc.release()
+        return bool(status) and int(status.Status) == STATUS_SUCCESS
 
     def stop(self) -> None:
         if self._server is not None:

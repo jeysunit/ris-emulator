@@ -10,7 +10,7 @@ from pynetdicom import AE
 from pynetdicom.sop_class import ModalityWorklistInformationFind, Verification
 
 from app.core.models import CharacterSet, OrderStatus
-from app.mwl.server import MwlServer, find_worklist
+from app.mwl.server import MwlServer, _loopback_of, find_worklist
 from app.services.config import AppConfig, Station
 from app.services.order_service import OrderRequest, OrderService
 from app.services.store import OrderStore
@@ -279,3 +279,34 @@ def test_c_echo(server: MwlServer) -> None:
         assert int(assoc.send_c_echo().Status) == 0x0000
     finally:
         assoc.release()
+
+
+def test_echo_of_own_listener(config: AppConfig, store: OrderStore) -> None:
+    # 画面の「接続確認」：待ち受けていれば成功、止まっていれば送らず失敗
+    mwl = MwlServer(config.mwl, store)
+    assert mwl.echo() is False
+    mwl.start()
+    try:
+        assert mwl.echo() is True
+    finally:
+        mwl.stop()
+    assert mwl.echo() is False
+
+
+def test_echo_fails_when_the_called_ae_title_is_not_accepted(
+    config: AppConfig, store: OrderStore
+) -> None:
+    # 呼び先の AEタイトルが合わなければ Association を断られ、失敗になる（待ち受けているのに応答しない相手）
+    mwl = MwlServer(config.mwl, store)
+    mwl.start()
+    try:
+        mwl.config = config.mwl.model_copy(update={"ae_title": "OTHER_AE"})
+        assert mwl.echo() is False
+    finally:
+        mwl.stop()
+
+
+def test_wildcard_bind_address_is_reached_through_the_loopback() -> None:
+    assert _loopback_of("0.0.0.0") == "127.0.0.1"
+    assert _loopback_of("::") == "::1"
+    assert _loopback_of("192.0.2.10") == "192.0.2.10"

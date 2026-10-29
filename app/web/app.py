@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import replace
@@ -82,6 +83,7 @@ from .auth import (
     new_csrf_token,
 )
 from .build_info import build_commit
+from .connection import CHECK_UNREADABLE, Probe, check_summary, conn_view, run_check
 
 BASE_DIR = Path(__file__).resolve().parent
 HTTP_BAD_REQUEST = 400
@@ -177,6 +179,9 @@ def create_app(
     app.state.service = order_service
     app.state.mwl = mwl
     app.state.csrf_token = new_csrf_token()
+    # 上の帯の「接続確認」の直近の結果（押すまでは無い）。確かめている間は重ねて送らない
+    probes: dict[str, Probe | None] = {"mwl": None}
+    check_lock = threading.Lock()
     templates = Jinja2Templates(directory=BASE_DIR / "templates")
     check_host = is_loopback(config.web.bind_address)
 
@@ -197,6 +202,8 @@ def create_app(
             mwl=mwl,
             mwl_config=config.mwl,
             hl7_config=config.hl7,
+            conn=conn_view(mwl, probes["mwl"]),
+            check_unreadable=CHECK_UNREADABLE,
             status_labels=STATUS_LABELS,
             selectable_statuses=selectable_statuses,
             is_final=is_final,
@@ -544,6 +551,22 @@ def create_app(
         if request.headers.get("hx-request"):
             return Response(status_code=204, headers={"HX-Refresh": "true"})
         return RedirectResponse(f"/orders/{order.accession_number}", status_code=HTTP_SEE_OTHER)
+
+    @app.post("/connection/check", response_class=HTMLResponse)
+    def connection_check(request: Request) -> Response:
+        """上の帯の「接続確認」：MWL の待ち受けに C-ECHO をかけ、popover の中身と全体の札を結果で差し替える.
+
+        確かめている最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
+        """
+        if not check_lock.acquire(blocking=False):
+            return Response(status_code=204)
+        try:
+            probe = run_check(mwl)
+            probes["mwl"] = probe
+        finally:
+            check_lock.release()
+        # 結果の 1 文は、中身の中の読み上げの欄（app.js が差し替えの後に入れる）に渡す
+        return render(request, "_conn_pop.html", oob=True, check_result=check_summary([probe.ok]))
 
     @app.get("/version", response_class=HTMLResponse)
     def version_page(request: Request) -> HTMLResponse:

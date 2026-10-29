@@ -19,17 +19,10 @@
     <button type="button" class="iconbtn" data-act="nav" aria-expanded="true" aria-controls="sidenav" aria-label="ナビを開閉する" title="ナビを閉じる"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-menu"/></svg></button>
     <a href="/orders" class="brand">ris-emulator</a>
     <span class="sp"></span>
-    {% set mwl_kind = 'listen' if mwl.running else 'ng' %}
     <span class="connwrap">
-      <button type="button" class="connbtn" popovertarget="conn-pop"><span class="cl">接続の状態</span><span class="st" data-k="{{ 'ok' if mwl.running else 'ng' }}">{{ '接続中' if mwl.running else '一部が接続不可' }}</span><svg class="ic chev" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-chevd"/></svg></button>
+      <button type="button" class="connbtn" popovertarget="conn-pop"><span class="cl">接続の状態</span><span class="st" id="conn-state" data-k="{{ conn.overall_kind }}">{{ conn.overall_label }}</span><svg class="ic chev" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-chevd"/></svg></button>
       <div id="conn-pop" popover class="pop" aria-label="接続の状態">
-        <h3>接続の状態</h3>
-        <dl class="kv">
-          <dt>待ち受け MWL</dt>
-          <dd><b>{{ mwl_config.ae_title }}</b> <span class="st" data-k="{{ mwl_kind }}">{{ '待ち受け中' if mwl.running else '停止' }}</span>{% if mwl.running %} <span class="xs label mono">{{ mwl_config.bind_address }}:{{ mwl.port }}</span>{% endif %}</dd>
-          <dt>送信先 HL7</dt>
-          <dd><b>{{ hl7_config.receiving_application }}</b> <span class="label">—</span> <span class="xs label mono">{{ hl7_config.host }}:{{ hl7_config.port }}</span></dd>
-        </dl>
+        {% include "_conn_pop.html" %}
       </div>
     </span>
     <button type="button" class="iconbtn" data-act="theme" aria-label="明るい地と暗い地を切り替える" title="明るい地と暗い地を切り替える"><svg class="ic show-light" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-sun"/></svg><svg class="ic show-dark" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-moon"/></svg></button>
