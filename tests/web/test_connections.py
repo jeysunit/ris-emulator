@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import socket
+import threading
 import time
 
 import pytest
@@ -192,11 +193,57 @@ def test_check_connection_reasons(monkeypatch: pytest.MonkeyPatch) -> None:
     def unresolved(*args: object, **kwargs: object) -> None:
         raise socket.gaierror(-2, "Name or service not known")
 
-    monkeypatch.setattr(socket, "create_connection", unresolved)
+    monkeypatch.setattr(socket, "getaddrinfo", unresolved)
     assert check_connection("no-such-host.invalid", 2575, 1.0).reason == REASON_UNKNOWN_HOST
+    monkeypatch.undo()
 
     def timed_out(*args: object, **kwargs: object) -> None:
         raise TimeoutError("timed out")
 
     monkeypatch.setattr(socket, "create_connection", timed_out)
     assert check_connection("192.0.2.1", 2575, 1.0).reason == REASON_NO_RESPONSE
+
+
+def test_check_connection_bounds_the_name_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """名前を引く側が答えなくても、timeout 秒で返す（接続の timeout は名前の解決に効かない）."""
+    release = threading.Event()
+
+    def stalled(*args: object, **kwargs: object) -> list:
+        release.wait(5)
+        return []
+
+    monkeypatch.setattr(socket, "getaddrinfo", stalled)
+    started = time.monotonic()
+    result = check_connection("slow.example", 2575, 0.3)
+    elapsed = time.monotonic() - started
+    release.set()
+    assert result.ok is False and result.reason == REASON_UNKNOWN_HOST and result.detail
+    assert elapsed < 2.0
+
+
+def test_check_connection_shares_one_timeout_across_addresses(monkeypatch: pytest.MonkeyPatch) -> None:
+    """IPv4・IPv6 の両方に解けても、合わせて timeout 秒まで（アドレスごとに timeout を使い切らない）."""
+    infos = [
+        (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2001:db8::1", 2575, 0, 0)),
+        (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.0.2.1", 2575)),
+    ]
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs: infos)
+    waits: list[float] = []
+
+    def stall(address: tuple, timeout: float) -> None:
+        waits.append(timeout)
+        time.sleep(timeout)
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr(socket, "create_connection", stall)
+    started = time.monotonic()
+    result = check_connection("dual.example", 2575, 0.4)
+    elapsed = time.monotonic() - started
+    assert result.reason == REASON_NO_RESPONSE
+    assert waits and sum(waits) <= 0.4 + 0.05 and elapsed < 1.0
+
+
+def test_check_connection_reports_an_unconvertible_host_name() -> None:
+    """IDNA に直せないホスト名（63 字を超える部分）は、500 にせず「ホスト名を引けません」にする."""
+    result = check_connection("a" * 70 + ".example", 2575, 1.0)
+    assert result.ok is False and result.reason == REASON_UNKNOWN_HOST and result.detail
