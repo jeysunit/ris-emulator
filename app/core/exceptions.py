@@ -23,7 +23,16 @@ class ConfigurationError(RisEmulatorError):
 
 
 class ValidationError(RisEmulatorError):
-    """CLI・画面から入った値の誤り."""
+    """CLI・画面から入った値の誤り.
+
+    画面のフォームは、誤りの欄ごとの文を `fields`（欄の name → 文）で受け取り、欄の下に出す。
+    """
+
+    def __init__(
+        self, message: str, details: dict | None = None, *, fields: dict[str, str] | None = None
+    ):
+        super().__init__(message, details)
+        self.fields = fields or {}
 
 
 class InvalidTransitionError(ValidationError):

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_notice.html" import err %}
+{% from "_notice.html" import err, form_errors, msg, attrs %}
 {% block title %}照合{% endblock %}
 {% block content %}
 <nav aria-label="いまの場所">
@@ -9,9 +9,7 @@
   </ol>
 </nav>
 <div class="pagehead"><h1>照合</h1></div>
-{% if error %}
-{{ err(error, alert=true) }}
-{% endif %}
+{{ form_errors(error, field_errors) }}
 {% set mark = mpps_marks.get(item.status, ('plan', item.status)) %}
 <div class="w-form">
 {% set banner_patient, banner_kind, banner_label = item.patient, 'r1', '仮の患者' %}
@@ -37,7 +35,7 @@
 {% elif not procedures %}
 {{ err('モダリティ ' ~ (item.modality or '（空）') ~ ' が設定に無いので、照合できません。') }}
 {% else %}
-<form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="w-form" data-patient-source>
+<form method="post" action="/reconciliation/{{ item.sop_instance_uid }}" class="w-form" data-patient-source novalidate data-validate>
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   {% set patient = values.get('patient', 'roster' if roster else 'manual') %}
   <fieldset class="sec">
@@ -47,11 +45,12 @@
       {{ err(roster_error, span=true) }}
       {% endif %}
       <div class="span choices">
-        <label class="choice"><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
-        <label class="choice"><input type="radio" name="patient" value="manual" required{% if patient == 'manual' %} checked{% endif %}> 入力する</label>
+        <label class="choice"><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %} data-error="患者を、名簿から選ぶか入力するかを選んでください"{{ attrs('patient', field_errors) }}> 名簿から選ぶ</label>
+        <label class="choice"><input type="radio" name="patient" value="manual" required{% if patient == 'manual' %} checked{% endif %} data-error="患者を、名簿から選ぶか入力するかを選んでください"{{ attrs('patient', field_errors) }}> 入力する</label>
       </div>
+      <div class="field span">{{ msg('patient', field_errors) }}</div>
       <label class="field span"><span class="l">名簿の患者</span>
-        <select name="roster_patient_id"{% if not roster %} disabled{% endif %} class="select">
+        <select name="roster_patient_id"{% if not roster %} disabled{% endif %} class="select"{{ attrs('roster_patient_id', field_errors) }}>
           {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
           {% set chosen = values.get('roster_patient_id', '') %}
           {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}
@@ -61,12 +60,13 @@
           <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex | sex }}</option>
           {% endfor %}
         </select>
+        {{ msg('roster_patient_id', field_errors) }}
       </label>
       {# 欄の下の誤りは入力のたびにスクリプトが出す（読み上げない。画面の上の知らせだけが role="alert"） #}
-      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}" class="input" data-check="patient-id" data-message="{{ input_messages['patient-id'] }}" aria-describedby="error-patient-id"><span class="msg" id="error-patient-id" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span></span></span></label>
+      <label class="field span"><span class="l">患者ID</span><input type="text" name="patient_id" maxlength="64" value="{{ values.get('patient_id', '') }}" class="input" data-check="patient-id" data-message="{{ input_messages['patient-id'] }}" {{ attrs('patient_id', field_errors) }}>{{ msg('patient_id', field_errors) }}</label>
       {% for script, label in (('alphabetic', '英字'), ('ideographic', '漢字'), ('phonetic', 'かな')) %}
       {% for part, part_label in (('family', '姓'), ('given', '名')) %}
-      <label class="field"><span class="l">氏名（{{ label }}）の{{ part_label }}</span><input type="text" name="{{ script }}_{{ part }}" maxlength="30" value="{{ values.get(script ~ '_' ~ part, '') }}" class="input"{% if script in input_messages %} data-check="{{ script }}" data-message="{{ input_messages[script] }}" aria-describedby="error-{{ script }}-{{ part }}"{% endif %}{% if script == 'ideographic' and charset_is_jis %} data-charset-jis{% endif %}{% if script == 'phonetic' %} data-note="{{ phonetic_converted_note }}"{% if test_mode %} data-test-mode{% endif %}{% endif %}>{% if script in input_messages %}<span class="msg" id="error-{{ script }}-{{ part }}" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span></span></span>{% endif %}</label>
+      <label class="field"><span class="l">氏名（{{ label }}）の{{ part_label }}</span><input type="text" name="{{ script }}_{{ part }}" maxlength="30" value="{{ values.get(script ~ '_' ~ part, '') }}" class="input"{% if script in input_messages %} data-check="{{ script }}" data-message="{{ input_messages[script] }}"{{ attrs(script ~ '_' ~ part, field_errors) }}{% endif %}{% if script == 'ideographic' and charset_is_jis %} data-charset-jis{% endif %}{% if script == 'phonetic' %} data-note="{{ phonetic_converted_note }}"{% if test_mode %} data-test-mode{% endif %}{% endif %}>{% if script in input_messages %}{{ msg(script ~ '_' ~ part, field_errors) }}{% endif %}</label>
       {% endfor %}
       {% if script == 'phonetic' %}
       <p class="fieldnote span" id="note-phonetic" aria-live="polite" hidden></p>
@@ -77,13 +77,14 @@
          年齢は照合の検査日（MPPS の開始日、読めなければ受けた日）で数える #}
       {% set value, on = values.get('birth_date', ''), banner_on %}
       {% set birth_problem = birth_hint(value, on)[1] %}
-      <label class="field"><span class="l">生年月日</span><input type="text" inputmode="text" autocomplete="off" name="birth_date" value="{{ value }}" class="input" data-check="birth-date" data-message="{{ birth_problem or input_messages['birth-date'] }}"{% if birth_problem %} data-unreadable aria-invalid="true"{% endif %} aria-describedby="hint-birth-date error-birth-date" hx-get="/birth-date/hint?on={{ on }}" hx-trigger="input changed delay:250ms" hx-target="#hint-birth-date" hx-swap="outerHTML" hx-sync="this:replace">{% include "_birth_hint.html" %}<span class="msg" id="error-birth-date"{% if not birth_problem %} hidden{% endif %}><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span>{{ birth_problem }}</span></span></label>
+      <label class="field"><span class="l">生年月日</span><input type="text" inputmode="text" autocomplete="off" name="birth_date" value="{{ value }}" class="input" data-check="birth-date" data-message="{{ birth_problem or input_messages['birth-date'] }}"{% if birth_problem %} data-unreadable{% endif %}{% if birth_problem or field_errors.get('birth_date') %} aria-invalid="true"{% endif %} aria-describedby="hint-birth-date error-birth-date" hx-get="/birth-date/hint?on={{ on }}" hx-trigger="input changed delay:250ms" hx-target="#hint-birth-date" hx-swap="outerHTML" hx-sync="this:replace">{% include "_birth_hint.html" %}{{ msg('birth_date', field_errors, birth_problem) }}</label>
       <label class="field"><span class="l">性別</span>
-        <select name="sex" class="select">
+        <select name="sex" class="select"{{ attrs('sex', field_errors) }}>
           {% for value in ('', 'M', 'F', 'O') %}
           <option value="{{ value }}"{% if values.get('sex', '') == value %} selected{% endif %}>{{ value }}</option>
           {% endfor %}
         </select>
+        {{ msg('sex', field_errors) }}
       </label>
     </div>
   </fieldset>
@@ -98,11 +99,12 @@
         </select>
       </label>
       <label class="field"><span class="l">依頼科<span class="req">必須</span></span>
-        <select name="department" class="select">
+        <select name="department" class="select"{{ attrs('department', field_errors) }}>
           {% for d in departments %}
           <option value="{{ d }}"{% if values.get('department', default_department) == d %} selected{% endif %}>{{ d }}</option>
           {% endfor %}
         </select>
+        {{ msg('department', field_errors) }}
       </label>
     </div>
   </fieldset>

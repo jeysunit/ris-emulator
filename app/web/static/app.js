@@ -355,8 +355,150 @@
     var text = note.querySelector("span");
     (text || note).textContent = message;
     note.hidden = ok;
+    if (ok) {
+      refreshFormErrors(input);
+    }
+  }
+  // 入力フォーム（form[data-validate]。novalidate でブラウザの吹き出しを出さない）：送るとき、
+  // 誤りのある欄の下に文を出して aria-invalid を付け、画面の上（#form-errors）に件数を出し、
+  // 最初の誤りの欄へ焦点を移す。誤りがあれば送らない（ほかの送信の処理にも渡さない）。
+  // 文は欄の data-error（必須・形の誤り）か、確かめの文（setCustomValidity）。最後の判定はサーバーが行い、
+  // サーバーが返した誤りも同じ欄の下に出る（件数の文は app/web/app.py の FORM_ERRORS_MESSAGE と同じ）
+  var FORM_ERRORS_TEXT = "入力に誤りが {count} 件あります。";
+  function showFieldError(control, message) {
+    var note = described(control, "msg");
+    control.setAttribute("aria-invalid", "true");
+    if (note) {
+      var text = note.querySelector("span");
+      (text || note).textContent = message;
+      note.hidden = false;
+    }
+  }
+  function clearFieldError(control) {
+    var note = described(control, "msg");
+    control.removeAttribute("aria-invalid");
+    if (note) {
+      note.hidden = true;
+    }
+  }
+  function showFormErrors(count) {
+    var box = document.getElementById("form-errors");
+    var text = box && box.querySelector(".notice > div");
+    if (!box || !text) {
+      return;
+    }
+    box.hidden = count === 0;
+    box.setAttribute("data-count", String(count));
+    text.textContent = count ? FORM_ERRORS_TEXT.replace("{count}", String(count)) : "";
+  }
+  // 件数は、いま欄の下に出ている誤りの文（.msg）の数。送るときも直すときも、これだけで数える
+  function shownErrorCount(form) {
+    return form.querySelectorAll(".msg:not([hidden])").length;
+  }
+  // 画面の上が件数の知らせのとき（data-count がある）だけ、直した後の件数を出し直す
+  function refreshFormErrors(control) {
+    var box = document.getElementById("form-errors");
+    if (control.form && box && box.hasAttribute("data-count")) {
+      showFormErrors(shownErrorCount(control.form));
+    }
+  }
+  // 一括作成：件数の欄のどれかが 1 以上になったら、区画の誤り（どれかに 1 以上、#error-counts）を隠す。
+  // この誤りは欄の誤りではない（aria-invalid が無い）ので、欄の直しとは別に外す。隠したら true
+  function clearCountsError(form) {
+    var note = form.querySelector("#error-counts");
+    if (!note || note.hidden) {
+      return false;
+    }
+    var inputs = form.querySelectorAll("input[name^=count_]");
+    for (var i = 0; i < inputs.length; i++) {
+      if (Number(inputs[i].value) >= 1) {
+        note.hidden = true;
+        return true;
+      }
+    }
+    return false;
+  }
+  function invalidControls(form) {
+    var found = [];
+    var groups = {};
+    for (var i = 0; i < form.elements.length; i++) {
+      var control = form.elements[i];
+      // 無効の欄・隠した欄は willValidate が false。ラジオは組の最初だけ数える
+      if (!control.willValidate || control.checkValidity()) {
+        continue;
+      }
+      if (control.type === "radio") {
+        if (groups[control.name]) {
+          continue;
+        }
+        groups[control.name] = true;
+      }
+      found.push(control);
+    }
+    return found;
+  }
+  document.addEventListener(
+    "submit",
+    function (event) {
+      var form = event.target;
+      if (!form.hasAttribute || !form.hasAttribute("data-validate")) {
+        return;
+      }
+      var controls = invalidControls(form);
+      if (!controls.length) {
+        return;
+      }
+      for (var i = 0; i < controls.length; i++) {
+        var control = controls[i];
+        var message = control.validity.customError
+          ? control.validationMessage
+          : control.getAttribute("data-error") || control.validationMessage;
+        showFieldError(control, message);
+      }
+      showFormErrors(shownErrorCount(form));
+      controls[0].focus();
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true
+  );
+  // 直した欄は誤りを外し、画面の上の件数を出し直す。確かめの文を持つ欄（data-check）は checkField が扱う
+  function revalidate(control) {
+    var form = control.form;
+    if (!form || !form.hasAttribute("data-validate")) {
+      return;
+    }
+    // 時と分は 1 つの誤り。文と aria-invalid は時の欄が持つ
+    if (control.name === "minute") {
+      control = form.elements.hour || control;
+    }
+    var countsCleared = clearCountsError(form);
+    if (!control.hasAttribute("aria-invalid") || control.hasAttribute("data-check")) {
+      if (countsCleared) {
+        refreshFormErrors(control);
+      }
+      return;
+    }
+    if (control.type === "radio") {
+      var group = form.querySelectorAll("input[type=radio]");
+      for (var i = 0; i < group.length; i++) {
+        if (group[i].name === control.name) {
+          clearFieldError(group[i]);
+        }
+      }
+    } else if (control.name === "hour" || control.checkValidity()) {
+      clearFieldError(control);
+    }
+    refreshFormErrors(control);
+  }
+  // サーバーが誤りを欄ごとに返した画面は、最初の誤りの欄へ焦点を移して開く
+  var shownErrors = document.querySelector("#form-errors[data-count]:not([hidden])");
+  var firstInvalid = shownErrors && document.querySelector("form[data-validate] [aria-invalid=true]");
+  if (firstInvalid) {
+    firstInvalid.focus();
   }
   document.addEventListener("input", function (event) {
+    revalidate(event.target);
     if (event.target instanceof HTMLInputElement) {
       if (event.target.getAttribute("data-check") === "birth-date") {
         // 入力のたびに前の読み取りの誤りを外し、新しい読み取り結果（.hint）が返るまで古い誤りを残さない
@@ -367,6 +509,7 @@
     }
   });
   document.addEventListener("change", function (event) {
+    revalidate(event.target);
     if (event.target instanceof HTMLInputElement) {
       checkField(event.target);
     }
