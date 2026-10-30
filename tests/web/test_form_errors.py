@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import html
+import json
 import re
+import shutil
+import subprocess
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.services.config import AppConfig
@@ -13,6 +18,8 @@ from app.web.app import FORM_ERRORS_MESSAGE, create_app
 from tests.conftest import add_unscheduled_mpps
 from tests.web.html_attrs import has_tag
 from tests.web.test_order_entry import ENTRY, _client, _post
+
+STATIC_DIR = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
 
 
 def _alert(page: str) -> str:
@@ -139,3 +146,52 @@ def test_reconcile_returns_the_error_under_its_field(config: AppConfig, store) -
     assert _msg(response.text, "patient-id") == "患者ID を入力してください。"
     assert has_tag(response.text, "input", name="patient_id", **{"aria-invalid": "true", "aria-describedby": "error-patient-id"})
     assert _msg(roster.text, "roster-patient-id") == "名簿の患者を選んでください"
+
+
+def _run_count_helpers(inputs: list[str]) -> list:
+    """画面のスクリプトの件数の数え方と「どれかに 1 以上」の外し方を、仮の form で動かす."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node が無いので、画面のスクリプトを動かせない")
+    source = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    shown = re.search(r"function shownErrorCount.*?\n  }\n", source, re.S)
+    clear = re.search(r"function clearCountsError.*?\n  }\n", source, re.S)
+    assert shown and clear
+    program = shown.group(0) + clear.group(0)
+    program += """
+var counts = {hidden: false};
+var msgs = [counts, {hidden: false}, {hidden: true}];
+var inputs = JSON.parse(process.argv[1]).map(function (v) { return {value: v}; });
+var form = {
+  querySelectorAll: function (selector) {
+    if (selector === ".msg:not([hidden])") { return msgs.filter(function (m) { return !m.hidden; }); }
+    if (selector === "input[name^=count_]") { return inputs; }
+    throw new Error(selector);
+  },
+  querySelector: function (selector) {
+    if (selector === "#error-counts") { return counts; }
+    throw new Error(selector);
+  },
+};
+var before = shownErrorCount(form);
+var cleared = clearCountsError(form);
+console.log(JSON.stringify([before, cleared, counts.hidden, shownErrorCount(form)]));
+"""
+    result = subprocess.run([node, "-e", program, json.dumps(inputs)], capture_output=True, text=True, check=True)
+    return json.loads(result.stdout)
+
+
+def test_script_hides_the_counts_error_once_a_count_is_entered() -> None:
+    """一括作成の「どれかに 1 以上」は、件数を入れたら消え、画面の上の件数も 1 減る."""
+    assert _run_count_helpers(["", "2"]) == [2, True, True, 1]
+
+
+def test_script_keeps_the_counts_error_while_every_count_is_empty_or_zero() -> None:
+    assert _run_count_helpers(["", "0"]) == [2, False, False, 2]
+
+
+def test_script_counts_the_shown_messages_only() -> None:
+    """件数の数え方は 1 つ。aria-invalid ではなく、出ている誤りの文（.msg）の数."""
+    source = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    assert "[aria-invalid=true]\").length" not in source
+    assert source.count("shownErrorCount(") == 3

@@ -391,12 +391,32 @@
     box.setAttribute("data-count", String(count));
     text.textContent = count ? FORM_ERRORS_TEXT.replace("{count}", String(count)) : "";
   }
+  // 件数は、いま欄の下に出ている誤りの文（.msg）の数。送るときも直すときも、これだけで数える
+  function shownErrorCount(form) {
+    return form.querySelectorAll(".msg:not([hidden])").length;
+  }
   // 画面の上が件数の知らせのとき（data-count がある）だけ、直した後の件数を出し直す
   function refreshFormErrors(control) {
     var box = document.getElementById("form-errors");
     if (control.form && box && box.hasAttribute("data-count")) {
-      showFormErrors(control.form.querySelectorAll("[aria-invalid=true]").length);
+      showFormErrors(shownErrorCount(control.form));
     }
+  }
+  // 一括作成：件数の欄のどれかが 1 以上になったら、区画の誤り（どれかに 1 以上、#error-counts）を隠す。
+  // この誤りは欄の誤りではない（aria-invalid が無い）ので、欄の直しとは別に外す。隠したら true
+  function clearCountsError(form) {
+    var note = form.querySelector("#error-counts");
+    if (!note || note.hidden) {
+      return false;
+    }
+    var inputs = form.querySelectorAll("input[name^=count_]");
+    for (var i = 0; i < inputs.length; i++) {
+      if (Number(inputs[i].value) >= 1) {
+        note.hidden = true;
+        return true;
+      }
+    }
+    return false;
   }
   function invalidControls(form) {
     var found = [];
@@ -435,7 +455,7 @@
           : control.getAttribute("data-error") || control.validationMessage;
         showFieldError(control, message);
       }
-      showFormErrors(controls.length);
+      showFormErrors(shownErrorCount(form));
       controls[0].focus();
       event.preventDefault();
       event.stopPropagation();
@@ -452,7 +472,11 @@
     if (control.name === "minute") {
       control = form.elements.hour || control;
     }
+    var countsCleared = clearCountsError(form);
     if (!control.hasAttribute("aria-invalid") || control.hasAttribute("data-check")) {
+      if (countsCleared) {
+        refreshFormErrors(control);
+      }
       return;
     }
     if (control.type === "radio") {

@@ -92,9 +92,9 @@ HTTP_FORBIDDEN = 403
 HTTP_NOT_FOUND = 404
 HTTP_CONFLICT = 409
 HTTP_SEE_OTHER = 303
-# 一覧の1ページの件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
 # 画面の上の誤りの件数の知らせ（app/web/static/app.js の同じ文と合わせる）
 FORM_ERRORS_MESSAGE = "入力に誤りが {count} 件あります。"
+# 一覧の1ページの件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
 LIST_PAGE_SIZE = 100
 MAX_LIST_DAYS = 31
 # 一括作成の間隔の既定（分）
