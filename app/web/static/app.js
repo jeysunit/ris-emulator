@@ -358,6 +358,11 @@
   }
   document.addEventListener("input", function (event) {
     if (event.target instanceof HTMLInputElement) {
+      if (event.target.getAttribute("data-check") === "birth-date") {
+        // 入力のたびに前の読み取りの誤りを外し、新しい読み取り結果（.hint）が返るまで古い誤りを残さない
+        event.target.removeAttribute("data-unreadable");
+        event.target.removeAttribute("data-message");
+      }
       checkField(event.target);
     }
   });

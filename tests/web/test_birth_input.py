@@ -184,6 +184,16 @@ def test_server_refuses_unreadable_birth_dates_with_the_same_message(
     assert '<span class="msg" id="error-birth-date"><svg' in field and f"<span>{message}</span>" in field
 
 
+def test_script_clears_the_previous_reading_on_every_input() -> None:
+    """入力のたびに前の誤り（data-unreadable・data-message）を外してから確かめる."""
+    script = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    start = script.index('document.addEventListener("input"')
+    block = script[start : script.index('document.addEventListener("change"', start)]
+    assert 'getAttribute("data-check") === "birth-date"' in block
+    assert block.index('removeAttribute("data-unreadable")') < block.index("checkField(event.target)")
+    assert block.index('removeAttribute("data-message")') < block.index("checkField(event.target)")
+
+
 def test_script_takes_the_reading_from_the_server() -> None:
     """画面のスクリプトは元号の表を持たず、サーバーの読み取り結果（data-error）で欄を確かめる."""
     script = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
