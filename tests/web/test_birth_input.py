@@ -174,10 +174,10 @@ def test_server_refuses_unreadable_birth_dates_with_the_same_message(
         assert service.count_orders() == 0
     page = html.unescape(response.text)
     assert response.status_code == 400
-    # 画面の上の知らせ（role="alert"）の 1 つに文を出す
+    # 画面の上の知らせ（role="alert"）は誤りの件数にし、文は欄の下に出す
     alerts = [part.split("</div>", 1)[0] for part in page.split('role="alert"')[1:]]
-    assert any(message in alert for alert in alerts), alerts
-    # 欄には入れた値を残し、欄の下にも同じ文を出す
+    assert any("入力に誤りが 1 件あります。" in alert for alert in alerts), alerts
+    # 欄には入れた値を残し、欄の下に文を出す
     field = _birth_field(page)
     assert f'value="{value}"' in field
     assert 'aria-invalid="true"' in field and "data-unreadable" in field

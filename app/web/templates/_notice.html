@@ -2,3 +2,17 @@
 {% macro err(text, alert=false, span=false) -%}
 <div class="notice{% if span %} span{% endif %}" data-k="err" role="{{ 'alert' if alert else 'status' }}"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><div>{{ text }}</div></div>
 {%- endmacro %}
+{# フォームの上の誤りの知らせ。誤りが欄ごとに返ったときは件数を data-count に持ち、
+   スクリプトが送るとき・直したときに件数を出し直す。誤りが無いときは隠して置く #}
+{% macro form_errors(text, field_errors) -%}
+<div id="form-errors"{% if field_errors %} data-count="{{ field_errors | length }}"{% endif %}{% if not text %} hidden{% endif %}>{{ err(text, alert=true) }}</div>
+{%- endmacro %}
+{# 欄の下の誤りの 1 行（.field の中に置く）。読み上げず、欄の aria-describedby が指す #}
+{% macro msg(name, field_errors, text='') -%}
+{% set shown = field_errors.get(name, '') or text %}
+<span class="msg" id="error-{{ name | replace('_', '-') }}"{% if not shown %} hidden{% endif %}><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span>{{ shown }}</span></span>
+{%- endmacro %}
+{# 欄が誤りのとき aria-invalid を付け、欄の下の文を指す #}
+{% macro attrs(name, field_errors) -%}
+ aria-describedby="error-{{ name | replace('_', '-') }}"{% if field_errors.get(name) %} aria-invalid="true"{% endif %}
+{%- endmacro %}

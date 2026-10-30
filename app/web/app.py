@@ -93,6 +93,8 @@ HTTP_NOT_FOUND = 404
 HTTP_CONFLICT = 409
 HTTP_SEE_OTHER = 303
 # 一覧の1ページの件数と、予定日の期間の上限（docs/spec/03_web_cli.md 3.1）
+# 画面の上の誤りの件数の知らせ（app/web/static/app.js の同じ文と合わせる）
+FORM_ERRORS_MESSAGE = "入力に誤りが {count} 件あります。"
 LIST_PAGE_SIZE = 100
 MAX_LIST_DAYS = 31
 # 一括作成の間隔の既定（分）
@@ -365,7 +367,12 @@ def create_app(
         return _render_entry(request, error="", values={})
 
     def _render_entry(
-        request: Request, *, error: str, values: dict[str, Any], status_code: int = 200
+        request: Request,
+        *,
+        error: str,
+        values: dict[str, Any],
+        status_code: int = 200,
+        field_errors: dict[str, str] | None = None,
     ) -> HTMLResponse:
         try:
             roster = order_service.roster_patients()
@@ -380,6 +387,7 @@ def create_app(
             "new_order.html",
             status_code=status_code,
             error=error,
+            field_errors=field_errors or {},
             values=values,
             roster=roster,
             roster_error=roster_error,
@@ -406,8 +414,13 @@ def create_app(
             order_request = _entry_request(values, config, order_service.today())
             order = order_service.create_orders(order_request)[0]
         except (ValidationError, ConfigurationError) as exc:
+            error, field_errors = _failure(exc)
             return _render_entry(
-                request, error=exc.message, values=values, status_code=HTTP_BAD_REQUEST
+                request,
+                error=error,
+                field_errors=field_errors,
+                values=values,
+                status_code=HTTP_BAD_REQUEST,
             )
         return RedirectResponse(f"/orders/{order.accession_number}", status_code=HTTP_SEE_OTHER)
 
@@ -416,7 +429,12 @@ def create_app(
         return _render_batch(request, error="", values={})
 
     def _render_batch(
-        request: Request, *, error: str, values: dict[str, Any], status_code: int = 200
+        request: Request,
+        *,
+        error: str,
+        values: dict[str, Any],
+        status_code: int = 200,
+        field_errors: dict[str, str] | None = None,
     ) -> HTMLResponse:
         interval = _choice(values.get("interval", ""), MINUTE_STEPS, DEFAULT_INTERVAL)
         return render(
@@ -424,6 +442,7 @@ def create_app(
             "batch_order.html",
             status_code=status_code,
             error=error,
+            field_errors=field_errors or {},
             values=values,
             max_orders=MAX_ORDERS_PER_REQUEST,
             intervals=MINUTE_STEPS,
@@ -446,8 +465,13 @@ def create_app(
             order_request = _batch_request(values, config, order_service.today())
             orders = order_service.create_orders(order_request)
         except (ValidationError, ConfigurationError) as exc:
+            error, field_errors = _failure(exc)
             return _render_batch(
-                request, error=exc.message, values=values, status_code=HTTP_BAD_REQUEST
+                request,
+                error=error,
+                field_errors=field_errors,
+                values=values,
+                status_code=HTTP_BAD_REQUEST,
             )
         day = date_param(orders[0].scheduled_date) if orders else ""
         return RedirectResponse(f"/orders?date_from={day}", status_code=HTTP_SEE_OTHER)
@@ -598,6 +622,7 @@ def create_app(
         values: dict[str, Any],
         status_code: int = 200,
         confirm: dict[str, Any] | None = None,
+        field_errors: dict[str, str] | None = None,
     ) -> HTMLResponse:
         try:
             item, linked = reconciliation_service.get_mpps(sop_instance_uid)
@@ -614,6 +639,7 @@ def create_app(
             status_code=status_code,
             confirm=confirm,
             error=error,
+            field_errors=field_errors or {},
             values=values,
             item=item,
             linked=linked[0] if linked else "",
@@ -636,7 +662,7 @@ def create_app(
             patient = _reconcile_patient(values, order_service)
             department = values.get("department", "").strip()
             if department and department not in config.orders.departments:
-                raise ValidationError("依頼科を選び直してください")
+                raise _field_error("department", "依頼科を選び直してください")
             reconcile_request = ReconcileRequest(
                 sop_instance_uid=sop_instance_uid,
                 patient=patient,
@@ -668,10 +694,12 @@ def create_app(
                 request, sop_instance_uid, error=exc.message, values=values, status_code=HTTP_CONFLICT
             )
         except (ValidationError, ConfigurationError) as exc:
+            error, field_errors = _failure(exc)
             return _render_reconcile(
                 request,
                 sop_instance_uid,
-                error=exc.message,
+                error=error,
+                field_errors=field_errors,
                 values=values,
                 status_code=HTTP_BAD_REQUEST,
             )
@@ -820,6 +848,30 @@ def _choice(text: str, choices: tuple[int, ...], default: int) -> int:
     return int(text) if text.isascii() and text.isdigit() and int(text) in choices else default
 
 
+def _form_errors(errors: dict[str, str]) -> ValidationError:
+    """欄ごとの誤り（欄の name → 文）。画面の上の知らせは件数にし、文は各欄の下に出す."""
+    return ValidationError(FORM_ERRORS_MESSAGE.format(count=len(errors)), fields=errors)
+
+
+def _field_error(field: str, message: str) -> ValidationError:
+    return _form_errors({field: message})
+
+
+def _collect(errors: dict[str, str], field: str, read: Callable[[], Any]) -> Any:  # noqa: ANN401
+    """`read` の誤りを、`field` の欄の誤りとして `errors` に足す（読めたら値、誤りなら None）."""
+    try:
+        return read()
+    except ValidationError as exc:
+        errors[field] = exc.message
+        return None
+
+
+def _failure(exc: ValidationError | ConfigurationError) -> tuple[str, dict[str, str]]:
+    """画面の上の知らせの文と、欄ごとの誤り."""
+    fields = getattr(exc, "fields", {})
+    return exc.message, dict(fields)
+
+
 def _form_date(values: dict[str, str], today: date) -> date:
     try:
         return parse_date_option(values.get("date", "").strip(), today)
@@ -854,26 +906,29 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
     if source == "roster":
         patient_id = values.get("roster_patient_id", "").strip()
         if not patient_id:
-            raise ValidationError("名簿の患者を選んでください")
+            raise _field_error("roster_patient_id", "名簿の患者を選んでください")
         patient = next((p for p in service.roster_patients() if p.patient_id == patient_id), None)
         if patient is None:
-            raise ValidationError(f"名簿に無い患者ID です: {patient_id}")
+            raise _field_error("roster_patient_id", f"名簿に無い患者ID です: {patient_id}")
         return patient
     if source != "manual":
-        raise ValidationError("患者を、名簿から選ぶか入力するかを選んでください")
+        raise _field_error("patient", "患者を、名簿から選ぶか入力するかを選んでください")
     patient_id = values.get("patient_id", "").strip()
-    validate_patient_id_input(patient_id)
+    try:
+        validate_patient_id_input(patient_id)
+    except ValidationError as exc:
+        raise _field_error("patient_id", exc.message) from exc
     groups = {}
     for script, label in SCRIPT_LABELS.items():
         family = values.get(f"{script}_family", "").strip()
         given = values.get(f"{script}_given", "").strip()
-        for part in (family, given):
+        for part_name, part in (("family", family), ("given", given)):
             message = check_name_component(label, part)
             if message:
-                raise ValidationError(message)
+                raise _field_error(f"{script}_{part_name}", message)
         groups[script] = f"{family}^{given}".rstrip("^") if family or given else ""
     if not any(groups.values()):
-        raise ValidationError("氏名を入力してください")
+        raise _field_error("alphabetic_family", "氏名を入力してください")
     orders = service.config.orders
     if not orders.patient_input_test_mode:
         groups["phonetic"] = to_katakana(groups["phonetic"])
@@ -886,15 +941,23 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
             test_mode=orders.patient_input_test_mode,
         )
         if message:
-            raise ValidationError(message)
+            raise _field_error(f"{script}_family", message)
     # 生年月日は西暦と和暦の入力を読み取り、西暦の YYYYMMDD で持つ（空は許す）。旧い形も受ける
     birth_input = legacy_birth_input(values.get("birth_date", "")).strip()
-    birth_date = (
-        parse_birth_input(birth_input, service.today()).strftime("%Y%m%d") if birth_input else ""
-    )
+    try:
+        birth_date = (
+            parse_birth_input(birth_input, service.today()).strftime("%Y%m%d")
+            if birth_input
+            else ""
+        )
+    except ValidationError as exc:
+        raise _field_error("birth_date", exc.message) from exc
     sex = values.get("sex", "").strip()
     # pydantic の英語の文より先に、日本語の文で断る
-    validate_sex(sex)
+    try:
+        validate_sex(sex)
+    except ValidationError as exc:
+        raise _field_error("sex", exc.message) from exc
     try:
         patient = Patient(
             patient_id=patient_id,
@@ -983,30 +1046,37 @@ def _reconcile_confirm(
 
 
 def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:
-    """予約作成（1件）のフォームの値を OrderRequest にする。誤りは ValidationError."""
+    """予約作成（1件）のフォームの値を OrderRequest にする。誤りは欄ごとに集めた ValidationError."""
+    errors: dict[str, str] = {}
     patient = values.get("patient", "")
     roster_patient_id = values.get("roster_patient_id", "").strip()
     if patient == "roster":
         if not roster_patient_id:
-            raise ValidationError("名簿の患者を選んでください")
+            errors["roster_patient_id"] = "名簿の患者を選んでください"
     elif patient != "new":
-        raise ValidationError("患者を、名簿から選ぶか新規にするかを選んでください")
+        errors["patient"] = "患者を、名簿から選ぶか新規にするかを選んでください"
     modality = values.get("modality", "")
     if modality not in config.orders.modalities:
-        raise ValidationError("モダリティを選び直してください")
+        errors["modality"] = "モダリティを選び直してください"
     procedure = values.get("procedure", "").strip()
     if not procedure:
-        raise ValidationError("検査名を選んでください")
+        errors["procedure"] = "検査名を選んでください"
     station = values.get("station", "").strip()
     if not station:
-        raise ValidationError("装置を選んでください")
+        errors["station"] = "装置を選んでください"
     department = values.get("department", "").strip()
     if department not in config.orders.departments:
-        raise ValidationError("依頼科を選んでください")
+        errors["department"] = "依頼科を選んでください"
+    scheduled_date = _collect(errors, "date", lambda: _form_date(values, today))
+    start_time = _collect(
+        errors, "time", lambda: _form_time(values, config.orders.slot_minutes, "予定時刻")
+    )
+    if errors:
+        raise _form_errors(errors)
     return OrderRequest(
         counts={modality: 1},
-        scheduled_date=_form_date(values, today),
-        start_time=_form_time(values, config.orders.slot_minutes, "予定時刻"),
+        scheduled_date=scheduled_date,
+        start_time=start_time,
         interval_minutes=0,
         patient_source="roster" if patient == "roster" else "random",
         roster_patient_id=roster_patient_id if patient == "roster" else None,
@@ -1018,7 +1088,8 @@ def _entry_request(values: dict[str, str], config: AppConfig, today: date) -> Or
 
 
 def _batch_request(values: dict[str, str], config: AppConfig, today: date) -> OrderRequest:
-    """一括作成のフォームの値を OrderRequest にする。誤りは ValidationError."""
+    """一括作成のフォームの値を OrderRequest にする。誤りは欄ごとに集めた ValidationError."""
+    errors: dict[str, str] = {}
     counts: dict[str, int] = {}
     for modality in config.orders.modalities:
         text = values.get(f"count_{modality}", "").strip()
@@ -1026,25 +1097,34 @@ def _batch_request(values: dict[str, str], config: AppConfig, today: date) -> Or
             continue
         try:
             count = int(text)
-        except ValueError as exc:
-            raise ValidationError(f"{modality} の件数が数ではありません") from exc
+        except ValueError:
+            errors[f"count_{modality}"] = f"{modality} の件数が数ではありません"
+            continue
         if count < 0:
-            raise ValidationError(f"{modality} の件数は 0 以上にしてください")
-        if count:
+            errors[f"count_{modality}"] = f"{modality} の件数は 0 以上にしてください"
+        elif count:
             counts[modality] = count
-    if not counts:
-        raise ValidationError("どれかのモダリティに 1 以上の件数を入れてください")
+    if not counts and not errors:
+        errors["counts"] = "どれかのモダリティに 1 以上の件数を入れてください"
     interval_text = values.get("interval", "").strip()
-    if not (interval_text.isascii() and interval_text.isdigit() and int(interval_text) in MINUTE_STEPS):
-        raise ValidationError(f"間隔は {'・'.join(map(str, MINUTE_STEPS))} 分から選んでください")
-    interval = int(interval_text)
+    interval = int(interval_text) if interval_text.isascii() and interval_text.isdigit() else 0
+    if interval not in MINUTE_STEPS:
+        errors["interval"] = f"間隔は {'・'.join(map(str, MINUTE_STEPS))} 分から選んでください"
     patients = values.get("patients", "random")
     if patients not in ("random", "roster"):
-        raise ValidationError("患者は新規（架空）か名簿から無作為にを選んでください")
+        errors["patients"] = "患者は新規（架空）か名簿から無作為にを選んでください"
+    scheduled_date = _collect(errors, "date", lambda: _form_date(values, today))
+    start_time = (
+        _collect(errors, "time", lambda: _form_time(values, interval, "開始時刻"))
+        if interval in MINUTE_STEPS
+        else None
+    )
+    if errors:
+        raise _form_errors(errors)
     return OrderRequest(
         counts=counts,
-        scheduled_date=_form_date(values, today),
-        start_time=_form_time(values, interval, "開始時刻"),
+        scheduled_date=scheduled_date,
+        start_time=start_time,
         interval_minutes=interval,
         patient_source=patients,  # type: ignore[arg-type]
         character_set=_form_character_set(values),

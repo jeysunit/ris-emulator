@@ -1,12 +1,10 @@
 {% extends "base.html" %}
-{% from "_notice.html" import err %}
+{% from "_notice.html" import err, form_errors, msg, attrs %}
 {% block title %}一括作成{% endblock %}
 {% block content %}
 <div class="pagehead"><h1>一括作成</h1></div>
-{% if error %}
-{{ err(error, alert=true) }}
-{% endif %}
-<form method="post" action="/orders/batch" class="w-form">
+{{ form_errors(error, field_errors) }}
+<form method="post" action="/orders/batch" class="w-form" novalidate data-validate>
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   <fieldset class="sec">
     <legend>モダリティごとの件数（合わせて {{ max_orders }} 件まで）</legend>
@@ -14,7 +12,8 @@
       {% for modality, entry in catalog.items() %}
       <div class="count-cell">
         <label class="field"><span class="l">{{ modality }}</span>
-          <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric" class="input">
+          <input type="number" name="count_{{ modality }}" min="0" max="{{ max_orders }}" value="{{ values.get('count_' ~ modality, '') }}" inputmode="numeric" class="input" data-error="{{ modality }} の件数は 0〜{{ max_orders }} の整数で入力してください"{{ attrs('count_' ~ modality, field_errors) }}>
+          {{ msg('count_' ~ modality, field_errors) }}
         </label>
         {% if entry.stations | length > 1 %}
         <label class="field"><span class="l">装置</span>
@@ -28,17 +27,19 @@
         {% endif %}
       </div>
       {% endfor %}
+      <div class="field span">{{ msg('counts', field_errors) }}</div>
     </div>
   </fieldset>
   <fieldset class="sec">
     <legend>予定</legend>
     <div class="in grid3">
       <label class="field"><span class="l">予定日<span class="req">必須</span></span>
-        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required class="input">
+        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required class="input" data-error="予定日を入力してください"{{ attrs('date', field_errors) }}>
+        {{ msg('date', field_errors) }}
       </label>
       <label class="field"><span class="l">開始時刻</span>
         <span class="time-select">
-          <select name="hour" aria-label="時" class="select">
+          <select name="hour" aria-label="時" class="select"{{ attrs('time', field_errors) }}>
             {% for h in hours %}
             <option value="{{ h }}"{% if values.get('hour', '09') == h %} selected{% endif %}>{{ h }}</option>
             {% endfor %}
@@ -47,21 +48,26 @@
           {% set selected = values.get('minute', '00') %}
           {% include "_minute_select.html" %}
         </span>
+        {{ msg('time', field_errors) }}
       </label>
       <label class="field"><span class="l">間隔（分）</span>
-        <select name="interval" hx-get="/orders/batch/minutes" hx-target="#minute-select" hx-swap="outerHTML" hx-include="#minute-select" class="select">
+        <select name="interval" hx-get="/orders/batch/minutes" hx-target="#minute-select" hx-swap="outerHTML" hx-include="#minute-select" class="select"{{ attrs('interval', field_errors) }}>
           {% for i in intervals %}
           <option value="{{ i }}"{% if i == interval %} selected{% endif %}>{{ i }}</option>
           {% endfor %}
         </select>
+        {{ msg('interval', field_errors) }}
       </label>
     </div>
   </fieldset>
   <fieldset class="sec">
     <legend>患者</legend>
-    <div class="in choices">
-      <label class="choice"><input type="radio" name="patients" value="random"{% if values.get('patients', 'random') == 'random' %} checked{% endif %}> 新規（架空）</label>
-      <label class="choice"><input type="radio" name="patients" value="roster"{% if values.get('patients') == 'roster' %} checked{% endif %}> 名簿から無作為に</label>
+    <div class="in">
+      <div class="choices">
+        <label class="choice"><input type="radio" name="patients" value="random"{% if values.get('patients', 'random') == 'random' %} checked{% endif %}{{ attrs('patients', field_errors) }}> 新規（架空）</label>
+        <label class="choice"><input type="radio" name="patients" value="roster"{% if values.get('patients') == 'roster' %} checked{% endif %}{{ attrs('patients', field_errors) }}> 名簿から無作為に</label>
+      </div>
+      <div class="field">{{ msg('patients', field_errors) }}</div>
     </div>
   </fieldset>
   <fieldset class="sec">
