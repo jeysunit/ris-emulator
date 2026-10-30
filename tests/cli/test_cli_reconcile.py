@@ -83,6 +83,20 @@ def test_run_with_typed_patient_and_json(tmp_path: Path, capsys: pytest.CaptureF
     assert "CT0003" in out
 
 
+def test_run_accepts_a_wareki_birth_date(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """誤りの文が示す形（S50/05/14）を CLI でも受け、西暦の YYYYMMDD で HL7 に入れる."""
+    sop_uid, _ = add_unscheduled_mpps(_store(tmp_path))
+    with stub_receiver(lambda text: ack("AA", text)) as receiver:
+        config = _config_file(tmp_path, receiver.port)
+        code, _, _ = _run(
+            capsys, "reconcile", "run", sop_uid,
+            "--patient-id", "X0001", "--name", "SATO^JIRO", "--birth-date", "S50/04/05",
+            "--config", str(config),
+        )  # fmt: skip
+    assert code == 0
+    assert "|19750405|" in receiver.received[0]
+
+
 def test_rejected_gives_exit_5_and_resend_fixes_it(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     sop_uid, _ = add_unscheduled_mpps(_store(tmp_path))
     answers = iter(["AR", "AA", "AA"])
@@ -115,7 +129,7 @@ def test_unreachable_gives_exit_6(tmp_path: Path, capsys: pytest.CaptureFixture[
         (["--patient-id", "X1"], "--roster-patient-id か"),
         (["--roster-patient-id", "NOPE"], "名簿に無い患者ID"),
         (["--roster-patient-id", "P000001", "--patient-id", "X1"], "同時に指定できません"),
-        (["--patient-id", "X1", "--name", "A", "--birth-date", "19751345"], "暦にある日付"),
+        (["--patient-id", "X1", "--name", "A", "--birth-date", "19751345"], "生年月日を読み取れません"),
         (["--roster-patient-id", "P000001", "--procedure", "CT9999"], "CT9999"),
     ],
 )

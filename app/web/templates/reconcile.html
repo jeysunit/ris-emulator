@@ -73,7 +73,11 @@
       <p class="fieldnote span" id="mode-phonetic">{% if test_mode %}かなの確かめ：試験の形（半角カナ・ひらがなもそのまま送る）{% else %}かなの確かめ：全角カタカナ{% endif %}</p>
       {% endif %}
       {% endfor %}
-      <label class="field"><span class="l">生年月日</span><input type="date" name="birth_date" value="{{ values.get('birth_date', '') }}" class="input" data-check="birth-date" data-message="{{ input_messages['birth-date'] }}" aria-describedby="error-birth-date"><span class="msg" id="error-birth-date" hidden><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span></span></span></label>
+      {# 生年月日は西暦と和暦を受ける。入力のたびにサーバーが読み取り、結果を欄の下（.hint）に出す。
+         年齢は照合の検査日（MPPS の開始日、読めなければ受けた日）で数える #}
+      {% set value, on = values.get('birth_date', ''), banner_on %}
+      {% set birth_problem = birth_hint(value, on)[1] %}
+      <label class="field"><span class="l">生年月日</span><input type="text" inputmode="text" autocomplete="off" name="birth_date" value="{{ value }}" class="input" data-check="birth-date" data-message="{{ birth_problem or input_messages['birth-date'] }}"{% if birth_problem %} data-unreadable aria-invalid="true"{% endif %} aria-describedby="hint-birth-date error-birth-date" hx-get="/birth-date/hint?on={{ on }}" hx-trigger="input changed delay:250ms" hx-target="#hint-birth-date" hx-swap="outerHTML" hx-sync="this:replace">{% include "_birth_hint.html" %}<span class="msg" id="error-birth-date"{% if not birth_problem %} hidden{% endif %}><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><span>{{ birth_problem }}</span></span></label>
       <label class="field"><span class="l">性別</span>
         <select name="sex" class="select">
           {% for value in ('', 'M', 'F', 'O') %}

@@ -185,7 +185,7 @@ def test_reconcile_with_typed_patient(config: AppConfig, store: OrderStore) -> N
             ideographic_given="次郎",
             phonetic_family="",
             phonetic_given="",
-            birth_date="1975-04-05",
+            birth_date="1975/04/05",
             sex="M",
             procedure="CT0001",
             department="救急科",
@@ -502,7 +502,7 @@ def test_typed_patient_id_of_the_same_patient_shows_the_known_patient(
             patient_id=ROSTER_ID,
             alphabetic_family="TANAKA",
             alphabetic_given="HIROSHI",
-            birth_date="1998-03-12",
+            birth_date="1998/03/12",
         )
     dialog = _dialog(response.text)
     assert "<th>既にある患者（同じ患者ID）</th>" in dialog

@@ -22,6 +22,7 @@ import re
 from datetime import date, datetime
 
 from app.core.charset import unencodable_chars
+from app.core.wareki import BIRTH_FORMAT_MESSAGE, BIRTH_FUTURE_MESSAGE, parse_birth_input
 from app.core.exceptions import ValidationError
 from app.core.models import (
     CHARACTER_SET_TERMS,
@@ -59,8 +60,10 @@ IDEOGRAPHIC_MESSAGE = (
 PHONETIC_MESSAGE = "氏名（かな）は全角のカタカナで入力してください。"
 PHONETIC_CONVERTED_NOTE = "ひらがなをカタカナに直しました。"
 PATIENT_ID_MESSAGE = "患者ID は半角の英数字と記号で入力してください（\\ ^ ~ & | は使えません）。"
-BIRTH_DATE_FUTURE_MESSAGE = "生年月日は今日以前の日付を入力してください。"
-# 欄の確かめの種類（data-check）ごとの文
+BIRTH_DATE_FORMAT_MESSAGE = BIRTH_FORMAT_MESSAGE
+BIRTH_DATE_FUTURE_MESSAGE = BIRTH_FUTURE_MESSAGE
+# 欄の確かめの種類（data-check）ごとの文。生年月日の欄は、入力のたびにサーバーが読み取った
+# 結果の文に替える（app/web/static/app.js）
 INPUT_MESSAGES = {
     "patient-id": PATIENT_ID_MESSAGE,
     "alphabetic": ALPHABETIC_MESSAGE,
@@ -193,9 +196,22 @@ def validate_birth_date(value: str, today: date | None = None) -> None:
         except ValueError:
             parsed = None
     if parsed is None:
-        raise ValidationError("生年月日は、暦にある日付を入力してください。")
+        raise ValidationError(BIRTH_DATE_FORMAT_MESSAGE)
     if parsed > (today or date.today()):
         raise ValidationError(BIRTH_DATE_FUTURE_MESSAGE)
+
+
+def birth_date_from_cli(value: str, today: date | None = None) -> str:
+    """CLI の生年月日を YYYYMMDD にする。空は空.
+
+    `YYYYMMDD` はそのまま確かめる。ほかは画面と同じ形（`1975/05/14`・`S50/05/14` など）として
+    読み取る。誤りの文は画面と同じで、文が示す形を CLI でも受ける.
+    """
+    text = value.strip()
+    if not text or _DATE.fullmatch(text):
+        validate_birth_date(text, today)
+        return text
+    return parse_birth_input(text, today or date.today()).strftime("%Y%m%d")
 
 
 def validate_sex(value: str) -> None:

@@ -10,11 +10,13 @@ from app.core.exceptions import ValidationError
 from app.core.models import CharacterSet, Patient, PersonName
 from app.core.patient_input import (
     ALPHABETIC_MESSAGE,
+    BIRTH_DATE_FORMAT_MESSAGE,
     BIRTH_DATE_FUTURE_MESSAGE,
     IDEOGRAPHIC_MESSAGE,
     INPUT_MESSAGES,
     PATIENT_ID_MESSAGE,
     PHONETIC_MESSAGE,
+    birth_date_from_cli,
     check_name_component,
     check_name_group,
     check_phonetic_group,
@@ -162,11 +164,36 @@ def test_birth_date() -> None:
     for value in ("", "19750510", "20261025", "20240229"):
         validate_birth_date(value, TODAY)
     for value in ("20230229", "19751301", "19750532", "00000000", "1975-05-10", "197505", "１９７５０５１０"):
-        with pytest.raises(ValidationError, match="暦にある日付"):
+        with pytest.raises(ValidationError) as caught:
             validate_birth_date(value, TODAY)
+        assert caught.value.message == BIRTH_DATE_FORMAT_MESSAGE
+    assert BIRTH_DATE_FORMAT_MESSAGE == "生年月日を読み取れません。1975/05/14 か S50/05/14 の形で入力してください。"
     with pytest.raises(ValidationError) as caught:
         validate_birth_date("20261026", TODAY)
     assert caught.value.message == BIRTH_DATE_FUTURE_MESSAGE
+    assert BIRTH_DATE_FUTURE_MESSAGE == "生年月日が今日より後です。日付を確かめてください。"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("", ""), ("19750514", "19750514"), ("1975/05/14", "19750514"), ("S50/05/14", "19750514"),
+     ("昭和50年5月14日", "19750514"), (" 19750514 ", "19750514")],
+)
+def test_cli_birth_date_accepts_yyyymmdd_and_the_screen_forms(value: str, expected: str) -> None:
+    """誤りの文が示す形（1975/05/14・S50/05/14）を、CLI でも受ける."""
+    assert birth_date_from_cli(value, TODAY) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [("20230229", BIRTH_DATE_FORMAT_MESSAGE), ("1975-05-14", BIRTH_DATE_FORMAT_MESSAGE),
+     ("20261026", BIRTH_DATE_FUTURE_MESSAGE), ("R8/10/26", BIRTH_DATE_FUTURE_MESSAGE),
+     ("H31/05/01", "生年月日が平成の範囲にありません。")],
+)
+def test_cli_birth_date_refuses_with_the_screen_messages(value: str, message: str) -> None:
+    with pytest.raises(ValidationError) as caught:
+        birth_date_from_cli(value, TODAY)
+    assert caught.value.message.startswith(message)
 
 
 def test_sex() -> None:

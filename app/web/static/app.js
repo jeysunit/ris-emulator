@@ -256,12 +256,6 @@
       });
     });
   }
-  function today() {
-    var now = new Date();
-    var month = ("0" + (now.getMonth() + 1)).slice(-2);
-    var day = ("0" + now.getDate()).slice(-2);
-    return now.getFullYear() + "-" + month + "-" + day;
-  }
   // かな：全角カタカナ（ァ〜ヾ）と空白だけ。半角カナは断る
   var PHONETIC_RANGES = [[0x20, 0x20], [0x3000, 0x3000], [0x30a1, 0x30fe]];
   function isPhonetic(value) {
@@ -288,9 +282,22 @@
       return input.hasAttribute("data-test-mode") || isPhonetic(toKatakana(value));
     }
     if (kind === "birth-date") {
-      return !value || value <= today();
+      // 生年月日はサーバーが読み取る（元号の表は app/core/wareki.py にだけ置く）。読めなかった
+      // ことは、欄の下の読み取り結果を差し替えたときに data-unreadable で受け取る
+      return !value.trim() || !input.hasAttribute("data-unreadable");
     }
     return true;
+  }
+  // 欄の aria-describedby が指す要素のうち、class を持つもの（.hint・.msg）
+  function described(input, className) {
+    var ids = (input.getAttribute("aria-describedby") || "").split(/\s+/);
+    for (var i = 0; i < ids.length; i++) {
+      var element = ids[i] ? document.getElementById(ids[i]) : null;
+      if (element && element.classList.contains(className)) {
+        return element;
+      }
+    }
+    return null;
   }
   // かな：ひらがなをカタカナに直し、直したことを欄の下に知らせる（試験の形では直さない）
   var HIRAGANA = /[ぁ-ゖゝゞ]/g;
@@ -333,7 +340,7 @@
   );
   function checkField(input) {
     var kind = input.getAttribute("data-check");
-    var note = document.getElementById(input.getAttribute("aria-describedby"));
+    var note = described(input, "msg");
     if (!kind || !note) {
       return;
     }
@@ -358,5 +365,23 @@
     if (event.target instanceof HTMLInputElement) {
       checkField(event.target);
     }
+  });
+  // 生年月日：サーバーが返した読み取り結果（.hint）を差し替えた後に、誤りの文（data-error）を欄の
+  // 文にして確かめ直す。読めないときは .hint が空で、.msg に誤りの文が出る
+  document.addEventListener("htmx:afterSettle", function (event) {
+    var config = event.detail && event.detail.requestConfig;
+    var input = config && config.elt;
+    if (!(input instanceof HTMLInputElement) || input.getAttribute("data-check") !== "birth-date") {
+      return;
+    }
+    var hint = described(input, "hint");
+    var problem = hint ? hint.getAttribute("data-error") : null;
+    if (problem) {
+      input.setAttribute("data-unreadable", "");
+      input.setAttribute("data-message", problem);
+    } else {
+      input.removeAttribute("data-unreadable");
+    }
+    checkField(input);
   });
 })();
