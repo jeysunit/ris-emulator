@@ -95,7 +95,7 @@ def test_hint_shows_the_reading(config: AppConfig, store: OrderStore, value: str
 @pytest.mark.parametrize(
     ("value", "message"),
     [
-        ("1975-05-14", BIRTH_FORMAT_MESSAGE),
+        ("S50-05-14", BIRTH_FORMAT_MESSAGE),
         ("H31/05/01", HEISEI_AFTER),
         ("2026/10/30", BIRTH_FUTURE_MESSAGE),
     ],
@@ -139,10 +139,28 @@ def test_wareki_birth_date_is_saved_in_the_western_calendar(
         assert service.list_orders()[0].patient.birth_date == "19750514"
 
 
+@pytest.mark.parametrize("value", ["1975-05-14", "1975-5-14", "19750514"])
+def test_legacy_birth_date_forms_are_still_accepted(
+    config: AppConfig, store: OrderStore, value: str
+) -> None:
+    """画面の外から送る呼び出しのため、照合の受け口は旧い形（ハイフン・8 桁）も受ける."""
+    sop_uid, _ = add_unscheduled_mpps(store)
+    path = f"/reconciliation/{sop_uid}"
+    with _client(config, store) as (client, service):
+        assert "1975/05/14（昭50・51歳）" in _hint(client, value)
+        first = _post(client, path, **_manual(value), procedure="CT0001")
+        assert first.status_code == 200
+        response = client.post(
+            path, data=_confirm_fields(first.text), headers={"Origin": ORIGIN}, follow_redirects=False
+        )
+        assert response.status_code == 303
+        assert service.list_orders()[0].patient.birth_date == "19750514"
+
+
 @pytest.mark.parametrize(
     ("value", "message"),
     [
-        ("1975-05-14", BIRTH_FORMAT_MESSAGE),
+        ("S50-05-14", BIRTH_FORMAT_MESSAGE),
         ("H31/05/01", HEISEI_AFTER),
         ("2026/10/30", BIRTH_FUTURE_MESSAGE),
     ],
