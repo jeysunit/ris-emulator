@@ -49,12 +49,11 @@ from app.core.patient_input import (
     check_name_component,
     check_name_group,
     to_katakana,
-    validate_birth_date,
     validate_patient_id_input,
     validate_sex,
 )
 from app.core.reconciliation import DELIVERY_LABELS
-from app.core.wareki import birth_cell, birth_text, parse_date
+from app.core.wareki import birth_cell, birth_hint, birth_text, parse_birth_input, parse_date
 from app.mwl.server import MwlServer
 from app.services.config import MINUTE_STEPS, AppConfig
 from app.services.order_service import (
@@ -583,6 +582,14 @@ def create_app(
     def reconciliation_form(request: Request, sop_instance_uid: str) -> HTMLResponse:
         return _render_reconcile(request, sop_instance_uid, error="", values={})
 
+    @app.get("/birth-date/hint", response_class=HTMLResponse)
+    def birth_date_hint(request: Request, birth_date: str = "", on: str = "") -> HTMLResponse:
+        """生年月日の欄の下の読み取り結果（htmx）。読めないときは誤りの文を付けて返す.
+
+        年齢は `on`（年齢を数える日、YYYYMMDD）で数え、読めなければ開いた日で数える。
+        """
+        return render(request, "_birth_hint.html", value=birth_date, on=on)
+
     def _render_reconcile(
         request: Request,
         sop_instance_uid: str,
@@ -691,9 +698,26 @@ def create_app(
     )
     templates.env.filters["birth_cell"] = lambda value, on="": birth_cell(value, count_day(on, order_service.today()))
     templates.env.filters["study_day"] = study_day
+    templates.env.globals["birth_hint"] = lambda value, on="": birth_hint(
+        legacy_birth_input(value), count_day(on, order_service.today()), order_service.today()
+    )
     templates.env.globals["mpps_marks"] = MPPS_MARKS
     templates.env.globals["delivery_marks"] = DELIVERY_MARKS
     return app
+
+
+_LEGACY_HYPHEN = re.compile(r"([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})")
+_LEGACY_DIGITS = re.compile(r"([0-9]{4})([0-9]{2})([0-9]{2})")
+
+
+def legacy_birth_input(value: str) -> str:
+    """照合の受け口が受ける旧い生年月日の形（`1975-05-14`・`19750514`）を `1975/05/14` の形にする.
+
+    画面の外から送る呼び出しのための後方互換。ほかの値はそのまま返す（読み取りは parse_birth_input）.
+    """
+    text = value.strip()
+    match = _LEGACY_HYPHEN.fullmatch(text) or _LEGACY_DIGITS.fullmatch(text)
+    return "/".join(match.groups()) if match else value
 
 
 def ymd(value: str) -> str:
@@ -863,10 +887,13 @@ def _reconcile_patient(values: dict[str, str], service: OrderService) -> Patient
         )
         if message:
             raise ValidationError(message)
-    birth_date = values.get("birth_date", "").strip().replace("-", "")
+    # 生年月日は西暦と和暦の入力を読み取り、西暦の YYYYMMDD で持つ（空は許す）。旧い形も受ける
+    birth_input = legacy_birth_input(values.get("birth_date", "")).strip()
+    birth_date = (
+        parse_birth_input(birth_input, service.today()).strftime("%Y%m%d") if birth_input else ""
+    )
     sex = values.get("sex", "").strip()
     # pydantic の英語の文より先に、日本語の文で断る
-    validate_birth_date(birth_date)
     validate_sex(sex)
     try:
         patient = Patient(

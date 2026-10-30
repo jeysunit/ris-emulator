@@ -14,6 +14,7 @@ import pytest
 from app.core.models import CharacterSet, Patient, PersonName
 from app.core.patient_input import (
     ALPHABETIC_MESSAGE,
+    BIRTH_DATE_FORMAT_MESSAGE,
     BIRTH_DATE_FUTURE_MESSAGE,
     IDEOGRAPHIC_MESSAGE,
     PATIENT_ID_MESSAGE,
@@ -75,8 +76,8 @@ def test_roster_patient_is_not_held_to_the_manual_input_rules(
         (_manual(alphabetic_family="A" * 65), "64 字以内"),
         (_manual(alphabetic_family="SA^TO"), "氏名（英字）に ^ = \\ と制御文字は使えません"),
         (_manual(phonetic_family="ア=イ"), "氏名（かな）に ^ = \\ と制御文字は使えません"),
-        (_manual(birth_date="2999-01-01"), BIRTH_DATE_FUTURE_MESSAGE),
-        (_manual(birth_date="2023-02-29"), "暦にある日付"),
+        (_manual(birth_date="2999/01/01"), BIRTH_DATE_FUTURE_MESSAGE),
+        (_manual(birth_date="2023/02/29"), BIRTH_DATE_FORMAT_MESSAGE),
         (_manual(sex="X"), "性別"),
     ],
 )
@@ -128,7 +129,7 @@ def test_hiragana_in_the_phonetic_name_is_saved_as_katakana(
 ) -> None:
     sop_uid, _ = add_unscheduled_mpps(store)
     data = _manual(
-        phonetic_family="さとう", phonetic_given="じろう", birth_date="1975-05-10", procedure=""
+        phonetic_family="さとう", phonetic_given="じろう", birth_date="1975/05/10", procedure=""
     )
     with _client(config, store) as (client, service):
         response = _reconcile(client, f"/reconciliation/{sop_uid}", **data)
@@ -201,7 +202,7 @@ def test_valid_manual_patient_is_accepted(config: AppConfig, store: OrderStore) 
         ideographic_given="次郎",
         phonetic_family="サトウ",
         phonetic_given="ジロウ",
-        birth_date="1975-05-10",
+        birth_date="1975/05/10",
         sex="M",
         procedure="",
     )

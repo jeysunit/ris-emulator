@@ -16,8 +16,8 @@ BAD_INPUTS = [
     (["--patient-id", "X1", "--name", "SATO^JIRO==Sato"], "氏名（かな）は全角のカタカナ"),
     (["--patient-id", "患者01", "--name", "SATO^JIRO"], "患者ID は半角の英数字"),
     (["--patient-id", "X1", "--name", "A" * 65], "64 字以内"),
-    (["--patient-id", "X1", "--name", "SATO^JIRO", "--birth-date", "20230229"], "暦にある日付"),
-    (["--patient-id", "X1", "--name", "SATO^JIRO", "--birth-date", "20991231"], "今日以前"),
+    (["--patient-id", "X1", "--name", "SATO^JIRO", "--birth-date", "20230229"], "生年月日を読み取れません"),
+    (["--patient-id", "X1", "--name", "SATO^JIRO", "--birth-date", "20991231"], "生年月日が今日より後です"),
 ]
 # 予約の文字コードが JIS のときだけ断る漢字の氏名
 JIS_BAD_INPUTS = [

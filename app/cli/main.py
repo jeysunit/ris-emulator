@@ -45,9 +45,9 @@ from app.core.models import (
 from app.core.mwl_dataset import order_to_dataset
 from app.core.patient_input import (
     SCRIPT_LABELS,
+    birth_date_from_cli,
     check_name_group,
     to_katakana,
-    validate_birth_date,
     validate_patient_id_input,
     validate_sex,
 )
@@ -185,7 +185,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--name",
         help='a40・a08：氏名。DICOM の PN の形 "英字=漢字=かな"（各グループは 姓^名^ミドル^接頭辞^接尾辞）',
     )
-    send.add_argument("--birth-date", default="", help="a40・a08：生年月日 YYYYMMDD")
+    send.add_argument("--birth-date", default="", help="a40・a08：生年月日 YYYYMMDD（1975/05/14・S50/05/14 の形も受ける）")
     send.add_argument("--sex", default="", choices=("", "M", "F", "O"), help="a40・a08：性別")
     send.add_argument("--prior-patient-id", help="a40：統合される旧い患者ID（MRG-1）")
     send.add_argument("--prior-name", help="a40：旧い患者の氏名（MRG-7。--name と同じ形）")
@@ -230,7 +230,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--roster-patient-id", help="名簿の患者の ID")
     run.add_argument("--patient-id", help="正式な患者ID")
     run.add_argument("--name", help='正式な氏名。DICOM の PN の形 "英字=漢字=かな"')
-    run.add_argument("--birth-date", default="", help="生年月日 YYYYMMDD")
+    run.add_argument("--birth-date", default="", help="生年月日 YYYYMMDD（1975/05/14・S50/05/14 の形も受ける）")
     run.add_argument("--sex", default="", choices=("", "M", "F", "O"), help="性別")
     run.add_argument("--procedure", help="検査の種類のコード（default: モダリティの先頭）")
     run.add_argument("--department", help="依頼科（default: 救急科。設定に無ければ先頭）")
@@ -407,13 +407,13 @@ def _patient_from_args(args: argparse.Namespace, orders: OrdersConfig) -> Patien
     # pydantic の英語の文より先に、日本語の文で断る（入力の確かめは app/core/patient_input.py）
     validate_patient_id_input(args.patient_id)
     name = _parse_person_name(args.name, orders)
-    validate_birth_date(args.birth_date)
+    birth_date = birth_date_from_cli(args.birth_date)
     validate_sex(args.sex)
     try:
         return Patient(
             patient_id=args.patient_id,
             name=name,
-            birth_date=args.birth_date,
+            birth_date=birth_date,
             sex=args.sex,
         )
     except pydantic.ValidationError as exc:
