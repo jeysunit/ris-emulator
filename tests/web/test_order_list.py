@@ -280,3 +280,10 @@ def test_summary_buttons_filter_without_javascript(config: AppConfig, service: O
         filtered = client.get("/orders", params={"status": "scheduled"}).text
     assert 'name="status" value="" aria-pressed="true"' in everything
     assert 'name="status" value="scheduled" aria-pressed="true"' in filtered
+
+
+def test_list_and_side_section_sit_in_a_container_query_wrapper(config: AppConfig, service: OrderService) -> None:
+    service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))
+    with _client(config, service) as client:
+        page = client.get("/orders").text
+    assert re.search(r'<div class="cq">\s*<div class="split-h">', page)
