@@ -41,7 +41,7 @@ def test_titles_and_nav(config: AppConfig, service: OrderService) -> None:
         }
     for title, page in pages.items():
         nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
-        assert re.findall(r'<span class="t">([^<]+)</span></a>', nav) == ["予約", "予約作成", "一括作成", "未照合", "バージョン情報"]
+        assert re.findall(r'<span class="t">([^<]+)</span></a>', nav) == ["予約", "予約作成", "一括作成", "未照合", "接続先", "バージョン情報"]
         assert f"<title>{title} - ris-emulator</title>" in page
         selected_nav = re.findall(r'<a href="([^"]+)" class="nav-i" aria-current="page"', nav)
         assert selected_nav == ["/orders/new" if title == "予約作成" else "/orders"]

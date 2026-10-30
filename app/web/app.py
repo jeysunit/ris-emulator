@@ -83,7 +83,15 @@ from .auth import (
     new_csrf_token,
 )
 from .build_info import build_commit
-from .connection import CHECK_UNREADABLE, Probe, check_summary, conn_view, run_check
+from .connection import (
+    CHECK_UNREADABLE,
+    Probe,
+    check_summary,
+    conn_view,
+    hl7_notice,
+    run_check,
+    run_hl7_check,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 HTTP_BAD_REQUEST = 400
@@ -180,7 +188,7 @@ def create_app(
     app.state.mwl = mwl
     app.state.csrf_token = new_csrf_token()
     # 上の帯の「接続確認」の直近の結果（押すまでは無い）。確かめている間は重ねて送らない
-    probes: dict[str, Probe | None] = {"mwl": None}
+    probes: dict[str, Probe | None] = {"mwl": None, "hl7": None}
     check_lock = threading.Lock()
     templates = Jinja2Templates(directory=BASE_DIR / "templates")
     check_host = is_loopback(config.web.bind_address)
@@ -194,6 +202,7 @@ def create_app(
                 "reconciliation_list.html": "reconciliation",
                 "reconcile.html": "reconciliation",
                 "version.html": "version",
+                "connections.html": "connections",
             }.get(name, "orders"),
         )
         context.update(
@@ -202,7 +211,7 @@ def create_app(
             mwl=mwl,
             mwl_config=config.mwl,
             hl7_config=config.hl7,
-            conn=conn_view(mwl, probes["mwl"]),
+            conn=conn_view(mwl, probes["mwl"], probes["hl7"]),
             check_unreadable=CHECK_UNREADABLE,
             status_labels=STATUS_LABELS,
             selectable_statuses=selectable_statuses,
@@ -554,19 +563,49 @@ def create_app(
 
     @app.post("/connection/check", response_class=HTMLResponse)
     def connection_check(request: Request) -> Response:
-        """上の帯の「接続確認」：MWL の待ち受けに C-ECHO をかけ、popover の中身と全体の札を結果で差し替える.
+        """上の帯の「接続確認」：MWL の待ち受けと HL7 の送信先を確かめ、popover の中身と全体の札を結果で差し替える.
 
         確かめている最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
         """
         if not check_lock.acquire(blocking=False):
             return Response(status_code=204)
         try:
-            probe = run_check(mwl)
-            probes["mwl"] = probe
+            results = [run_check(mwl), run_hl7_check(config.hl7)]
+            probes["mwl"], probes["hl7"] = results
         finally:
             check_lock.release()
         # 結果の 1 文は、中身の中の読み上げの欄（app.js が差し替えの後に入れる）に渡す
-        return render(request, "_conn_pop.html", oob=True, check_result=check_summary([probe.ok]))
+        return render(
+            request,
+            "_conn_pop.html",
+            oob=True,
+            check_result=check_summary([probe.ok for probe in results]),
+        )
+
+    @app.get("/connections", response_class=HTMLResponse)
+    def connections_page(request: Request) -> HTMLResponse:
+        return render(request, "connections.html")
+
+    @app.post("/connections/check", response_class=HTMLResponse)
+    def connections_check(request: Request, target: str = "all") -> Response:
+        """接続先の画面の「接続確認」。`target=hl7` は送信先の行だけ、`all` は待ち受けも確かめる.
+
+        表の区画・待ち受けの区画・上の知らせ・上の帯の札と popover を、同じ応答で差し替える。
+        確かめている最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
+        """
+        if target not in ("hl7", "all"):
+            raise HTTPException(HTTP_BAD_REQUEST, "Unknown target")
+        if not check_lock.acquire(blocking=False):
+            return Response(status_code=204)
+        try:
+            if target == "all":
+                probes["mwl"] = run_check(mwl)
+            hl7_probe = run_hl7_check(config.hl7)
+            probes["hl7"] = hl7_probe
+        finally:
+            check_lock.release()
+        kind, text = hl7_notice(config.hl7, hl7_probe)
+        return render(request, "_connections_result.html", notice_kind=kind, notice_text=text)
 
     @app.get("/version", response_class=HTMLResponse)
     def version_page(request: Request) -> HTMLResponse:

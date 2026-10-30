@@ -76,11 +76,19 @@
       announceUnreadable();
       return;
     }
+    if (isPageCheck(event)) {
+      announcePageUnreadable();
+      return;
+    }
     fail(event, "（" + status + "）。画面を読み直してください");
   });
   document.addEventListener("htmx:sendError", function (event) {
     if (isConnCheck(event)) {
       announceUnreadable();
+      return;
+    }
+    if (isPageCheck(event)) {
+      announcePageUnreadable();
       return;
     }
     fail(event, "。接続を確かめて、画面を読み直してください");
@@ -108,7 +116,66 @@
     var result = document.getElementById("conn-result");
     announceConn(result ? result.getAttribute("data-unreadable") : null);
   }
+  // 接続先の画面（/connections）の「接続確認」。押した行の結果の欄を、応答が返るまで札「確認中」にする
+  // （押したボタンは hx-disabled-elt で押せなくなる）。結果と知らせは応答が差し替える。
+  // 応答で区画ごと差し替わるので、差し替えた後に、押したボタンと同じ種類のボタンへ焦点を戻す
+  function isPageCheck(event) {
+    var config = event.detail && event.detail.requestConfig;
+    return !!config && typeof config.path === "string" && config.path.indexOf("/connections/check") === 0;
+  }
+  function announcePageUnreadable() {
+    var notice = document.getElementById("conn-notice");
+    if (!notice) {
+      return;
+    }
+    notice.textContent = "";
+    var box = document.createElement("div");
+    box.className = "notice";
+    box.setAttribute("data-k", "err");
+    var text = document.createElement("div");
+    text.textContent = notice.getAttribute("data-unreadable") || "";
+    box.appendChild(text);
+    notice.appendChild(box);
+    // 押せなくした行のボタンを戻す（区画は差し替わらないので）
+    var buttons = document.querySelectorAll("#conn-sections button[disabled]");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].disabled = false;
+    }
+    var checking = document.querySelectorAll("#conn-sections td.res .st[data-k=check]");
+    for (var j = 0; j < checking.length; j++) {
+      checking[j].setAttribute("data-k", "plan");
+      checking[j].textContent = "未確認";
+    }
+  }
+  document.addEventListener("htmx:beforeRequest", function (event) {
+    var button = event.detail.elt;
+    var kind = button && button.getAttribute && button.getAttribute("data-conn-check");
+    if (!kind) {
+      return;
+    }
+    var cells = document.querySelectorAll("#conn-sections td.res");
+    for (var i = 0; i < cells.length; i++) {
+      // 行の「接続確認」は、その行だけ。「すべて接続確認」は全部の行
+      if (kind === "row" && cells[i].parentNode !== button.closest("tr")) {
+        continue;
+      }
+      var mark = document.createElement("span");
+      mark.className = "st";
+      mark.setAttribute("data-k", "check");
+      mark.textContent = "確認中";
+      cells[i].textContent = "";
+      cells[i].appendChild(mark);
+    }
+  });
   document.addEventListener("htmx:afterSwap", function (event) {
+    if (isPageCheck(event)) {
+      var kind = event.detail.requestConfig.elt.getAttribute("data-conn-check");
+      var again = kind && document.querySelector("[data-conn-check='" + kind + "']");
+      if (again) {
+        again.focus();
+      }
+      return;
+    }
     var result = document.getElementById("conn-result");
     if (!isConnCheck(event) || !result) {
       return;

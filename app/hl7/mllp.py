@@ -38,6 +38,39 @@ def frame(payload: bytes) -> bytes:
     return START_BLOCK + payload + END_BLOCK
 
 
+# 接続確認の失敗の理由の 1 句（部品集の接続先の表。AEタイトルは MLLP に無いので 3 つ）
+REASON_NO_RESPONSE = "応答がありません"
+REASON_REFUSED = "接続を断られました"
+REASON_UNKNOWN_HOST = "ホスト名を引けません"
+
+
+@dataclass(frozen=True)
+class ConnectionCheck:
+    """接続確認の結果。`reason` は失敗の理由の 1 句、`detail` は記録に残す元の文."""
+
+    ok: bool
+    reason: str = ""
+    detail: str = ""
+
+
+def check_connection(host: str, port: int, timeout: float) -> ConnectionCheck:
+    """MLLP の接続を開けるかだけを確かめる。何も送らず、すぐ閉じる.
+
+    HL7 v2 の MLLP は、接続を開いて 1 通送り、ACK を受けて閉じる（上の docstring）ので、
+    相手の受け口が待ち受けているかは、接続を開けるかで分かる。メッセージを送らないので、
+    相手の記録にも残らない。
+    """
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return ConnectionCheck(True)
+    except socket.gaierror as exc:
+        return ConnectionCheck(False, REASON_UNKNOWN_HOST, str(exc))
+    except ConnectionRefusedError as exc:
+        return ConnectionCheck(False, REASON_REFUSED, str(exc))
+    except OSError as exc:  # 時間切れ・到達できない経路など
+        return ConnectionCheck(False, REASON_NO_RESPONSE, str(exc))
+
+
 def send_message(message: Hl7Message, host: str, port: int, timeout: float) -> DeliveryResult:
     """MLLP で 1 通を送り、ACK の MSA-1 で結果を分ける.
 

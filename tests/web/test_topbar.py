@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.hl7.mllp import ConnectionCheck
 from app.mwl.server import MwlServer
 from app.services.config import AppConfig
 from app.services.order_service import OrderService
@@ -66,16 +67,23 @@ def test_topbar_structure_follows_the_ui_kit(config: AppConfig, service: OrderSe
     parts = re.findall(r'<span class="cl">接続の状態</span>|<span class="st"|<svg class="ic chev"', button.group(1))
     assert parts == ['<span class="cl">接続の状態</span>', '<span class="st"', '<svg class="ic chev"']
     assert "icons.svg#i-chevd" in button.group(1)
-    # HL7 の送信先は状態を持たない相手なので、札を出さず素の「—」（補助の色）
+    # HL7 の送信先は確かめられる相手（MLLP の接続を開けるか）。まだ確かめていないので、札「未確認」
     pop = header.split('<div id="conn-pop" popover class="pop"')[1]
-    assert re.search(rf"<b>{re.escape(config.hl7.receiving_application)}</b> <span class=\"label\">—</span>", pop)
-    assert "未確認" not in pop
+    assert re.search(
+        rf'<b>{re.escape(config.hl7.receiving_application)}</b> <span class="st" data-k="plan">未確認</span>', pop
+    )
 
 
 def test_topbar_when_mwl_is_stopped(config: AppConfig, service: OrderService) -> None:
     header = _header(config, service, start_mwl=False)
     assert re.search(r'<span class="st" id="conn-state" data-k="ng">一部が接続不可</span>', header)
     assert '<span class="st" data-k="ng">停止</span>' in header
+
+
+@pytest.fixture
+def hl7_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """HL7 の送信先の MLLP の接続は開けるものとして扱う（本物の接続を張らない）."""
+    monkeypatch.setattr("app.web.connection.check_connection", lambda host, port, timeout: ConnectionCheck(True))
 
 
 def _check(client: TestClient):  # noqa: ANN202
@@ -103,37 +111,43 @@ def test_popover_has_the_check_button_and_a_reading_area(config: AppConfig, serv
     assert button is not None
     assert 'class="btn btn-sm"' in button.group(0) and 'hx-post="/connection/check"' in button.group(0)
     assert re.sub(r"<[^>]+>|\s", "", button.group(1)) == "接続確認"
-    # 接続先の画面は無いので、その道は置かない
-    assert "/connections" not in pop and "接続先を開く" not in pop
+    # 接続先の画面への道
+    assert re.search(r'<a class="btn btn-sm" href="/connections">接続先を開く</a>', pop)
 
 
-def test_check_succeeds_when_the_mwl_answers(config: AppConfig, service: OrderService) -> None:
+@pytest.mark.usefixtures("hl7_open")
+def test_check_succeeds_when_both_answer(config: AppConfig, service: OrderService) -> None:
     app = create_app(config, password=None, service=service, start_mwl=True)
     with TestClient(app, base_url=ORIGIN) as client:
         response = _check(client)
         after = client.get("/orders").text.split("</header>")[0]
     assert response.status_code == 200
     body = response.text
-    # 中身は結果の 1 文を持ち、MWL の行は「待ち受け中」に確かめた時刻が付く
-    assert 'data-result="1 件すべてに接続できました。"' in body
+    # 中身は結果の 1 文（確かめた 2 件）を持ち、MWL の行は「待ち受け中」に確かめた時刻が付く
+    assert 'data-result="2 件すべてに接続できました。"' in body
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
     # 帯の全体の札も同じ応答で差し替える
     assert '<span class="st" id="conn-state" data-k="ok" hx-swap-oob="true">接続中</span>' in body
     # 結果は覚えていて、読み直した画面にも時刻が残る
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', after)
-    # HL7 の送信先には札を出さず、時刻も付けない
-    assert re.search(rf"<b>{re.escape(config.hl7.receiving_application)}</b> <span class=\"label\">—</span>", body)
+    # HL7 の送信先は札「成功」と確かめた時刻
+    assert re.search(
+        rf'<b>{re.escape(config.hl7.receiving_application)}</b> <span class="st" data-k="ok">成功</span>.*<span class="xs label">\d{{4}}/\d{{2}}/\d{{2}} \d{{2}}:\d{{2}}</span>',
+        body,
+    )
 
 
+@pytest.mark.usefixtures("hl7_open")
 def test_check_fails_when_the_mwl_is_stopped(config: AppConfig, service: OrderService) -> None:
     app = create_app(config, password=None, service=service, start_mwl=False)
     with TestClient(app, base_url=ORIGIN) as client:
         body = _check(client).text
-    assert 'data-result="1 件のうち 1 件に接続できませんでした。"' in body
+    assert 'data-result="2 件のうち 1 件に接続できませんでした。"' in body
     assert re.search(r'data-k="ng">停止</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
     assert 'data-k="ng" hx-swap-oob="true">一部が接続不可</span>' in body
 
 
+@pytest.mark.usefixtures("hl7_open")
 def test_check_fails_when_a_listening_mwl_does_not_answer(
     config: AppConfig, service: OrderService, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -143,7 +157,7 @@ def test_check_fails_when_a_listening_mwl_does_not_answer(
         body = _check(client).text
         after = client.get("/orders").text.split("</header>")[0]
     # 待ち受けているのに応答が無いときは、札「失敗」。全体の札も「一部が接続不可」
-    assert 'data-result="1 件のうち 1 件に接続できませんでした。"' in body
+    assert 'data-result="2 件のうち 1 件に接続できませんでした。"' in body
     assert 'data-k="ng">失敗</span>' in body
     assert 'id="conn-state" data-k="ng">一部が接続不可</span>' in after
 
@@ -155,6 +169,7 @@ def test_check_needs_the_csrf_token(config: AppConfig, service: OrderService) ->
     assert response.status_code == 403
 
 
+@pytest.mark.usefixtures("hl7_open")
 def test_check_does_not_overlap(config: AppConfig, service: OrderService) -> None:
     app = create_app(config, password=None, service=service, start_mwl=True)
     with TestClient(app, base_url=ORIGIN) as client:
@@ -195,7 +210,7 @@ def test_nav_items_have_icons_and_theme_is_remembered(config: AppConfig, service
         script = client.get("/static/app.js").text
     nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
     icons = re.findall(r'<use href="/static/ui-kit/icons.svg#(i-[a-z-]+)"/></svg><span class="t">', nav)
-    assert icons == ["i-list", "i-plus", "i-list-plus", "i-inbox", "i-info"]
+    assert icons == ["i-list", "i-plus", "i-list-plus", "i-inbox", "i-device", "i-info"]
     for name in [*icons, "i-menu", "i-sun", "i-moon"]:
         assert f'<symbol id="{name}" viewBox="0 0 24 24"' in sprite
     # 地は描く前に決める（head の同期の script）。覚えが無ければ端末の設定に従う
@@ -217,7 +232,7 @@ def test_version_page_is_in_the_admin_group_and_shows_name_and_version(
         version = client.get("/version")
     # 左のナビの群「管理」の最後の項目。項目の名前と頁の題は同じ語
     nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
-    assert re.findall(r'<p class="nav-g">([^<]+)</p>', nav) == ["業務", "管理"]
+    assert re.findall(r'<p class="nav-g">([^<]+)</p>', nav) == ["業務", "接続", "管理"]
     assert nav.rstrip().endswith('<span class="t">バージョン情報</span></a>')
     assert version.status_code == 200
     assert "<title>バージョン情報 - ris-emulator</title>" in version.text

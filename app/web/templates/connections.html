@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}接続先{% endblock %}
+{% block content %}
+<div class="pagehead"><h1>接続先</h1></div>
+{# 押した直後の知らせ（何が起きたか・なぜか・次にすること）。読み上げの欄は最初からあり、応答で中身だけを差し替える #}
+<div id="conn-notice" role="status" aria-live="polite" data-unreadable="{{ check_unreadable }}"></div>
+<div id="conn-sections" class="conn-sections">
+{% include "_connections_body.html" %}
+</div>
+{% endblock %}

@@ -32,6 +32,8 @@
     {% for key, url, label, icon in [("orders", "/orders", "予約", "i-list"), ("new", "/orders/new", "予約作成", "i-plus"), ("batch", "/orders/batch", "一括作成", "i-list-plus"), ("reconciliation", "/reconciliation", "未照合", "i-inbox")] %}
     <a href="{{ url }}" class="nav-i"{% if nav_current == key %} aria-current="page"{% endif %} title="{{ label }}"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#{{ icon }}"/></svg><span class="t">{{ label }}</span></a>
     {% endfor %}
+    <p class="nav-g">接続</p>
+    <a href="/connections" class="nav-i"{% if nav_current == "connections" %} aria-current="page"{% endif %} title="接続先"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-device"/></svg><span class="t">接続先</span></a>
     <p class="nav-g">管理</p>
     <a href="/version" class="nav-i"{% if nav_current == "version" %} aria-current="page"{% endif %} title="バージョン情報"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-info"/></svg><span class="t">バージョン情報</span></a>
   </nav>

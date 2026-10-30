@@ -2,3 +2,7 @@
 {% macro err(text, alert=false, span=false) -%}
 <div class="notice{% if span %} span{% endif %}" data-k="err" role="{{ 'alert' if alert else 'status' }}"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-alert"/></svg><div>{{ text }}</div></div>
 {%- endmacro %}
+{# 操作の結果の知らせ（成功は ok、失敗は err）。読み上げの欄（role="status"）の中に置くので、role は付けない #}
+{% macro notice(kind, text) -%}
+<div class="notice" data-k="{{ kind }}"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#{{ 'i-check' if kind == 'ok' else 'i-alert' }}"/></svg><div>{{ text }}</div></div>
+{%- endmacro %}
