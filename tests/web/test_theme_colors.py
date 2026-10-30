@@ -107,4 +107,4 @@ def test_app_css_holds_no_tokens_and_reads_after_the_ui_kit() -> None:
     base = (STATIC.parent / "templates" / "base.html").read_text(encoding="utf-8")
     links = re.findall(r'<link rel="stylesheet" href="([^"]+)">', base)
     assert links == ["/static/ui-kit/tokens.css", "/static/ui-kit/components.css", "/static/app.css"]
-    assert (STATIC / "ui-kit" / "VERSION").read_text(encoding="utf-8").strip() == "1.2.3"
+    assert (STATIC / "ui-kit" / "VERSION").read_text(encoding="utf-8").strip() == "1.2.4"
