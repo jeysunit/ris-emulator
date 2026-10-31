@@ -185,6 +185,11 @@ PACS の PIR（Patient Information Reconciliation）への対応を試すため�
 メッセージを MLLP で送れます。送り先は設定の `hl7.host`・`hl7.port` です。
 先に `--dry-run` で、組み立てたメッセージを確認できます。
 
+送り先に届くかは、Web 画面の左のナビの「接続先」（`/connections`）で、「接続確認」を押して確かめます。
+MLLP の接続を開いて閉じるだけで、メッセージは送りません。結果は札と時刻で出て、失敗のときは
+理由（応答がありません・接続を断られました・ホスト名を引けません）と次にすることが出ます。
+上の帯の「接続の状態」を開いても、同じ相手と結果を見られます。
+
 ```bash
 # 仮の患者ID ER0001 を、正式な患者ID RE0000001 に統合する（ADT^A40）
 docker exec ris-emulator python -m app.cli pir send --kind a40 \

@@ -1,0 +1,6 @@
+{# 接続先の画面の「接続確認」の応答。区画（#conn-sections の中身）に、上の知らせ・上の帯の札・popover を同じ応答で差し替える #}
+{% from "_notice.html" import notice %}
+{% include "_connections_body.html" %}
+<div hx-swap-oob="innerHTML:#conn-notice">{{ notice(notice_kind, notice_text) }}</div>
+<div hx-swap-oob="innerHTML:#conn-pop">{% include "_conn_pop.html" %}</div>
+<span class="st" id="conn-state" data-k="{{ conn.overall_kind }}" hx-swap-oob="true">{{ conn.overall_label }}</span>

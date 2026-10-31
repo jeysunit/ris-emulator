@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import socket
+import threading
 import time
 from dataclasses import dataclass
 from typing import Literal
@@ -36,6 +37,83 @@ class DeliveryResult:
 
 def frame(payload: bytes) -> bytes:
     return START_BLOCK + payload + END_BLOCK
+
+
+# 接続確認の失敗の理由の 1 句（部品集の接続先の表。AEタイトルは MLLP に無いので 3 つ）
+REASON_NO_RESPONSE = "応答がありません"
+REASON_REFUSED = "接続を断られました"
+REASON_UNKNOWN_HOST = "ホスト名を引けません"
+
+
+@dataclass(frozen=True)
+class ConnectionCheck:
+    """接続確認の結果。`reason` は失敗の理由の 1 句、`detail` は記録に残す元の文."""
+
+    ok: bool
+    reason: str = ""
+    detail: str = ""
+
+
+def _resolve(host: str, port: int, timeout: float) -> list[str]:
+    """名前を引いて、アドレスを引けた順に返す。`timeout` 秒で引けなければ TimeoutError.
+
+    getaddrinfo には時間の上限を渡せない（create_connection の timeout は接続にしか
+    効かない）ので、別のスレッドで引き、待つ時間に上限を付ける。引き終わらなかった
+    スレッドは、OS の名前解決が諦めた時点で自然に終わる（デーモンなので終了を止めない）。
+    """
+    outcome: dict[str, object] = {}
+
+    def work() -> None:
+        try:
+            outcome["infos"] = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except (OSError, UnicodeError) as exc:  # UnicodeError：ホスト名が IDNA に直せない
+            outcome["error"] = exc
+
+    worker = threading.Thread(target=work, daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        raise TimeoutError(f"名前の解決が {timeout:g} 秒で終わりませんでした")
+    error = outcome.get("error")
+    if isinstance(error, BaseException):
+        raise error
+    infos: list[tuple] = outcome["infos"]  # type: ignore[assignment]
+    addresses: list[str] = []
+    for info in infos:
+        address = info[4][0]
+        if address not in addresses:
+            addresses.append(address)
+    return addresses
+
+
+def check_connection(host: str, port: int, timeout: float) -> ConnectionCheck:
+    """MLLP の接続を開けるかだけを確かめる。何も送らず、すぐ閉じる.
+
+    HL7 v2 の MLLP は、接続を開いて 1 通送り、ACK を受けて閉じる（上の docstring）ので、
+    相手の受け口が待ち受けているかは、接続を開けるかで分かる。メッセージは送らない
+    （接続を開いて閉じるので、受け手によっては接続のログが残る）。名前の解決と接続を合わせて `timeout` 秒までで返す
+    （IPv4・IPv6 の両方に解けるときも倍にならない）。
+    """
+    deadline = time.monotonic() + timeout
+    try:
+        addresses = _resolve(host, port, timeout)
+    except (OSError, UnicodeError) as exc:  # TimeoutError（引き終わらない）を含む
+        return ConnectionCheck(False, REASON_UNKNOWN_HOST, str(exc))
+    if not addresses:
+        return ConnectionCheck(False, REASON_UNKNOWN_HOST, "アドレスがありません")
+    failure = ConnectionCheck(False, REASON_NO_RESPONSE, "時間切れ")
+    for address in addresses:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        try:
+            with socket.create_connection((address, port), timeout=remaining):
+                return ConnectionCheck(True)
+        except ConnectionRefusedError as exc:
+            failure = ConnectionCheck(False, REASON_REFUSED, str(exc))
+        except OSError as exc:  # 時間切れ・到達できない経路など
+            failure = ConnectionCheck(False, REASON_NO_RESPONSE, str(exc))
+    return failure
 
 
 def send_message(message: Hl7Message, host: str, port: int, timeout: float) -> DeliveryResult:

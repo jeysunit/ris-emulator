@@ -1,10 +1,11 @@
-{# 上の帯の接続の状態の中身（#conn-pop の中）。「接続確認」の応答は、この中身だけを差し替え、帯の全体の札も同じ応答で差し替える #}
+{# 上の帯の接続の状態の中身（#conn-pop の中）。「接続確認」の応答は、この中身だけを差し替え、帯の全体の札も同じ応答で差し替える。
+   相手と札は接続先の画面（/connections。_connections_body.html）と同じ #}
 <h3>接続の状態</h3>
 <dl class="kv">
   <dt>待ち受け MWL</dt>
   <dd><b>{{ mwl_config.ae_title }}</b> <span class="st" data-k="{{ conn.mwl_kind }}">{{ conn.mwl_label }}</span>{% if mwl.running %} <span class="xs label mono">{{ mwl_config.bind_address }}:{{ mwl.port }}</span>{% endif %}{% if conn.mwl_time %} <span class="xs label">{{ conn.mwl_time }}</span>{% endif %}</dd>
   <dt>送信先 HL7</dt>
-  <dd><b>{{ hl7_config.receiving_application }}</b> <span class="label">—</span> <span class="xs label mono">{{ hl7_config.host }}:{{ hl7_config.port }}</span></dd>
+  <dd><b>{{ hl7_config.receiving_application }}</b> <span class="st" data-k="{{ conn.hl7_kind }}">{{ conn.hl7_label }}</span> <span class="xs label mono">{{ hl7_config.host }}:{{ hl7_config.port }}</span>{% if conn.hl7_time %} <span class="xs label">{{ conn.hl7_time }}</span>{% endif %}</dd>
 </dl>
 {# 手で押した「接続確認」の結果の読み上げ（部品集の型）。popover の中に置く（閉じると読まれない）。中身ごと差し替わるので、app.js が差し替えの後に空から文を入れる。1 分ごとに替わる札は無いので、ほかに読み上げは無い #}
 <p class="sr" id="conn-result" role="status" aria-live="polite" data-unreadable="{{ check_unreadable }}"{% if check_result is defined %} data-result="{{ check_result }}"{% endif %}></p>
@@ -12,5 +13,6 @@
   <button type="button" class="btn btn-sm" id="conn-check" hx-post="/connection/check" hx-target="#conn-pop" hx-swap="innerHTML" hx-disabled-elt="this">
     <svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-refresh"/></svg>接続確認
   </button>
+  <a class="btn btn-sm" href="/connections">接続先を開く</a>
 </div>
 {% if oob %}<span class="st" id="conn-state" data-k="{{ conn.overall_kind }}" hx-swap-oob="true">{{ conn.overall_label }}</span>{% endif %}

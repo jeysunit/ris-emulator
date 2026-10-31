@@ -1,0 +1,32 @@
+{# 接続先の画面の区画：HL7 の送信先の表と、待ち受け（MWL）。相手と札は上の帯の popover（_conn_pop.html）と同じ #}
+<section class="sec">
+  <h2 class="hd">HL7 の送信先<span class="acts"><button type="button" class="btn" hx-post="/connections/check?target=all" hx-target="#conn-sections" hx-swap="innerHTML" hx-disabled-elt="#conn-sections button" data-conn-check="all"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-refresh"/></svg>すべて接続確認</button></span></h2>
+  <div class="in">
+    <div class="tbl-wrap" role="region" aria-label="HL7 の送信先の一覧" tabindex="0">
+      <table class="tbl conn">
+        <thead>
+          <tr><th>名称</th><th>種類</th><th>AEタイトル</th><th>ホスト名:ポート番号</th><th>最後の接続確認</th><th><span class="sr">操作</span></th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="main-c">{{ hl7_config.receiving_application }}</span></td>
+            <td>HL7</td>
+            <td><span class="mono">—</span></td>
+            <td><span class="mono">{{ hl7_config.host }}:{{ hl7_config.port }}</span></td>
+            <td class="res"><span class="st" data-k="{{ conn.hl7_kind }}">{{ conn.hl7_label }}</span>{% if conn.hl7_time %} <span class="when">{{ conn.hl7_time }}</span>{% endif %}{% if conn.hl7_reason %} <span class="why">{{ conn.hl7_reason }}</span>{% endif %}</td>
+            <td><button type="button" class="btn btn-sm" hx-post="/connections/check?target=hl7" hx-target="#conn-sections" hx-swap="innerHTML" hx-disabled-elt="#conn-sections button" data-conn-check="row">接続確認</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="sec">
+  <h2 class="hd">待ち受け</h2>
+  <div class="in">
+    <dl class="kv">
+      <dt>MWL</dt>
+      <dd><b>{{ mwl_config.ae_title }}</b> <span class="st" data-k="{{ conn.mwl_kind }}">{{ conn.mwl_label }}</span>{% if mwl.running %} <span class="xs label mono">{{ mwl_config.bind_address }}:{{ mwl.port }}</span>{% endif %}{% if conn.mwl_time %} <span class="xs label">{{ conn.mwl_time }}</span>{% endif %}</dd>
+    </dl>
+  </div>
+</section>
