@@ -8,7 +8,8 @@
 - 患者ID：PS3.5 6.2 の LO（64 字まで）。HL7 v2 の PID-3 にエスケープなしで入れるため、
   基本の文字集合の表示できる字に限り、HL7 v2 の区切り（`^~&|`）と前後の空白も断る
 - 生年月日：PS3.5 6.2 の DA（YYYYMMDD）。暦にある日で、今日より後は断る
-- 性別：PS3.3 C.7.1.1 の Patient's Sex（M・F・O。空は許す）
+- 性別：M・F・O・U（U は不明。空は U と読む）。DICOM の Patient's Sex（PS3.3 C.7.1.1）の
+  列挙値は M・F・O だけなので、DICOM に書くときは U を空にする
 
 漢字の氏名は、予約の文字コード（設定の `orders.default_character_set`）で表せる字だけを受ける。
 UTF-8 なら制限しない。かなの氏名は全角カタカナだけを受け、ひらがなはカタカナに直す。半角カナは
@@ -29,6 +30,7 @@ from app.core.models import (
     HL7_V2_DELIMITERS,
     LO_MAX_LENGTH,
     PN_GROUP_MAX_LENGTH,
+    SEX_VALUES,
     CharacterSet,
     Patient,
     PersonName,
@@ -36,7 +38,6 @@ from app.core.models import (
 )
 
 PN_COMPONENT_MAX_COUNT = 5
-SEX_VALUES = ("M", "F", "O")
 SCRIPT_LABELS = {"alphabetic": "英字", "ideographic": "漢字", "phonetic": "かな"}
 _ASCII_PRINTABLE_MIN = 0x20
 _ASCII_PRINTABLE_MAX = 0x7E
@@ -216,4 +217,4 @@ def birth_date_from_cli(value: str, today: date | None = None) -> str:
 
 def validate_sex(value: str) -> None:
     if value and value not in SEX_VALUES:
-        raise ValidationError("性別は、M・F・O のどれかを選んでください。")
+        raise ValidationError("性別は、男・女・その他・不明のどれかを選んでください。")

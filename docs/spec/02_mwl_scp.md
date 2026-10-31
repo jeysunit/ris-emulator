@@ -66,7 +66,7 @@ PS3.4 Table K.6-1 の Return Key Type 1・2 の属性と、モダリティが画
 | Requested Procedure | Requested Procedure ID・Description・Code Sequence・Study Instance UID・Referenced Study Sequence（空）・Requested Procedure Priority・Patient Transport Arrangements（空）・Reason for the Requested Procedure（空） |
 | Imaging Service Request | Accession Number・Issuer of Accession Number Sequence（設定の `issuer_namespace`。ADR-0005）・Requesting Physician・Referring Physician's Name・Requesting Service・Institution Name |
 | Visit | Admission ID（空）・Current Patient Location（空）・Referenced Patient Sequence（空） |
-| Patient | Patient's Name・Patient ID・Issuer of Patient ID（設定の `issuer_namespace`）・Birth Date・Sex・Weight・Size・Confidentiality Constraint on Patient Data Description（空） |
+| Patient | Patient's Name・Patient ID・Issuer of Patient ID（設定の `issuer_namespace`）・Birth Date・Sex（性別が U（不明）のときは空。列挙値は M・F・O だけ）・Weight・Size・Confidentiality Constraint on Patient Data Description（空） |
 | Patient Medical | Patient State・Pregnancy Status・Medical Alerts・Allergies・Special Needs（どれも空） |
 
 Table K.6-1（2026d）の Return Key Type 2 の属性はすべて保持する。

@@ -113,7 +113,7 @@ MPPS_MARKS = {
     "COMPLETED": ("done", "完了"),
     "DISCONTINUED": ("stop", "中止"),
 }
-# 性別の DICOM・HL7 の値は画面に出さない（空と知らない値は空のまま）
+# 性別の DICOM・HL7 の値は画面に出さない（空と知らない値は「不明」と出す）
 SEX_LABELS = {"M": "男", "F": "女", "O": "その他", "U": "不明"}
 # HL7 の送信の状態の札（ACK で断られたときも送信失敗。理由は詳細の列に出す）
 DELIVERY_MARKS = {
@@ -758,7 +758,7 @@ def create_app(
     templates.env.filters["ymd"] = ymd
     templates.env.filters["md"] = lambda value: f"{value[4:6]}/{value[6:]}" if len(value) == 8 else value
     templates.env.filters["pn"] = lambda value: value.replace("^", " ")
-    templates.env.filters["sex"] = lambda value: SEX_LABELS.get(value, "")
+    templates.env.filters["sex"] = lambda value: SEX_LABELS.get(value, "不明")
     templates.env.filters["when"] = when
     templates.env.filters["birth_parts"] = lambda patient, on="": birth_parts(
         patient, count_day(on, order_service.today())
@@ -824,7 +824,7 @@ def birth_parts(patient: Any, on: date) -> tuple[str, str]:
     日付として読めなければ年齢と元号を付けない。生年月日が無いときは前が空で、性別だけを返す.
     """
     day, inside = birth_text(patient.birth_date, on)
-    sex = SEX_LABELS.get(patient.sex, "")
+    sex = SEX_LABELS.get(patient.sex, "不明")
     tail = inside + sex
     return day, (f" {tail}" if tail and not inside and day else tail)
 
@@ -1034,7 +1034,7 @@ def _refuse_another_patient(patient: Patient, known: list[Patient]) -> None:
     """手で入れた患者ID が既にある患者のもので、氏名・生年月日・性別が合わなければ断る."""
     other = ReconciliationService.another_patient(patient, known)
     if other is not None:
-        facts = " ".join(v for v in (_person(other), ymd(other.birth_date), SEX_LABELS.get(other.sex, "")) if v)
+        facts = " ".join(v for v in (_person(other), ymd(other.birth_date), SEX_LABELS.get(other.sex, "不明")) if v)
         raise ValidationError(
             f"患者ID {patient.patient_id} は、既にある患者（{facts}）の患者ID です。"
             "入力した氏名・生年月日・性別と合いません。名簿から選ぶか、患者ID を確かめてください"
@@ -1054,7 +1054,7 @@ def _reconcile_confirm(
         ("氏名（かな）", lambda p: p.name.phonetic.replace("^", " ")),
         ("氏名（英字）", lambda p: p.name.alphabetic.replace("^", " ")),
         ("生年月日", lambda p: ymd(p.birth_date)),
-        ("性別", lambda p: SEX_LABELS.get(p.sex, "")),
+        ("性別", lambda p: SEX_LABELS.get(p.sex, "不明")),
     ]
     rows = [
         {

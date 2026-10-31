@@ -11,7 +11,7 @@ from pydicom.dataelem import DataElement
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence
 
-from .models import CHARACTER_SET_TERMS, SPS_STATUS_TERMS, Order
+from .models import CHARACTER_SET_TERMS, SPS_STATUS_TERMS, Order, sex_to_dicom
 
 # 要求に入っていても照合と応答の対象にしない属性（PS3.4 K.6-1a。Specific Character Set は照合しない）
 NON_KEY_TAGS = frozenset({0x00080005, 0x00080201})
@@ -29,7 +29,7 @@ def order_to_dataset(order: Order) -> Dataset:
     ds.PatientID = patient.patient_id
     ds.IssuerOfPatientID = order.issuer_namespace
     ds.PatientBirthDate = patient.birth_date
-    ds.PatientSex = patient.sex
+    ds.PatientSex = sex_to_dicom(patient.sex)
     ds.PatientWeight = _decimal(patient.weight_kg)
     ds.PatientSize = _decimal(patient.size_m)
 

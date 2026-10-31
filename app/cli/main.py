@@ -186,7 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
         help='a40・a08：氏名。DICOM の PN の形 "英字=漢字=かな"（各グループは 姓^名^ミドル^接頭辞^接尾辞）',
     )
     send.add_argument("--birth-date", default="", help="a40・a08：生年月日 YYYYMMDD（1975/05/14・S50/05/14 の形も受ける）")
-    send.add_argument("--sex", default="", choices=("", "M", "F", "O"), help="a40・a08：性別")
+    send.add_argument("--sex", default="U", choices=("", "M", "F", "O", "U"), help="a40・a08：性別")
     send.add_argument("--prior-patient-id", help="a40：統合される旧い患者ID（MRG-1）")
     send.add_argument("--prior-name", help="a40：旧い患者の氏名（MRG-7。--name と同じ形）")
     send.add_argument("--accession", help="orm：送る予約の受付番号")
@@ -231,7 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--patient-id", help="正式な患者ID")
     run.add_argument("--name", help='正式な氏名。DICOM の PN の形 "英字=漢字=かな"')
     run.add_argument("--birth-date", default="", help="生年月日 YYYYMMDD（1975/05/14・S50/05/14 の形も受ける）")
-    run.add_argument("--sex", default="", choices=("", "M", "F", "O"), help="性別")
+    run.add_argument("--sex", default="U", choices=("", "M", "F", "O", "U"), help="性別")
     run.add_argument("--procedure", help="検査の種類のコード（default: モダリティの先頭）")
     run.add_argument("--department", help="依頼科（default: 救急科。設定に無ければ先頭）")
     run.add_argument("--json", action="store_true", help="JSON で出す")

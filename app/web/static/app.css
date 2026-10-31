@@ -108,5 +108,8 @@ dialog.dlg.dlg-wide { width: min(40rem, calc(100vw - 2rem)); }
   .side { position: static; }
 }
 
+/* 接続先：応答で差し替える入れ物は、区画の並びを .main の直下と同じにする（区画の間 12px） */
+#conn-sections { display: contents; }
+
 /* バージョン情報：設定の幅（共通の決まり） */
 .w-settings { max-width: var(--w-settings); }

@@ -197,7 +197,7 @@ def test_cli_birth_date_refuses_with_the_screen_messages(value: str, message: st
 
 
 def test_sex() -> None:
-    for value in ("", "M", "F", "O"):
+    for value in ("", "M", "F", "O", "U"):
         validate_sex(value)
     for value in ("X", "m", "男"):
         with pytest.raises(ValidationError, match="性別"):

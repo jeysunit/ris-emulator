@@ -80,8 +80,9 @@
       <label class="field"><span class="l">生年月日</span><input type="text" inputmode="text" autocomplete="off" name="birth_date" value="{{ value }}" class="input" data-check="birth-date" data-message="{{ birth_problem or input_messages['birth-date'] }}"{% if birth_problem %} data-unreadable{% endif %}{% if birth_problem or field_errors.get('birth_date') %} aria-invalid="true"{% endif %} aria-describedby="hint-birth-date error-birth-date" hx-get="/birth-date/hint?on={{ on }}" hx-trigger="input changed delay:250ms" hx-target="#hint-birth-date" hx-swap="outerHTML" hx-sync="this:replace">{% include "_birth_hint.html" %}{{ msg('birth_date', field_errors, birth_problem) }}</label>
       <label class="field"><span class="l">性別</span>
         <select name="sex" class="select"{{ attrs('sex', field_errors) }}>
-          {% for value in ('', 'M', 'F', 'O') %}
-          <option value="{{ value }}"{% if values.get('sex', '') == value %} selected{% endif %}>{{ value }}</option>
+          {% set chosen = values.get('sex') or 'U' %}
+          {% for value in ('M', 'F', 'O', 'U') %}
+          <option value="{{ value }}"{% if chosen == value %} selected{% endif %}>{{ value | sex }}</option>
           {% endfor %}
         </select>
         {{ msg('sex', field_errors) }}

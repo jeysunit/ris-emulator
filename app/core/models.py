@@ -13,6 +13,21 @@ LO_MAX_LENGTH = 64
 PN_GROUP_MAX_LENGTH = 64
 UI_MAX_LENGTH = 64
 HL7_V2_DELIMITERS = frozenset("^~&|")
+# 性別は M・F・O・U の 4 値（医療システム共通）。U は不明で、DICOM の Patient's Sex には書かない
+SEX_VALUES = ("M", "F", "O", "U")
+SEX_UNKNOWN = "U"
+
+
+def sex_from_dicom(value: str) -> str:
+    """DICOM から読んだ性別。M・F・O 以外（空・規格外）は U（不明）."""
+    return value if value in ("M", "F", "O") else SEX_UNKNOWN
+
+
+def sex_to_dicom(value: str) -> str:
+    """DICOM の Patient's Sex に書く値。列挙値は M・F・O だけなので、U は空にする."""
+    return value if value in ("M", "F", "O") else ""
+
+
 _DATE = re.compile(r"^\d{8}$")
 _TIME = re.compile(r"^\d{6}$")
 _PRINTABLE_ASCII_MIN = 0x20
@@ -188,7 +203,7 @@ class Patient(BaseModel):
     patient_id: str = Field(..., min_length=1, max_length=64)
     name: PersonName
     birth_date: str = ""  # YYYYMMDD
-    sex: str = ""  # M, F, O, 空
+    sex: str = SEX_UNKNOWN  # M, F, O, U（空で渡されたら U）
     weight_kg: float | None = None
     size_m: float | None = None
 
@@ -204,11 +219,13 @@ class Patient(BaseModel):
             raise ValueError("birth_date must be YYYYMMDD")
         return value
 
-    @field_validator("sex")
+    @field_validator("sex", mode="before")
     @classmethod
     def _check_sex(cls, value: str) -> str:
-        if value not in ("", "M", "F", "O"):
-            raise ValueError("sex must be M, F, O or empty")
+        if value == "":
+            return SEX_UNKNOWN
+        if value not in SEX_VALUES:
+            raise ValueError("sex must be M, F, O or U")
         return value
 
 

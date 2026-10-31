@@ -49,6 +49,22 @@ def _order(**updates: object) -> Order:
     return order.model_copy(update=updates)
 
 
+@pytest.mark.parametrize(("sex", "written"), [("M", "M"), ("F", "F"), ("O", "O"), ("U", ""), ("", "")])
+def test_patient_sex_unknown_is_written_empty(sex: str, written: str) -> None:
+    # Patient's Sex の列挙値は M・F・O だけ。U（不明）と空は、空で書く
+    order = _order()
+    patient = order.patient.model_copy(update={"sex": sex})
+    assert order_to_dataset(order.model_copy(update={"patient": patient})).PatientSex == written
+
+
+def test_patient_sex_is_u_when_empty_or_missing() -> None:
+    name = PersonName(alphabetic="TANAKA^HIROSHI")
+    assert Patient(patient_id="P1", name=name).sex == "U"
+    assert Patient(patient_id="P1", name=name, sex="").sex == "U"
+    with pytest.raises(ValueError, match="sex"):
+        Patient(patient_id="P1", name=name, sex="X")
+
+
 def test_full_dataset_has_ihe_required_values() -> None:
     ds = order_to_dataset(_order())
     assert ds.SpecificCharacterSet == "ISO_IR 192"
