@@ -1,12 +1,10 @@
 {% extends "base.html" %}
-{% from "_notice.html" import err %}
+{% from "_notice.html" import err, form_errors, msg, attrs %}
 {% block title %}予約作成{% endblock %}
 {% block content %}
 <div class="pagehead"><h1>予約作成</h1></div>
-{% if error %}
-{{ err(error, alert=true) }}
-{% endif %}
-<form method="post" action="/orders" class="w-form">
+{{ form_errors(error, field_errors) }}
+<form method="post" action="/orders" class="w-form" novalidate data-validate>
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   {% set patient = values.get('patient', 'roster' if roster else 'new') %}
   <fieldset class="sec">
@@ -17,11 +15,12 @@
       {% endif %}
       {# 名簿を選んで送った後に名簿が読めなくなったときは、どちらも選ばずに出す（黙って新規に切り替えない） #}
       <div class="span choices">
-        <label class="choice"><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %}> 名簿から選ぶ</label>
-        <label class="choice"><input type="radio" name="patient" value="new" required{% if patient == 'new' %} checked{% endif %}> 新規（架空）</label>
+        <label class="choice"><input type="radio" name="patient" value="roster" required{% if patient == 'roster' and roster %} checked{% endif %}{% if not roster %} disabled{% endif %} data-error="患者を、名簿から選ぶか新規にするかを選んでください"{{ attrs('patient', field_errors) }}> 名簿から選ぶ</label>
+        <label class="choice"><input type="radio" name="patient" value="new" required{% if patient == 'new' %} checked{% endif %} data-error="患者を、名簿から選ぶか新規にするかを選んでください"{{ attrs('patient', field_errors) }}> 新規（架空）</label>
       </div>
+      <div class="field span">{{ msg('patient', field_errors) }}</div>
       <label class="field span"><span class="l">名簿の患者</span>
-        <select name="roster_patient_id" data-roster-select{% if not roster %} data-no-roster disabled{% endif %} class="select">
+        <select name="roster_patient_id" data-roster-select{% if not roster %} data-no-roster disabled{% endif %} class="select"{{ attrs('roster_patient_id', field_errors) }}>
           {# 送った患者が名簿から消えていたら、先頭の患者に黙って替えず、選び直させる #}
           {% set chosen = values.get('roster_patient_id', '') %}
           {% if chosen and chosen not in roster | map(attribute='patient_id') | list %}
@@ -31,6 +30,7 @@
           <option value="{{ p.patient_id }}"{% if values.get('roster_patient_id') == p.patient_id %} selected{% endif %}>{{ p.patient_id }} {{ p.name.ideographic | pn }}（{{ p.name.phonetic | pn }}） {{ p.birth_date | ymd }} {{ p.sex | sex }}</option>
           {% endfor %}
         </select>
+        {{ msg('roster_patient_id', field_errors) }}
       </label>
     </div>
   </fieldset>
@@ -38,11 +38,12 @@
     <legend>検査</legend>
     <div class="in grid2">
       <label class="field"><span class="l">モダリティ<span class="req">必須</span></span>
-        <select name="modality" hx-get="/orders/new/exam" hx-target="#exam-options" hx-swap="outerHTML" class="select">
+        <select name="modality" hx-get="/orders/new/exam" hx-target="#exam-options" hx-swap="outerHTML" class="select"{{ attrs('modality', field_errors) }}>
           {% for m in catalog %}
           <option value="{{ m }}"{% if m == modality %} selected{% endif %}>{{ m }}</option>
           {% endfor %}
         </select>
+        {{ msg('modality', field_errors) }}
       </label>
       {% include "_exam_options.html" %}
     </div>
@@ -51,11 +52,12 @@
     <legend>予定</legend>
     <div class="in grid2">
       <label class="field"><span class="l">予定日<span class="req">必須</span></span>
-        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required class="input">
+        <input type="date" name="date" value="{{ values.get('date', today.isoformat()) }}" required class="input" data-error="予定日を入力してください"{{ attrs('date', field_errors) }}>
+        {{ msg('date', field_errors) }}
       </label>
       <label class="field"><span class="l">予定時刻</span>
         <span class="time-select">
-          <select name="hour" aria-label="時" class="select">
+          <select name="hour" aria-label="時" class="select"{{ attrs('time', field_errors) }}>
             {% for h in hours %}
             <option value="{{ h }}"{% if values.get('hour', '09') == h %} selected{% endif %}>{{ h }}</option>
             {% endfor %}
@@ -64,6 +66,7 @@
           {% set selected = values.get('minute', '00') %}
           {% include "_minute_select.html" %}
         </span>
+        {{ msg('time', field_errors) }}
       </label>
     </div>
   </fieldset>
@@ -71,11 +74,12 @@
     <legend>依頼</legend>
     <div class="in grid2">
       <label class="field"><span class="l">依頼科<span class="req">必須</span></span>
-        <select name="department" required class="select">
+        <select name="department" required class="select" data-error="依頼科を選んでください"{{ attrs('department', field_errors) }}>
           {% for d in departments %}
           <option value="{{ d }}"{% if values.get('department') == d %} selected{% endif %}>{{ d }}</option>
           {% endfor %}
         </select>
+        {{ msg('department', field_errors) }}
       </label>
       <label class="field"><span class="l">文字コード</span>
         <select name="charset" class="select">

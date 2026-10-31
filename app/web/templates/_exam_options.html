@@ -1,16 +1,20 @@
+{% from "_notice.html" import msg, attrs %}
+{% set field_errors = field_errors | default({}) %}
 <span id="exam-options" class="exam-options">
   <label class="field"><span class="l">検査名<span class="req">必須</span></span>
-    <select name="procedure" class="select">
+    <select name="procedure" class="select"{{ attrs('procedure', field_errors) }}>
       {% for p in entry.procedures %}
       <option value="{{ p.code }}"{% if values.get('procedure') == p.code %} selected{% endif %}>{{ p.name }}</option>
       {% endfor %}
     </select>
+    {{ msg('procedure', field_errors) }}
   </label>
   <label class="field"><span class="l">装置</span>
-    <select name="station" class="select">
+    <select name="station" class="select"{{ attrs('station', field_errors) }}>
       {% for s in entry.stations %}
       <option value="{{ s.name }}"{% if values.get('station') == s.name %} selected{% endif %}>{{ s.name }}（{{ s.ae_title }}）</option>
       {% endfor %}
     </select>
+    {{ msg('station', field_errors) }}
   </label>
 </span>
