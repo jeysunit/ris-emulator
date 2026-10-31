@@ -13,7 +13,7 @@
 ## 3. ドキュメント
 
 - [x] 3.1 ADR-0012 を足し、`docs/spec/03_web_cli.md`・`05_mpps_scp.md`・`06_hl7_pir.md`・`07_reconciliation.md`・`docs/usage.md`・`docs/project_charter.md` を直し、markdownlint が合格することを確かめる
-- [ ] 3.2 `python -m pytest -q` がすべて合格し、CI が緑であることを確かめる
+- [x] 3.2 `python -m pytest -q` がすべて合格し、CI が緑であることを確かめる
 
 ## Workflow follow-up
 
