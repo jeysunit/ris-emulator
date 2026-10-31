@@ -8,6 +8,7 @@ import pytest
 
 from app.core.exceptions import AckParseError, ValidationError
 from app.core.hl7 import (
+    _pid,
     Hl7Header,
     build_adt_a08,
     build_adt_a40,
@@ -29,6 +30,12 @@ YAMADA = PersonName(
     alphabetic="YAMADA^TARO", ideographic="山田^太郎", phonetic="ヤマダ^タロウ"
 )
 PATIENT = Patient(patient_id="RE0000001", name=YAMADA, birth_date="19800101", sex="M")
+
+
+def test_pid_sends_u_for_an_unknown_sex() -> None:
+    unknown = Patient(patient_id="RE0000001", name=YAMADA, birth_date="19800101")
+    assert unknown.sex == "U"
+    assert _pid(unknown, NAMESPACE, "").split("|")[8] == "U"
 
 
 def _segments(text: str) -> dict[str, list[str]]:

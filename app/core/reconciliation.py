@@ -14,9 +14,11 @@ from pydicom.dataset import Dataset
 from pydicom.multival import MultiValue
 
 from app.core.models import (
+    SEX_UNKNOWN,
     OrderStatus,
     Patient,
     PersonName,
+    sex_from_dicom,
     validate_ae_title,
     validate_patient_id,
 )
@@ -54,7 +56,7 @@ class TemporaryPatient:
     patient_id: str = ""
     name: PersonName = PersonName()
     birth_date: str = ""
-    sex: str = ""
+    sex: str = "U"  # M, F, O, U（DICOM の空・規格外は U）
 
 
 @dataclass(frozen=True)
@@ -105,7 +107,7 @@ def read_unreconciled(
             patient_id=patient_id,
             name=name,
             birth_date=_digits(_text(dataset, "PatientBirthDate"), _DATE, 8),
-            sex=_sex(_text(dataset, "PatientSex")),
+            sex=sex_from_dicom(_text(dataset, "PatientSex")),
         ),
         study_instance_uid=study_uid,
         modality=_text(dataset, "Modality"),
@@ -150,9 +152,13 @@ def looks_like_another_patient(known: Patient, typed: Patient) -> bool:
     compared = [(a, b) for a, b in pairs if a and b]
     if not compared or any(a != b for a, b in compared):
         return True
+    # 性別の U（不明）は値が無いのと同じに扱う
     return any(
         a and b and a != b
-        for a, b in ((known.birth_date, typed.birth_date), (known.sex, typed.sex))
+        for a, b in (
+            (known.birth_date, typed.birth_date),
+            (known.sex.replace(SEX_UNKNOWN, ""), typed.sex.replace(SEX_UNKNOWN, "")),
+        )
     )
 
 
@@ -200,10 +206,6 @@ def _digits(value: str, pattern: re.Pattern[str], length: int) -> str:
     """`YYYYMMDD`・`HHMMSS` の先頭を取る（小数の秒などは捨てる）。形が合わなければ空."""
     head = value[:length]
     return head if pattern.fullmatch(head) else ""
-
-
-def _sex(value: str) -> str:
-    return value if value in ("M", "F", "O") else ""
 
 
 def _ae_title(value: str) -> str:

@@ -27,7 +27,8 @@ MPPS の状態（`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`）によらず照�
 | 撮影の開始日時 | Performed Procedure Step Start Date (0040,0244)・Time (0040,0245) |
 
 読めない値は空として扱う。生年月日と開始日時は、`YYYYMMDD`・`HHMMSS`
-（秒の小数は捨てる）の形のときだけ使う。性別は `M`・`F`・`O` のときだけ使う。
+（秒の小数は捨てる）の形のときだけ使う。性別は `M`・`F`・`O` のときだけ使い、空と
+それ以外の値は `U`（不明）と読む。
 装置の AEタイトルは AE の規則（[01_orders.md](01_orders.md) の台帳の `ae_title`）に
 合うときだけ使う。`\` で区切られた複数の値を持つ属性は、空として扱う。
 

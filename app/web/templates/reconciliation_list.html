@@ -30,7 +30,7 @@
       <td><span class="st" data-k="{{ mark[0] }}">{{ mark[1] }}</span></td>
       <td class="mono">{{ item.patient.patient_id }}</td>
       <td class="main-c">{{ item.patient.name.ideographic | pn }}<span class="sub">{{ item.patient.name.phonetic | pn }} / {{ item.patient.name.alphabetic | pn }}</span></td>
-      <td class="nowrap">{{ item.patient.birth_date | birth_cell(item | study_day) }}{% if item.patient.sex | sex %}<span class="sub">{{ item.patient.sex | sex }}</span>{% endif %}</td>
+      <td class="nowrap">{{ item.patient.birth_date | birth_cell(item | study_day) }}<span class="sub">{{ item.patient.sex | sex }}</span></td>
       <td>{{ item.modality }}</td>
       <td class="mono">{{ item.station_ae_title }}</td>
       <td class="mono uid-c" title="{{ item.study_instance_uid }}">{{ item.study_instance_uid }}</td>

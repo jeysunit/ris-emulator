@@ -20,6 +20,7 @@ ADR（Architecture Decision Record）の一覧と、ADR に固有の書き方で
 | [0011](0011-reconciliation-links-the-mpps.md) | 照合は MPPS に新しい予約を結び、Study Instance UID は撮影の値を使い、HL7 は同じ本文で送り直す | 採用 |
 | [0012](0012-case6-and-procedure-update.md) | 照合の後の撮影は Study Instance UID と患者ID で照合済みの予約に結び、取消・中止は手の操作のときだけ ORM で知らせる | 採用 |
 | [0013](0013-confirm-before-irreversible-web-operations.md) | 画面の照合と終わりの状態への変更は、確認の窓を通したときだけサーバーが行う | 採用 |
+| [0014](0014-sex-has-four-values.md) | 性別は M・F・O・U の 4 値で持ち、DICOM に書くときだけ U を空にする | 採用 |
 
 ## 書き方
 

@@ -84,7 +84,7 @@ def test_unreadable_values_become_empty() -> None:
         PerformedProcedureStepStartTime="9:15",
         PatientName=None,
     )
-    assert item.patient.sex == "" and item.patient.birth_date == ""
+    assert item.patient.sex == "U" and item.patient.birth_date == ""
     assert item.station_ae_title == "" and item.started_date == "" and item.started_time == ""
     assert item.patient.name == PersonName()
 
@@ -124,6 +124,8 @@ KNOWN = Patient(
     [
         # 同じ人：両方に値のある項目がすべて合う（空白・英字の大小は見ない。片方だけの項目は比べない）
         (PersonName(alphabetic="tanaka^hiroshi"), "", "", False),
+        # 性別の U（不明）は値が無いのと同じで、既にある M と比べても別人とは見ない
+        (PersonName(alphabetic="TANAKA^HIROSHI"), "19980312", "U", False),
         (PersonName(ideographic="田中 ^ 博"), "19980312", "M", False),
         (PersonName(alphabetic="TANAKA^HIROSHI", ideographic="田中^博"), "", "M", False),
         # 別人に見える：どれかが違う

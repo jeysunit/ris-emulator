@@ -1,4 +1,4 @@
-/* ui-kit 1.2.4（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
+/* ui-kit 1.2.5（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
 /* 部品の CSS。tokens.css の後に読む。クラスの名前と構造は system/parts.md */
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -72,7 +72,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .input::placeholder{color:var(--color-label)}
 .input:disabled,.select:disabled{background:var(--color-surface);color:var(--color-label);border-color:var(--color-border);cursor:not-allowed}
 .input[aria-invalid=true]{border-color:var(--color-danger);box-shadow:inset 0 0 0 1px var(--color-danger)}
-.field .msg{display:flex;gap:4px;align-items:center;font-size:12px;line-height:18px;color:var(--color-foreground)}
+.field .msg{display:flex;gap:4px;align-items:flex-start;font-size:12px;line-height:18px;color:var(--color-foreground)}
 .field .msg .ic{color:var(--color-danger);width:14px;height:14px}
 .field .hint{font-size:12px;line-height:18px;color:var(--color-label)}
 .w-s{width:120px}.w-m{width:200px}.w-l{width:320px}.w-full{width:100%}
@@ -115,6 +115,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 .listhead .cnt b{font-size:16px}
 .pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--color-label)}
 .mod{display:inline-block;min-width:34px;padding:0 6px;border-left:4px solid var(--m,var(--color-mod-doc));background:var(--color-surface);font-size:12px;line-height:18px;font-weight:700;color:var(--color-foreground)}
+.mod[data-m="ct"]{--m:var(--color-mod-ct)}
+.mod[data-m="mr"]{--m:var(--color-mod-mr)}
+.mod[data-m="crdx"]{--m:var(--color-mod-crdx)}
+.mod[data-m="us"]{--m:var(--color-mod-us)}
+.mod[data-m="es"]{--m:var(--color-mod-es)}
+.mod[data-m="mg"]{--m:var(--color-mod-mg)}
+.mod[data-m="sr"]{--m:var(--color-mod-sr)}
 
 .st{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border:1px solid var(--k,var(--color-border-input));border-radius:3px;font-size:12px;line-height:18px;color:var(--color-foreground);background:var(--color-background);white-space:nowrap}
 .st::before{content:var(--g,"○");color:var(--k,var(--color-label));font-size:10px;line-height:1}

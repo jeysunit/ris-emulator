@@ -212,6 +212,25 @@ def test_valid_manual_patient_is_accepted(config: AppConfig, store: OrderStore) 
         assert service.count_orders() == 1
 
 
+def test_sex_select_offers_four_values_and_defaults_to_unknown(config: AppConfig, store: OrderStore) -> None:
+    sop_uid, _ = add_unscheduled_mpps(store)
+    with _client(config, store) as (client, _):
+        page = client.get(f"/reconciliation/{sop_uid}").text
+    start = page.index('name="sex"')
+    select = page[start : page.index("</select>", start)]
+    options = re.findall(r'<option value="([A-Z])"( selected)?>([^<]+)</option>', select)
+    assert [(v, label) for v, _, label in options] == [("M", "男"), ("F", "女"), ("O", "その他"), ("U", "不明")]
+    assert [v for v, selected, _ in options if selected] == ["U"]
+
+
+def test_unknown_sex_is_accepted_and_kept_as_u(config: AppConfig, store: OrderStore) -> None:
+    sop_uid, _ = add_unscheduled_mpps(store)
+    with _client(config, store) as (client, service):
+        response = _reconcile(client, f"/reconciliation/{sop_uid}", **_manual(sex="U", procedure=""))
+        assert response.status_code == 303
+        assert service.count_orders() == 1
+
+
 def test_reconcile_form_marks_each_field_for_the_script(config: AppConfig, store: OrderStore) -> None:
     """入力した時に分かるよう、欄に確かめの種類・文・誤りの置き場を持たせる."""
     sop_uid, _ = add_unscheduled_mpps(store)

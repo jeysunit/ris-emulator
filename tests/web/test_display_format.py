@@ -32,7 +32,10 @@ def test_banner_birth_date_has_era_age_and_sex() -> None:
     # 日付として読めなければ元号も年齢も付けない。性別は残す
     assert birth_parts(_patient("19701399", "M"), today) == ("1970/13/99", " 男")
     assert birth_parts(_patient("", "M"), today) == ("", "男")
-    assert birth_parts(_patient("", ""), today) == ("", "")
+    # 性別が空・規格外・U のときは「不明」と出す（空のまま何も出さない画面を作らない）
+    assert birth_parts(_patient("", ""), today) == ("", "不明")
+    assert birth_parts(_patient("19700401", "U"), today) == ("1970/04/01", "（昭45・56歳）不明")
+    assert birth_parts(_patient("19700401", "X"), today) == ("1970/04/01", "（昭45・56歳）不明")
     # 今日より後の生年月日は年齢を出さない
     assert birth_parts(_patient("20261026", "F"), today) == ("2026/10/26", "（令8）女")
     # 明治より前は元号を出さず、年齢だけ
