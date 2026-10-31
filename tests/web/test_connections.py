@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import pathlib
 import re
+import shutil
 import socket
+import subprocess
 import threading
 import time
 
@@ -172,6 +176,26 @@ def test_page_script_marks_the_checking_row_and_restores_focus(config: AppConfig
         script = client.get("/static/app.js").text
     assert '"htmx:beforeRequest"' in script and "確認中" in script and 'data-k", "check"' in script
     assert 'indexOf("/connections/check")' in script and "announcePageUnreadable" in script
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node が無い（CI の ubuntu には入っている）")
+def test_checking_cell_is_restored_when_the_request_is_not_sent() -> None:
+    """確認が重なって 204 が返ると、「確認中」にした欄は元に戻る。200 では戻さない（応答が差し替える）."""
+    root = pathlib.Path(__file__).resolve().parents[2]
+    done = subprocess.run(
+        ["node", str(root / "tests/web/connections_checking.js"), str(root / "app/web/static/app.js")],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    shown = json.loads(done.stdout)
+    assert shown["initial"] == ["未確認0", "未確認1"]
+    # 押した行だけ「確認中」になり、204 で元に戻る
+    assert shown["checking"] == ["確認中", "未確認1"]
+    assert shown["after204"] == ["未確認0", "未確認1"]
+    assert shown["after200"] == ["確認中", "未確認1"]
 
 
 def test_check_connection_opens_and_closes_without_sending() -> None:

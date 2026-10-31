@@ -147,6 +147,8 @@
       checking[j].textContent = "未確認";
     }
   }
+  // 「確認中」にした欄の元の中身。確かめている最中の重なりで 204（何も差し替わらない）が返ったときに戻す
+  var checkingCells = [];
   document.addEventListener("htmx:beforeRequest", function (event) {
     var button = event.detail.elt;
     var kind = button && button.getAttribute && button.getAttribute("data-conn-check");
@@ -154,11 +156,13 @@
       return;
     }
     var cells = document.querySelectorAll("#conn-sections td.res");
+    checkingCells = [];
     for (var i = 0; i < cells.length; i++) {
       // 行の「接続確認」は、その行だけ。「すべて接続確認」は全部の行
       if (kind === "row" && cells[i].parentNode !== button.closest("tr")) {
         continue;
       }
+      checkingCells.push({ cell: cells[i], nodes: Array.prototype.slice.call(cells[i].childNodes) });
       var mark = document.createElement("span");
       mark.className = "st";
       mark.setAttribute("data-k", "check");
@@ -166,6 +170,24 @@
       cells[i].textContent = "";
       cells[i].appendChild(mark);
     }
+  });
+  document.addEventListener("htmx:afterRequest", function (event) {
+    if (!isPageCheck(event) || !event.detail.xhr || event.detail.xhr.status !== 204) {
+      return;
+    }
+    // 先の確認が続いていて、この要求は重ねて送られなかった。「確認中」にした欄を元の中身に戻す
+    // （先の確認の応答が区画ごと差し替えるので、その結果が出る）。もう差し替わった欄は触らない
+    for (var i = 0; i < checkingCells.length; i++) {
+      var cell = checkingCells[i].cell;
+      if (!cell.querySelector(".st[data-k=check]")) {
+        continue;
+      }
+      cell.textContent = "";
+      for (var j = 0; j < checkingCells[i].nodes.length; j++) {
+        cell.appendChild(checkingCells[i].nodes[j]);
+      }
+    }
+    checkingCells = [];
   });
   document.addEventListener("htmx:afterSwap", function (event) {
     if (isPageCheck(event)) {

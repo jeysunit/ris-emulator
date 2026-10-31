@@ -90,8 +90,8 @@ def check_connection(host: str, port: int, timeout: float) -> ConnectionCheck:
     """MLLP の接続を開けるかだけを確かめる。何も送らず、すぐ閉じる.
 
     HL7 v2 の MLLP は、接続を開いて 1 通送り、ACK を受けて閉じる（上の docstring）ので、
-    相手の受け口が待ち受けているかは、接続を開けるかで分かる。メッセージを送らないので、
-    相手の記録にも残らない。名前の解決と接続を合わせて `timeout` 秒までで返す
+    相手の受け口が待ち受けているかは、接続を開けるかで分かる。メッセージは送らない
+    （接続を開いて閉じるので、受け手によっては接続のログが残る）。名前の解決と接続を合わせて `timeout` 秒までで返す
     （IPv4・IPv6 の両方に解けるときも倍にならない）。
     """
     deadline = time.monotonic() + timeout
