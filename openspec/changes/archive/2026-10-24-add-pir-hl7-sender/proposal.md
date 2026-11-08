@@ -18,10 +18,10 @@ System Scheduler/Order Filler）がその知らせを HL7 v2 で送る。ris-emu
   UTF-8（MSH-18）で送る
 - MLLP で設定の宛先へ送り、ACK の MSA-1 で「受理（AA）」「拒否（AE・AR）」「失敗
   （接続・枠・ACK の誤り）」に分ける
-- 設定に `hl7` の節（宛先と MSH の名前）を足す
-- CLI に `pir send --kind a40|a08|orm`（`--dry-run` で組み立てだけ）を足す
+- 設定に `hl7` の節（宛先と MSH の名前）を追加する
+- CLI に `pir send --kind a40|a08|orm`（`--dry-run` で組み立てだけ）を追加する
 - 3 つのメッセージの例を docs に書く（受け手の tsunagi と共有するため）
-- `docs/project_charter.md` の対象に「HL7 v2 の送信」を足す。受信は対象外のまま
+- `docs/project_charter.md` の対象に「HL7 v2 の送信」を追加する。受信は対象外のまま
 
 ## Capabilities
 
@@ -38,7 +38,7 @@ System Scheduler/Order Filler）がその知らせを HL7 v2 で送る。ris-emu
 - コード：`app/core/hl7.py`（組み立てと ACK の読み取り）、`app/hl7/mllp.py`（送信）、
   `app/services/config.py`（`hl7` の節）、`app/cli/main.py`（`pir send`）、
   `app/core/exceptions.py`
-- 設定：`config/app_config.yaml` に `hl7` の節を足す。無い設定ファイルは既定値で読める
+- 設定：`config/app_config.yaml` に `hl7` の節を追加する。無い設定ファイルは既定値で読める
 - テスト：`tests/hl7/`（組み立て、MLLP とスタブの受け手）、`tests/cli/test_cli_pir.py`、
   `tests/services/test_hl7_config.py`
 - ドキュメント：`docs/spec/06_hl7_pir.md`（新規）、`docs/spec/03_web_cli.md`、`docs/usage.md`、

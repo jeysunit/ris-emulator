@@ -6,7 +6,7 @@
   C-ECHO を受ける。画面のプロセスの中で別のスレッドとして動く
 - 予約は SQLite（`OrderStore`）にあり、状態の変更は `BEGIN IMMEDIATE` のトランザクションで行う。
   `order-status-transitions` で、遷移の表（`ALLOWED_TRANSITIONS`）と検証がストアに入る
-- ADR-0001 の「MPPS は次に作る」の節に、設計の要点（同じ `MwlServer` に足す、Accession Number と
+- ADR-0001 の「MPPS は次に作る」の節に、設計の要点（同じ `MwlServer` に追加する、Accession Number と
   Scheduled Procedure Step ID で探す、MPPS は別の表に記録する、受けた値を信用しない）がある。
   DISCONTINUED を「取消」にする点だけを、この change で「中止」に変える
 - 規格の出典（DICOM 2026d、2026-10-23 に確認）
@@ -27,7 +27,7 @@
 **Goals:**
 
 - モダリティの MPPS の N-CREATE・N-SET を PS3.4 F.7 のとおりに受け、予約の状態に反映する
-- 受けた MPPS を、予約と別に記録して後から確かめられるようにする
+- 受けた MPPS を、予約と別に記録して後から確認できるようにする
 
 **Non-Goals:**
 
@@ -42,7 +42,7 @@
 ### MWL と同じ AE で受ける
 
 ADR-0001 の要点のとおり、`MwlServer.make_ae` に `ModalityPerformedProcedureStep` の
-Presentation Context を足し、`evt.EVT_N_CREATE`・`evt.EVT_N_SET` の handler を足す。
+Presentation Context を追加、`evt.EVT_N_CREATE`・`evt.EVT_N_SET` の handler を追加する。
 モダリティの設定では MWL と MPPS の送り先を同じにすることが多く、AE を分けると試験の
 環境の設定が増える。
 
@@ -56,7 +56,7 @@ Study Instance UID を発番するので使わない。
 ### MPPS は別の表に記録し、状態の変更と同じトランザクションで書く
 
 SQLite に `mpps` の表（`sop_instance_uid` が主キー、`status`、`accession_numbers`（JSON）、
-`body`（受けた属性を pydicom の JSON にしたもの）、`created_at`、`updated_at`）を足す。
+`body`（受けた属性を pydicom の JSON にしたもの）、`created_at`、`updated_at`）を追加する。
 予約の状態の変更と MPPS の記録は、1つの `BEGIN IMMEDIATE` の中で行う。片方だけが
 書かれると、MPPS が `COMPLETED` なのに予約が実施中のまま、という食い違いが残る。
 
@@ -99,4 +99,4 @@ Performed Procedure Step Status が Enumerated Values に無い、といった�
 2. 今のデータベースの予約はそのまま使える。中止の予約はまだ無い
 3. 戻すときは、この change の commit を revert する。`mpps` の表は古い版では使われずに残る。
    中止にした予約は古い版では読めない（`OrderStatus` に無い）ので、戻す前に CLI で
-   中止の予約が無いことを確かめるか、データベースを作り直す
+   中止の予約が無いことを確認するか、データベースを作り直す

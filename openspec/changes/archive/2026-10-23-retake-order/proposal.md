@@ -11,17 +11,17 @@
   変わる。RIS に撮り直しの予約が要る
 
 今の RIS は `append` の形しか試験できない。`new_order` の施設のモダリティと PACS を試験するには、
-元の予約を写して新しい番号を発番した「撮り直しの予約」を作れる必要がある。どちらの形を使うかを
+元の予約をコピーして新しい番号を発番した「撮り直しの予約」を作れる必要がある。どちらの形を使うかを
 設定で選べるようにする。モダリティの側も同じ名前・同じ値の設定を持つ前提にする。
 
 ## What Changes
 
-- 設定に `orders.retake_mode` を足す。値は `append`（既定）と `new_order`
+- 設定に `orders.retake_mode` を追加する。値は `append`（既定）と `new_order`
 - `append` のときは、RIS は撮り直しで何もしない。同じ予約に2つ目以降の MPPS が来ても、
   `mpps-scp` の規則のとおりに記録し、予約が終わりの状態なら状態は変えない。撮り直しの予約を
   作る機能は出さない（CLI はエラー）
 - `new_order` のとき、予約の詳細の画面と CLI の `retake <受付番号>` で、撮り直しの予約を作る。
-  元の予約の患者・モダリティ・装置・検査・依頼の内容・文字コードを写し、受付番号・
+  元の予約の患者・モダリティ・装置・検査・依頼の内容・文字コードをコピー、受付番号・
   Requested Procedure ID・Scheduled Procedure Step ID・Study Instance UID を新しく発番する。
   予定日時は作った時点（指定もできる）、状態は予定
 - 撮り直しの予約に元の受付番号（`retake_of`）を残し、予約の詳細に、元の予約と撮り直しの予約を
@@ -45,7 +45,7 @@
 - コード：`app/services/config.py`（`retake_mode`）、`app/core/models.py`（`Order.retake_of`）、
   `app/services/order_service.py`・`store.py`（撮り直しの予約の作成と元の予約の状態の変更を
   1つのトランザクションで行う）、`app/cli/main.py`（`retake`）、`app/web/app.py`・`order_detail.html`
-- テスト：撮り直しの作成、番号の発番、元の予約の状態、2つの設定での動作の試験を足す
+- テスト：撮り直しの作成、番号の発番、元の予約の状態、2つの設定での動作の試験を追加する
 - ドキュメント：`docs/spec/01_orders.md`・`03_web_cli.md`、`docs/usage.md`、ADR
 - 前提：`order-status-transitions` と `mpps-scp` を先に archive する（中止の状態と MPPS の記録を使う）
 - 既定は `append` なので、設定を変えない利用者の動作は `mpps-scp` の後と同じ

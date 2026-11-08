@@ -73,7 +73,7 @@ IHE の Scheduled Workflow は、撮り直しを Append Case として、同じ�
 
 ### 関係は撮り直しの予約の側に持つ
 
-`Order` に `retake_of: str = ""`（元の受付番号）を足す。元の予約の側には持たず、詳細の画面で
+`Order` に `retake_of: str = ""`（元の受付番号）を追加する。元の予約の側には持たず、詳細の画面で
 `retake_of` が自分の受付番号の予約を引く。片方だけに持つので、2つが食い違うことが無い。
 件数が少ないので、予約の JSON の列を `json_extract` で引く形で始める。
 
@@ -88,7 +88,7 @@ IHE の Scheduled Workflow は、撮り直しを Append Case として、同じ�
   撮り直しの記録は MPPS の一覧に残る。予約を完了にしたい施設は `new_order` を使う
 - [`new_order` で、元の予約の MPPS が撮り直しの後に COMPLETED で届く] → 元の予約は中止のまま
   （案1）。MPPS は記録されるので、予約の詳細で食い違いが見える
-- [台帳（`station-registry`）が変わった後の撮り直し] → 装置の値は元の予約から写すので、
+- [台帳（`station-registry`）が変わった後の撮り直し] → 装置の値は元の予約からコピーするので、
   台帳から消えた装置でも撮り直しの予約を作れる
 
 ## Migration Plan

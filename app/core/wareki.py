@@ -65,7 +65,7 @@ def _real_date(year: int, month: int, day: int) -> date:
 
 
 def _era_date(index: int, year_text: str, month: int, day: int) -> date:
-    """元号の年月日を西暦の日付にし、その元号の期間に入るかを確かめる."""
+    """元号の年月日を西暦の日付にし、その元号の期間に入るかを確認する."""
     start, _kanji, _alpha, name = _ERAS[index]
     year = 1 if year_text == "元" else int(year_text)
     if year == 0:
@@ -95,7 +95,7 @@ def parse_birth_input(value: str, today: date) -> date:
 
     受ける形：`1975/05/14`・`S50/05/14`（英字は大文字・小文字・全角）・`昭50/05/14`・
     `昭和50年5月14日`。月と日の 0 は省いてよく、元号の年は `元` でもよい。前後の空白は捨てる。
-    確かめる順：形が合わない（暦に無い日を含む）→ 元号の範囲の外 → 今日より後。
+    確認する順：形が合わない（暦に無い日を含む）→ 元号の範囲の外 → 今日より後。
     空の値は形の誤りにする（空を許す欄は、呼ぶ側が先に空を扱う）.
     """
     text = value.strip()

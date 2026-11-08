@@ -128,7 +128,7 @@ def parse_time_option(text: str) -> time:
 
 
 def _check_lo_text(label: str, value: str) -> None:
-    """LO の値（64 字まで、`\\` と制御文字なし）か確かめる."""
+    """LO の値（64 字まで、`\\` と制御文字なし）か確認する."""
     if len(value) > LO_MAX_LENGTH:
         raise ValidationError(f"{label}は {LO_MAX_LENGTH} 字までにしてください")
     if "\\" in value or has_control_chars(value):
@@ -140,7 +140,7 @@ def _find_procedure(procedures: list[Procedure], code: str | None) -> Procedure 
 
 
 def check_encodable(order: Order) -> None:
-    """予約の文字の値が、選んだ Specific Character Set で書けるかを確かめる.
+    """予約の文字の値が、選んだ Specific Character Set で書けるかを確認する.
 
     pydicom は書けない字を黙って `?` に置き換えるので、保存の前に止める。
     """
@@ -176,7 +176,7 @@ class OrderService:
     ) -> tuple[Order, Order]:
         """撮り直しの予約を作る（`orders.retake_mode` が `new_order` のときだけ）.
 
-        元の予約の内容を写し、受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
+        元の予約の内容をコピー、受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
         Study Instance UID を新しく発番する。予定日時の既定は作った時点（分まで）。
         戻り値は (撮り直しの予約, 元の予約)。docs/spec/01_orders.md 7 章。
         """

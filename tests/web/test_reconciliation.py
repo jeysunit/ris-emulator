@@ -433,7 +433,7 @@ def test_confirm_dialog_for_an_update_says_a08(config: AppConfig, store: OrderSt
 
 
 def test_confirm_with_a_stale_key_shows_the_dialog_again(config: AppConfig, store: OrderStore) -> None:
-    """確かめた後に撮影の値が変わったら（N-SET）、送らずに窓を出し直す."""
+    """確認した後に撮影の値が変わったら（N-SET）、送らずに窓を出し直す."""
     sop_uid, _ = add_unscheduled_mpps(store)
     with stub_receiver(_accept) as receiver, _client(config, store, receiver.port) as (client, service):
         fields = _confirm_fields(_post(client, f"/reconciliation/{sop_uid}", **_roster()).text)

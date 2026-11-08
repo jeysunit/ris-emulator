@@ -404,7 +404,7 @@ def _build_pir_message(args: argparse.Namespace, config: AppConfig) -> Hl7Messag
 
 
 def _patient_from_args(args: argparse.Namespace, orders: OrdersConfig) -> Patient:
-    # pydantic の英語の文より先に、日本語の文で断る（入力の確かめは app/core/patient_input.py）
+    # pydantic の英語の文より先に、日本語の文で断る（入力の確認は app/core/patient_input.py）
     validate_patient_id_input(args.patient_id)
     name = _parse_person_name(args.name, orders)
     birth_date = birth_date_from_cli(args.birth_date)

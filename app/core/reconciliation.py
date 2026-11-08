@@ -143,7 +143,7 @@ def looks_like_another_patient(known: Patient, typed: Patient) -> bool:
 
     両方に値のある項目（氏名の表記ごと・生年月日・性別）のどれかが違えば別人と見る。氏名は
     成分（姓・名）の境目を保ったまま、空白と英字の大小を無視して比べる。氏名に両方に値のある表記が1つも無ければ、同じ人と
-    確かめられないので別人と見る。
+    確認できないので別人と見る。
     """
     pairs = [
         (_name_key(getattr(known.name, script)), _name_key(getattr(typed.name, script)))

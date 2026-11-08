@@ -189,7 +189,7 @@ def create_app(
     app.state.service = order_service
     app.state.mwl = mwl
     app.state.csrf_token = new_csrf_token()
-    # 上の帯の「接続確認」の直近の結果（押すまでは無い）。確かめている間は重ねて送らない
+    # 上の帯の「接続確認」の直近の結果（押すまでは無い）。確認している間は重ねて送らない
     probes: dict[str, Probe | None] = {"mwl": None, "hl7": None}
     check_lock = threading.Lock()
     templates = Jinja2Templates(directory=BASE_DIR / "templates")
@@ -587,9 +587,9 @@ def create_app(
 
     @app.post("/connection/check", response_class=HTMLResponse)
     def connection_check(request: Request) -> Response:
-        """上の帯の「接続確認」：MWL の待ち受けと HL7 の送信先を確かめ、popover の中身と全体の札を結果で差し替える.
+        """上の帯の「接続確認」：MWL の待ち受けと HL7 の送信先を確認、popover の中身と全体の札を結果で差し替える.
 
-        確かめている最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
+        確認している最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
         """
         if not check_lock.acquire(blocking=False):
             return Response(status_code=204)
@@ -612,10 +612,10 @@ def create_app(
 
     @app.post("/connections/check", response_class=HTMLResponse)
     def connections_check(request: Request, target: str = "all") -> Response:
-        """接続先の画面の「接続確認」。`target=hl7` は送信先の行だけ、`all` は待ち受けも確かめる.
+        """接続先の画面の「接続確認」。`target=hl7` は送信先の行だけ、`all` は待ち受けも確認する.
 
         表の区画・待ち受けの区画・上の知らせ・上の帯の札と popover を、同じ応答で差し替える。
-        確かめている最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
+        確認している最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
         """
         if target not in ("hl7", "all"):
             raise HTTPException(HTTP_BAD_REQUEST, "Unknown target")
@@ -715,7 +715,7 @@ def create_app(
             key = values.get("confirmed_key", "")
             if not key or key != preview.key:
                 # 確認の窓（照合の内容と送る HL7）を出す。窓の「照合・送信する」で鍵を付けて送り直す。
-                # 鍵が違えば、確かめた後に内容が変わったので、窓を出し直す
+                # 鍵が違えば、確認した後に内容が変わったので、窓を出し直す
                 return _render_reconcile(
                     request,
                     sop_instance_uid,
@@ -897,7 +897,7 @@ def _field_error(field: str, message: str) -> ValidationError:
 
 
 def _collect(errors: dict[str, str], field: str, read: Callable[[], Any]) -> Any:  # noqa: ANN401
-    """`read` の誤りを、`field` の欄の誤りとして `errors` に足す（読めたら値、誤りなら None）."""
+    """`read` の誤りを、`field` の欄の誤りとして `errors` に追加する（読めたら値、誤りなら None）."""
     try:
         return read()
     except ValidationError as exc:

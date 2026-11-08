@@ -35,7 +35,7 @@
 ## Impact
 
 - コード：`app/services/config.py`（台帳の読み込みと検証）、`app/core/models.py`
-  （予約に装置の名前を足す）、`app/services/order_service.py`、`app/cli/main.py`、
+  （予約に装置の名前を追加する）、`app/services/order_service.py`、`app/cli/main.py`、
   `app/web/app.py`・`new_order.html`・`_order_row.html`・`order_detail.html`
 - 設定：`config/app_config.yaml` の6つのモダリティを新しい形に書き換える
 - テスト：予定の AE タイトルの試験（`tests/services/test_order_service.py`・

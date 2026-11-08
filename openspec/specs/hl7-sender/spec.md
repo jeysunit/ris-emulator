@@ -128,7 +128,7 @@ MSH-18 に `UNICODE UTF-8` を入れ、ASCII だけなら MSH-18 を空にする
 - **WHEN** MSA-2 が送った MSH-10 と違う ACK が返る
 - **THEN** 結果は失敗になり、MSA-2 が違うと示す
 
-### Requirement: 接続確認は MLLP の接続を開けるかだけを確かめる
+### Requirement: 接続確認は MLLP の接続を開けるかだけを確認する
 
 宛先の接続確認は、`host`・`port` へ接続を開き、メッセージを送らずに閉じなければならない（SHALL）。
 待つ時間は `timeout_seconds` と 3 秒の短いほうとし、名前の解決と接続を合わせてその時間までで

@@ -131,7 +131,7 @@ def test_input_values_with_control_characters_are_not_printed_raw(
         "pir", "send", "--kind", "a08", "--patient-id", "RE1", "--name", "YAMADA‮^TARO",
         "--visit-number", "V1", "--dry-run", "--config", str(config_file),
     )  # fmt: skip
-    # 氏名の書式文字は、入力の確かめで断る（誤りの文にも入れた字を出さない）
+    # 氏名の書式文字は、入力の確認で断る（誤りの文にも入れた字を出さない）
     assert code == 2 and "‮" not in out and "‮" not in err
 
     code, out, err = _run(

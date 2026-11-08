@@ -1,4 +1,4 @@
-"""手で入れた患者の値の確かめ（docs/spec/01_orders.md 3.4）.
+"""手で入れた患者の値の確認（docs/spec/01_orders.md 3.4）.
 
 画面・CLI が使う Pure な処理。誤りは日本語の文で `ValidationError` にする。文は入れた値を
 含めない。規則の原典：
@@ -13,7 +13,7 @@
 
 漢字の氏名は、予約の文字コード（設定の `orders.default_character_set`）で表せる字だけを受ける。
 UTF-8 なら制限しない。かなの氏名は全角カタカナだけを受け、ひらがなはカタカナに直す。半角カナは
-断る。試験の形（設定の `orders.patient_input_test_mode`）では、かなの確かめと直しをせず、
+断る。試験の形（設定の `orders.patient_input_test_mode`）では、かなの確認と直しをせず、
 そのまま通す。
 """
 
@@ -63,7 +63,7 @@ PHONETIC_CONVERTED_NOTE = "ひらがなをカタカナに直しました。"
 PATIENT_ID_MESSAGE = "患者ID は半角の英数字と記号で入力してください（\\ ^ ~ & | は使えません）。"
 BIRTH_DATE_FORMAT_MESSAGE = BIRTH_FORMAT_MESSAGE
 BIRTH_DATE_FUTURE_MESSAGE = BIRTH_FUTURE_MESSAGE
-# 欄の確かめの種類（data-check）ごとの文。生年月日の欄は、入力のたびにサーバーが読み取った
+# 欄の確認の種類（data-check）ごとの文。生年月日の欄は、入力のたびにサーバーが読み取った
 # 結果の文に替える（app/web/static/app.js）
 INPUT_MESSAGES = {
     "patient-id": PATIENT_ID_MESSAGE,
@@ -81,7 +81,7 @@ def validate_patient_input(
     *,
     test_mode: bool = False,
 ) -> None:
-    """手で入れた患者の値を確かめる。誤りは `ValidationError`（最初の1件）."""
+    """手で入れた患者の値を確認する。誤りは `ValidationError`（最初の1件）."""
     validate_patient_id_input(patient.patient_id)
     validate_person_name(patient.name, character_set, test_mode=test_mode)
     validate_birth_date(patient.birth_date, today)
@@ -110,7 +110,7 @@ def validate_person_name(
     *,
     test_mode: bool = False,
 ) -> None:
-    """氏名の3つの群を、群ごとに確かめる."""
+    """氏名の3つの群を、群ごとに確認する."""
     for script, label in SCRIPT_LABELS.items():
         message = check_name_group(
             script, label, getattr(name, script), character_set, test_mode=test_mode
@@ -167,7 +167,7 @@ def check_ideographic_group(group: str, character_set: CharacterSet = CharacterS
 def check_phonetic_group(group: str, *, test_mode: bool = False) -> str:
     """かなの氏名：全角カタカナ（長音・中点・空白・`^` 区切りを含む）だけ。半角カナは断る.
 
-    ひらがなは `to_katakana` でカタカナに直してから確かめる。試験の形では何も見ずに通す。
+    ひらがなは `to_katakana` でカタカナに直してから確認する。試験の形では何も見ずに通す。
     """
     if test_mode:
         return ""
@@ -205,7 +205,7 @@ def validate_birth_date(value: str, today: date | None = None) -> None:
 def birth_date_from_cli(value: str, today: date | None = None) -> str:
     """CLI の生年月日を YYYYMMDD にする。空は空.
 
-    `YYYYMMDD` はそのまま確かめる。ほかは画面と同じ形（`1975/05/14`・`S50/05/14` など）として
+    `YYYYMMDD` はそのまま確認する。ほかは画面と同じ形（`1975/05/14`・`S50/05/14` など）として
     読み取る。誤りの文は画面と同じで、文が示す形を CLI でも受ける.
     """
     text = value.strip()

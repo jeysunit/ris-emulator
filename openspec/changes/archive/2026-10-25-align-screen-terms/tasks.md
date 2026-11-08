@@ -7,9 +7,9 @@
 
 ## 2. 決まりと試験
 
-- [x] 2.1 `openspec/specs/screen-terms/spec.md` に「語の使い分け」の要件を足す
-- [x] 2.2 `tests/web/test_web.py` に、外した語が画面に出ないことを確かめる試験を足す
-- [x] 2.3 `python -m pytest -q` がすべて合格することを確かめる
+- [x] 2.1 `openspec/specs/screen-terms/spec.md` に「語の使い分け」の要件を追加する
+- [x] 2.2 `tests/web/test_web.py` に、外した語が画面に出ないことを確認する試験を追加する
+- [x] 2.3 `python -m pytest -q` がすべて合格することを確認する
 
 ## Workflow follow-up
 

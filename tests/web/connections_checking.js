@@ -1,4 +1,4 @@
-// app.js の「確認中」の動きを、最小の偽の DOM の上で動かす（tests/web/test_connections.py から node で起こす）。
+// app.js の「確認中」の動きを、最小の偽の DOM の上で動かす（tests/web/test_connections.py から node で起動する）。
 // 引数: app.js のパス。結果は JSON を 1 行で標準出力に出す。
 "use strict";
 const fs = require("fs");

@@ -241,7 +241,7 @@ def test_selection_summary_and_panel(config: AppConfig, service: OrderService) -
 
 def test_query_and_status_survive_links(config: AppConfig, service: OrderService) -> None:
     orders = service.create_orders(OrderRequest(counts={"CT": 101}, scheduled_date=TODAY, interval_minutes=1, seed=1))
-    # 同じ患者の予約を 101 件にして、検索とページ送りを同時に確かめる
+    # 同じ患者の予約を 101 件にして、検索とページ送りを同時に確認する
     for order in orders[1:]:
         with service.store._connect() as conn:
             copied = order.model_copy(update={"patient": orders[0].patient})

@@ -20,7 +20,7 @@
 
 1. 要求に Affected SOP Instance UID が無ければ、SCP が `2.25.` と UUID の整数で発番し、
    応答の Affected SOP Instance UID で返す（PS3.7 10.1.5.1.4）。あれば PS3.5 9.1 の
-   UID の形かを確かめ、違えば `0106`（Invalid Attribute Value）
+   UID の形かを確認、違えば `0106`（Invalid Attribute Value）
 2. Performed Procedure Step Status (0040,0252) が無ければ `0120`（Missing Attribute）、
    `IN PROGRESS` でなければ `0106`（PS3.4 F.7.2.1.3）
 3. Scheduled Step Attributes Sequence (0040,0270) が無ければ `0120`
@@ -48,7 +48,7 @@
    （`IN PROGRESS`・`COMPLETED`・`DISCONTINUED`。PS3.3 C.4.14）に無ければ `0106`
 4. `COMPLETED` なら結び付いた予約を完了に、`DISCONTINUED` なら中止にする。状態を
    含まない N-SET は、受けた属性を記録するだけ
-5. 受けた属性を MPPS の記録に足して `0000`
+5. 受けた属性を MPPS の記録に追加して `0000`
 
 ## 4. 予約の状態と記録
 

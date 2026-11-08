@@ -49,7 +49,7 @@ from .store import Delivery, MppsRecord, Reconciliation
 PATIENT_CLASS_EMERGENCY = "E"
 PRIORITY_EMERGENCY = "STAT"
 DEFAULT_DEPARTMENT = "救急科"
-# 送信の権利（claim_delivery）の有効な時間は、送信の時間切れの 2 倍にこの秒数を足したもの
+# 送信の権利（claim_delivery）の有効な時間は、送信の時間切れの 2 倍にこの秒数を追加したもの
 CLAIM_MARGIN_SECONDS = 5.0
 # 予約の状態 → 照合で作った予約をその状態に変えたときに送る通の種類とメッセージ型（画面の確認の窓）
 STATUS_MESSAGES: dict[OrderStatus, tuple[DeliveryKind, str]] = {
@@ -67,8 +67,8 @@ class ReconcileRequest:
     patient: Patient
     procedure_code: str | None = None
     department: str | None = None
-    # 確認の窓で見せた内容の鍵（ReconcilePreview.key）。与えると、確定のときに読み直した撮影で
-    # 作った鍵と違えば断る（確かめた後に仮の患者や送る通が変わっていたら、確かめ直させる）
+    # 確認の窓で見せた内容の鍵（ReconcilePreview.key）。与えると、確定のときに再読み込みした撮影で
+    # 作った鍵と違えば断る（確認した後に仮の患者や送る通が変わっていたら、再確認させる）
     confirmed_key: str | None = None
 
 
@@ -168,7 +168,7 @@ class ReconciliationService:
         def build(
             sequence: int, record: MppsRecord
         ) -> tuple[Order, list[Delivery], dict[str, str]]:
-            # 結び付ける MPPS をトランザクションの中で読み直した値から、予約・送る HL7・仮の患者を
+            # 結び付ける MPPS をトランザクションの中で再読み込みした値から、予約・送る HL7・仮の患者を
             # 作る（N-SET が間に入っても、旧い患者ID と送る種類が予約と食い違わない）
             current = read_unreconciled(**_fields(record))
             self._check(current, request.patient)
@@ -199,13 +199,13 @@ class ReconciliationService:
     def set_status(
         self, accession_number: str, status: OrderStatus
     ) -> tuple[Order, Reconciliation | None]:
-        """画面・CLI の状態の変更。照合で作った予約を取消・中止したら、ORM（CA・DC）を足して送る.
+        """画面・CLI の状態の変更。照合で作った予約を取消・中止したら、ORM（CA・DC）を追加して送る.
 
         状態の変更と送る通の追加は 1 つのトランザクションで行う。前の通が受理されていなければ
-        何も送らず、足した通は送信待ちで残る（予約を知らせる前に取消を送らない。前の通の送り直しは
+        何も送らず、追加した通は送信待ちで残る（予約を知らせる前に取消を送らない。前の通の送り直しは
         再送信の操作で行う）。
         MPPS（N-SET）による中止では送らない（モダリティの MPPS は PACS も受けるため）。
-        通を足さなかったときの 2 つめの値は None。
+        通を追加しなかったときの 2 つめの値は None。
         """
         added = False
 
@@ -222,7 +222,7 @@ class ReconciliationService:
             return order, None
         reconciliation = self._get(accession_number)
         if any(d.outcome != "accepted" for d in reconciliation.deliveries[:-1]):
-            # 前の通の送り直しは、再送信の操作に任せる（足した通は送信待ちで残す）
+            # 前の通の送り直しは、再送信の操作に任せる（追加した通は送信待ちで残す）
             return order, reconciliation
         return order, self.send_pending(accession_number)
 

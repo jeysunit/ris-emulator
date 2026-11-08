@@ -159,5 +159,5 @@ CLI の `create` の引数（`--patients random/roster`・`--station`・`--inter
 
 #### Scenario: CLI でシードを指定する
 
-- **WHEN** 利用者が CLI で `create CT=3 --seed 1` を2回、別のデータベースで流す
+- **WHEN** 利用者が CLI で `create CT=3 --seed 1` を2回、別のデータベースで実行する
 - **THEN** 2回とも同じ患者と検査名の予約が作られる

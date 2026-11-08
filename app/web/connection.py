@@ -1,6 +1,6 @@
 """上の帯の接続の状態・「接続確認」・接続先の画面（docs/spec/03_web_cli.md 3.1）.
 
-確かめられる相手は 2 つ：自分の MWL の待ち受け（C-ECHO）と、HL7 の送信先（MLLP の接続を開けるか。
+確認できる相手は 2 つ：自分の MWL の待ち受け（C-ECHO）と、HL7 の送信先（MLLP の接続を開けるか。
 何も送らない）。直近の結果はこの画面のプロセスの中だけに持つ。
 """
 
@@ -55,9 +55,9 @@ class ConnView:
 
 
 def check_summary(results: list[bool]) -> str:
-    """手で押した「接続確認」の結果を読み上げる 1 文（部品集の 3 つの型の、確かめられた場合の 2 つ）.
+    """手で押した「接続確認」の結果を読み上げる 1 文（部品集の 3 つの型の、確認できた場合の 2 つ）.
 
-    N は確かめた件数、M は失敗の件数。
+    N は確認した件数、M は失敗の件数。
     """
     total = len(results)
     failed = results.count(False)
@@ -77,7 +77,7 @@ def run_check(mwl: MwlServer) -> Probe:
 
 
 def run_hl7_check(config: Hl7Config) -> Probe:
-    """HL7 の送信先の MLLP の接続を開けるかを確かめ、結果を時刻つきで返す（何も送らない）."""
+    """HL7 の送信先の MLLP の接続を開けるかを確認、結果を時刻つきで返す（何も送らない）."""
     timeout = min(config.timeout_seconds, HL7_CHECK_TIMEOUT_SECONDS)
     result = check_connection(config.host, config.port, timeout)
     if not result.ok:
@@ -97,8 +97,8 @@ def hl7_notice(config: Hl7Config, probe: Probe) -> tuple[str, str]:
 def conn_view(mwl: MwlServer, probe: Probe | None, hl7_probe: Probe | None = None) -> ConnView:
     """全体の札と、MWL・HL7 の行の札.
 
-    待ち受けが止まっているか、どちらかの直近の確かめが失敗なら「一部が接続不可」。まだ確かめていない
-    HL7 の送信先は札「未確認」で、全体の札を下げない（MWL の待ち受けも、確かめる前は動いているかで決める）。
+    待ち受けが止まっているか、どちらかの直近の確認が失敗なら「一部が接続不可」。まだ確認していない
+    HL7 の送信先は札「未確認」で、全体の札を下げない（MWL の待ち受けも、確認する前は動いているかで決める）。
     """
     ok = mwl.running and (probe is None or probe.ok) and (hl7_probe is None or hl7_probe.ok)
     if not mwl.running:

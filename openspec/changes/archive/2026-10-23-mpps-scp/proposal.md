@@ -15,7 +15,7 @@ RIS の画面と MWL に自動で反映され、モダリティの MPPS の送�
   Attributes Sequence の項目に一致する予約を「実施中」にする
 - N-SET で Performed Procedure Step Status が `COMPLETED` になったら予約を「完了」、
   `DISCONTINUED` になったら「中止」にする
-- 予約の状態に「中止」（`discontinued`）を足す。中止は終わりの状態で、MWL で返さない。
+- 予約の状態に「中止」（`discontinued`）を追加する。中止は終わりの状態で、MWL で返さない。
   手動では実施中からだけ中止にできる
 - 予約に一致しない MPPS（予定の無い撮影）は、MPPS だけを記録して成功を返す
 - 受けた MPPS（SOP Instance UID・状態・受けた属性・一致した予約）を、予約とは別の表に記録し、
@@ -32,7 +32,7 @@ RIS の画面と MWL に自動で反映され、モダリティの MPPS の送�
 
 ### Modified Capabilities
 
-- `order-status`: 状態に「中止」を足し、遷移の表・画面の選択肢・MWL で返す状態を変える
+- `order-status`: 状態に「中止」を追加、遷移の表・画面の選択肢・MWL で返す状態を変える
   （`order-status-transitions` を archive した後の spec に対する差分）
 
 ## Impact
@@ -41,8 +41,8 @@ RIS の画面と MWL に自動で反映され、モダリティの MPPS の送�
   `app/core/models.py`（中止の状態と遷移）、`app/services/store.py`（MPPS の表と、状態の変更を
   1つのトランザクションで行う処理）、`app/services/config.py`（`mwl.statuses` の検証）、
   `app/web/templates/order_detail.html`
-- データ：SQLite に MPPS の表を足す（起動のときに無ければ作る）。予約の表の形は変えない
-- テスト：`tests/mwl/` に、pynetdicom の SCU から N-CREATE・N-SET を送る試験を足す
-- ドキュメント：`docs/spec/` に MPPS の SCP の spec を足し、`01_orders.md` の 5 章、
+- データ：SQLite に MPPS の表を追加する（起動のときに無ければ作る）。予約の表の形は変えない
+- テスト：`tests/mwl/` に、pynetdicom の SCU から N-CREATE・N-SET を送る試験を追加する
+- ドキュメント：`docs/spec/` に MPPS の SCP の spec を追加、`01_orders.md` の 5 章、
   `02_mwl_scp.md` の 1 章、`docs/roadmap.md`、`docs/project_charter.md`、新しい ADR
 - 前提：`order-status-transitions` を先に archive する

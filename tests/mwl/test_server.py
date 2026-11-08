@@ -245,7 +245,7 @@ def test_unsupported_keys_make_pending_warning(
 def test_identifier_without_keys_returns_nothing(
     config: AppConfig, store: OrderStore, service: OrderService
 ) -> None:
-    """照合の属性が1つも無い要求は一致なし（PS3.4 K.4.1.3.1）。空の Identifier は送れないので関数で確かめる."""
+    """照合の属性が1つも無い要求は一致なし（PS3.4 K.4.1.3.1）。空の Identifier は送れないので関数で確認する."""
     _seed(service)
     request = Dataset()
     request.SpecificCharacterSet = "ISO_IR 192"

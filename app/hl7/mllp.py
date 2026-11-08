@@ -87,7 +87,7 @@ def _resolve(host: str, port: int, timeout: float) -> list[str]:
 
 
 def check_connection(host: str, port: int, timeout: float) -> ConnectionCheck:
-    """MLLP の接続を開けるかだけを確かめる。何も送らず、すぐ閉じる.
+    """MLLP の接続を開けるかだけを確認する。何も送らず、すぐ閉じる.
 
     HL7 v2 の MLLP は、接続を開いて 1 通送り、ACK を受けて閉じる（上の docstring）ので、
     相手の受け口が待ち受けているかは、接続を開けるかで分かる。メッセージは送らない
@@ -163,7 +163,7 @@ def _receive_frame(connection: socket.socket, timeout: float) -> bytes:
     deadline = time.monotonic() + timeout
     buffer = b""
     while END_BLOCK not in buffer:
-        # 本文の上限に、開始と終端の分を足す（終端が 2 回の受信に分かれても、上限ちょうどは通す）
+        # 本文の上限に、開始と終端の分を追加する（終端が 2 回の受信に分かれても、上限ちょうどは通す）
         if len(buffer) > MAX_ACK_BYTES + len(START_BLOCK) + len(END_BLOCK):
             raise _FrameError("ACK が大きすぎます")
         remaining = deadline - time.monotonic()

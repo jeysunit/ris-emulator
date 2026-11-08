@@ -399,7 +399,7 @@ def test_preview_sends_nothing_and_its_key_confirms(config: AppConfig, store: Or
 
 
 def test_key_from_before_a_change_is_refused_in_the_transaction(config: AppConfig, store: OrderStore) -> None:
-    """確かめた後に仮の患者が変われば（N-SET）、確定のトランザクションで断り、何も残さない."""
+    """確認した後に仮の患者が変われば（N-SET）、確定のトランザクションで断り、何も残さない."""
     sop_uid, _ = add_unscheduled_mpps(store)
     service = _service(config, store, _free_port())
     key = service.preview(ReconcileRequest(sop_uid, OFFICIAL)).key

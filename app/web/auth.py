@@ -1,4 +1,4 @@
-"""待ち受けのアドレスと認証・CSRF の確かめ（docs/spec/03_web_cli.md 3.3）.
+"""待ち受けのアドレスと認証・CSRF の確認（docs/spec/03_web_cli.md 3.3）.
 
 決まり（理由は docs/decisions/0006-web-ui-loopback-by-default.md）：
 - 既定は 127.0.0.1 だけで待ち受け、認証は付けない
@@ -130,7 +130,7 @@ def same_origin(request: Request) -> bool:
 
 
 async def csrf_guard(request: Request) -> None:
-    """書き込みの要求（POST など）を、同じ origin と CSRF の token で確かめる."""
+    """書き込みの要求（POST など）を、同じ origin と CSRF の token で確認する."""
     if request.method in SAFE_METHODS:
         return
     if not same_origin(request):

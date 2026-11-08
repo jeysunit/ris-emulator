@@ -26,7 +26,7 @@ A02・A03・A06・A07、HL7 v2.5.1 の OMI は送らない。
 | MSH-3〜6 | 設定の `hl7.sending_application`・`sending_facility`・`receiving_application`・`receiving_facility` |
 | MSH-7 | 組み立てた時刻 `YYYYMMDDHHMMSS`（時差は付けない。プロセスの時計の時刻） |
 | MSH-9 | `ADT^A40^ADT_A39`・`ADT^A08^ADT_A08`・`ORM^O01^ORM_O01`（3 つめは IHE が許す。A40 は `ADT_A39`） |
-| MSH-10 | `yyMMddHHmmss` に乱数 8 桁（16 進）を足した 20 文字 |
+| MSH-10 | `yyMMddHHmmss` に乱数 8 桁（16 進）を追加した 20 文字 |
 | MSH-11 | 設定の `hl7.processing_id`（`P`・`T`・`D`） |
 | MSH-12 | `2.3.1` |
 | MSH-18 | メッセージに ASCII 以外の文字があるときだけ `UNICODE UTF-8`。ASCII だけなら空（IHE RAD TF-2 2.4.2.2） |
@@ -34,7 +34,7 @@ A02・A03・A06・A07、HL7 v2.5.1 の OMI は送らない。
 メッセージは UTF-8 で符号化する。MSH-20（文字集合の切り替え）は使わない。
 予約の文字コード（`jis` など）は MWL の応答にだけ関わり、HL7 のメッセージは選択に関わらず
 UTF-8 なので、Orthanc が複数の値の文字コードを読み崩す制約（[02_mwl_scp.md](02_mwl_scp.md) の 5 章）は
-HL7 の経路に起きない（確かめた）。
+HL7 の経路に起きない（確認した）。
 
 ### 2.2 区切りとエスケープ
 
@@ -91,7 +91,7 @@ ORM の PV1-8 には、紹介医を英字（無ければ漢字、かな）の 1 
 ## 3. 例
 
 患者 `P000001`（名簿の例）。MSH-10 と時刻は例のために固定した。受け手と共有する
-ために、実際に組み立てた出力をそのまま載せている（セグメントごとに改行）。
+ために、実際に組み立てた出力をそのまま掲載している（セグメントごとに改行）。
 
 ADT^A40（旧い患者ID `ER2026102400` を `P000001` に統合する）：
 
@@ -159,7 +159,7 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
 | オプション | 内容 |
 |------------|------|
 | `--kind` | `a40`・`a08`・`orm`（必須） |
-| `--patient-id`・`--name` | a40・a08：患者ID と氏名（`英字=漢字=かな`、各グループは `姓^名^ミドル^接頭辞^接尾辞`）。`--birth-date`・`--sex` を足せる |
+| `--patient-id`・`--name` | a40・a08：患者ID と氏名（`英字=漢字=かな`、各グループは `姓^名^ミドル^接頭辞^接尾辞`）。`--birth-date`・`--sex` を追加できる |
 | `--prior-patient-id`・`--prior-name` | a40：旧い患者ID（必須）と氏名 |
 | `--accession` | orm：保存済みの予約の受付番号（患者・検査・UID は予約から取る） |
 | `--order-control` | orm：ORC-1（`NW`・`CA`・`DC`・`XO`。既定 `NW`）。orm 以外で `NW` 以外を指定すると断る |
