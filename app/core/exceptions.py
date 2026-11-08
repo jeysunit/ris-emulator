@@ -40,7 +40,7 @@ class InvalidTransitionError(ValidationError):
 
 
 class OrderNotFoundError(RisEmulatorError):
-    """受付番号に当たる予約が無い."""
+    """受付番号に一致する予約が無い."""
 
 
 class MwlServerError(RisEmulatorError):
@@ -72,4 +72,4 @@ class AlreadyReconciledError(ValidationError):
 
 
 class ReconciliationNotFoundError(RisEmulatorError):
-    """受付番号に当たる照合の記録が無い."""
+    """受付番号に一致する照合の記録が無い."""

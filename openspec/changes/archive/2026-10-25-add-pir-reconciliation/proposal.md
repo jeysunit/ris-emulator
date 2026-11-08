@@ -18,9 +18,9 @@ PACS に HL7 v2 で知らせる必要がある（IHE の PIR）。HL7 の組み�
   ORM^O01（NW）を、順に送る。受理されなかった 1 通で止める
 - 送った本文と結果（送信待ち・送信完了・拒否・送信失敗）を記録し、予約の詳細に出す。
   受理されていない通は、同じ本文で再送信できる
-- 画面に「未照合」の一覧と照合の画面を足す。CLI に `reconcile list`・`run`・`resend` を足す
+- 画面に「未照合」の一覧と照合の画面を追加する。CLI に `reconcile list`・`run`・`resend` を追加する
 - 照合で作った予約の詳細に、照合前の患者と HL7 送信の表を出す
-- `docs/spec/07_reconciliation.md`・ADR-0011 を足し、憲章の対象に照合を足す
+- `docs/spec/07_reconciliation.md`・ADR-0011 を追加し、憲章の対象に照合を追加する
 
 ## Capabilities
 
@@ -37,7 +37,7 @@ PACS に HL7 v2 で知らせる必要がある（IHE の PIR）。HL7 の組み�
 - コード：`app/core/reconciliation.py`（MPPS の読み取りと送る HL7 の決め方）、
   `app/services/reconciliation.py`（照合）、`app/services/store.py`（`reconciliations` の表と
   照合の保存）、`app/web/app.py` とテンプレート、`app/cli/main.py`、`app/core/exceptions.py`
-- データベース：`reconciliations` の表を足す（無ければ起動のときに作る。古いデータベースは
+- データベース：`reconciliations` の表を追加する（無ければ起動のときに作る。古いデータベースは
   そのまま読める）
 - テスト：`tests/core/test_reconciliation.py`・`tests/services/test_reconciliation.py`・
   `tests/web/test_reconciliation.py`・`tests/cli/test_cli_reconcile.py`・`tests/hl7/stub.py`

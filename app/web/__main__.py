@@ -51,7 +51,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
 
-    # MWL の SCP は uvicorn の前に立てる（待ち受けられなければ画面も起動しない）
+    # MWL の SCP は uvicorn の前に起動する（待ち受けられなければ画面も起動しない）
     app = create_app(config, password=password, start_mwl=False)
     mwl = app.state.mwl
     if config.web.start_mwl:

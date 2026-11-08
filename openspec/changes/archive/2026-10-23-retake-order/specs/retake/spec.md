@@ -55,10 +55,10 @@
 - **WHEN** `new_order` の設定で、利用者が予定の予約に `retake <受付番号>` を実行する
 - **THEN** 予約は作られず、終了コードは 2 になる
 
-### Requirement: 撮り直しの予約は内容を写し、番号を新しく発番する
+### Requirement: 撮り直しの予約は内容をコピーし、番号を新しく発番する
 
 撮り直しの予約は、元の予約の患者・モダリティ・装置・検査・依頼科・依頼医・紹介医・施設名・
-優先度・文字コードを写し、受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
+優先度・文字コードをコピーし、受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
 Study Instance UID を、新しい予約と同じ規則（`docs/spec/04_identifiers.md`）で発番しなければ
 ならない（SHALL）。予定日時は、指定が無ければ作った時点の日付と時刻（分まで）にする。
 

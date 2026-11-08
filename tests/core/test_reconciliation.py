@@ -144,7 +144,7 @@ def test_looks_like_another_patient(name: PersonName, birth_date: str, sex: str,
 
 
 def test_patient_without_a_comparable_name_looks_like_another() -> None:
-    # 氏名に両方に値のある表記が無ければ、同じ人と確かめられないので別人と見る
+    # 氏名に両方に値のある表記が無ければ、同じ人と確認できないので別人と見る
     known = Patient(patient_id="P1", name=PersonName(ideographic="田中^博"))
     typed = Patient(patient_id="P1", name=PersonName(alphabetic="TANAKA^HIROSHI"))
     assert looks_like_another_patient(known, typed)

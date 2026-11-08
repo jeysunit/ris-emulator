@@ -155,7 +155,7 @@ class OrderStore:
             conn.close()
 
     def add_numbered_orders(self, counter: str, count: int, build: OrderBuilder) -> list[Order]:
-        """連番を `count` 個取り、`build` で作った予約をまとめて足す.
+        """連番を `count` 個取り、`build` で作った予約をまとめて追加する.
 
         連番の取得・予約の組み立て・保存を1つのトランザクションで行う。`build` が
         例外を出せば何も残さない（連番に欠番を作らない）。`build` には連番と、
@@ -201,7 +201,7 @@ class OrderStore:
         build: RetakeBuilder,
         retake_from: frozenset[OrderStatus],
     ) -> tuple[Order, Order]:
-        """元の予約から撮り直しの予約を作って足し、元の予約の状態を合わせる.
+        """元の予約から撮り直しの予約を作って追加し、元の予約の状態を合わせる.
 
         元の予約の状態の確認・連番の取得・撮り直しの予約の保存・元の予約の状態の変更を
         1つのトランザクションで行う（docs/spec/01_orders.md 7 章）。元の予約の状態が
@@ -331,7 +331,7 @@ class OrderStore:
     ) -> Order:
         """予約の状態を変える.
 
-        照合で作った予約で、`build_delivery` が通を返せば、照合の記録の末尾に未送信で足す。
+        照合で作った予約で、`build_delivery` が通を返せば、照合の記録の末尾に未送信で追加する。
         状態の変更と通の追加は 1 つのトランザクションで行う（`build_delivery` が例外を出せば
         どちらも残さない）。
         """
@@ -342,7 +342,7 @@ class OrderStore:
                 if current is None:
                     raise OrderNotFoundError("Order not found", {"accession_number": accession_number})
                 if status == current.status:
-                    # 同じ状態は何もしない（更新日時も変えず、通も足さない）
+                    # 同じ状態は何もしない（更新日時も変えず、通も追加しない）
                     conn.execute("ROLLBACK")
                     return current
                 if not can_transition(current.status, status):

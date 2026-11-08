@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""変更した ADR の「最終更新日」が、その commit の日より古くないかを確かめる.
+"""変更した ADR の「最終更新日」が、その commit の日より古くないかを確認する.
 
 使い方: python scripts/check_doc_dates.py origin/main..HEAD
 
-範囲の中で足した・直した ADR（docs/decisions/NNNN-*.md。雛形と README は除く）ごとに、
+範囲の中で追加した・直した ADR（docs/decisions/NNNN-*.md。雛形と README は除く）ごとに、
 範囲の中でその ADR を最後に変えた commit の中身を読む。
 冒頭の「- 最終更新日：YYYY-MM-DD」が無いか、その commit の日（committer の日付）より
 古ければ失敗する。途中の commit で付け忘れても、後の commit で直してあれば通る。
@@ -50,7 +50,7 @@ def last_updated(text: str) -> str | None:
 
 
 def changed_paths(revision_range: str) -> set[str]:
-    """範囲の commit が足した・直した・名前を変えたパス。merge は親ごとの差分を見る."""
+    """範囲の commit が追加した・直した・名前を変えたパス。merge は親ごとの差分を見る."""
     output = git("log", "-m", "--format=", "--name-only", "-z", "--diff-filter=AMR", revision_range)
     return {path.strip("\n") for path in output.split("\0") if path.strip("\n")}
 

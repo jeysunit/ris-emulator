@@ -32,7 +32,7 @@ Specific Character Set の値は、PS3.3 C.12.1.1.2 の規則に合わなけれ�
 `ISO 2022 IR 87` は Table C.12-4 の Defined Terms。`jis` と `jis_kana` は PS3.5 H.3.1・H.3.2 の
 例と同じ値。
 
-#### Scenario: 3つの選択肢の値を確かめる
+#### Scenario: 3つの選択肢の値を確認する
 
 - **WHEN** 3つの選択肢のそれぞれで予約を作り、MWL の応答の Specific Character Set を読む
 - **THEN** `ISO_IR 192` は1つだけの値で、`ISO 2022` で始まる語を含む値は2つの値になり、どの値も重ならない
@@ -75,7 +75,7 @@ Specific Character Set の値を `\` でつないだ文字列は出さない。
 予約の詳細の「MWL の属性」は、Specific Character Set の値を変えずに出さなければならない
 （SHALL）。表示の名前に置き換えない。
 
-#### Scenario: 詳細で値を確かめる
+#### Scenario: 詳細で値を確認する
 
 - **WHEN** 利用者が、文字コードを `jis` にした予約の詳細を開く
 - **THEN** 「文字コード」には表示の名前が、「MWL の属性」の Specific Character Set には空の値と `ISO 2022 IR 87` の2つの値が出る

@@ -240,7 +240,7 @@ class Procedure(BaseModel):
 
 
 class Order(BaseModel):
-    """予約の1件。MWL の1件（Scheduled Procedure Step が1つ）に当たる."""
+    """予約の1件。MWL の1件（Scheduled Procedure Step が1つ）に対応する."""
 
     accession_number: str = Field(..., min_length=1, max_length=SH_MAX_LENGTH)
     requested_procedure_id: str = Field(..., min_length=1, max_length=SH_MAX_LENGTH)

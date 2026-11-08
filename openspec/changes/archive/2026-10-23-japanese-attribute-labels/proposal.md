@@ -33,7 +33,7 @@ Physician (0032,1032) は日本の RIS では「依頼医」、Referring Physici
 
 ## Impact
 
-- コード：変えない。用語の表のとおりであることを確かめる試験を `tests/web/test_web.py` に足す
+- コード：変えない。用語の表のとおりであることを確認する試験を `tests/web/test_web.py` に追加する
 - ドキュメント：`docs/spec/01_orders.md` の 1 章の表、`docs/spec/03_web_cli.md` の 3.2
-- `station-registry`・`character-set-labels` で足す画面の名前（装置・文字コードの名前）は、
-  それぞれの change で用語の表に足す
+- `station-registry`・`character-set-labels` で追加する画面の名前（装置・文字コードの名前）は、
+  それぞれの change で用語の表に追加する

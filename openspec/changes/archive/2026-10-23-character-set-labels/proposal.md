@@ -36,7 +36,7 @@ ISO 2022 IR 6）であることを表し、値としては正しい（PS3.5 6.4�
 
 - コード：`app/core/models.py`（表示の名前の表）、`app/web/app.py`（`CHARACTER_SET_LABELS`）、
   `app/services/order_service.py`（`check_encodable` のエラーの文）、`app/cli/main.py`
-- テスト：画面の選択肢とエラーの文の試験を足す。Specific Character Set の値の今の試験
+- テスト：画面の選択肢とエラーの文の試験を追加する。Specific Character Set の値の今の試験
   （`tests/core/test_mwl_dataset.py`・`tests/mwl/test_server.py`）はそのまま通る
-- ドキュメント：`docs/spec/02_mwl_scp.md` の 5 章の表に表示の名前の列を足す
+- ドキュメント：`docs/spec/02_mwl_scp.md` の 5 章の表に表示の名前の列を追加する
 - MWL の応答・データベース・設定の値（`utf8`・`jis`・`jis_kana`）は変わらない

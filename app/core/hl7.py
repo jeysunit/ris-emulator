@@ -121,7 +121,7 @@ def unescape(value: str, encoding_characters: str = ENCODING_CHARACTERS) -> str:
 
 
 def new_control_id(now: datetime) -> str:
-    """MSH-10：`yyMMddHHmmss` に乱数 8 桁（16 進）を足した 20 文字（MSH-10 は 20 文字まで）."""
+    """MSH-10：`yyMMddHHmmss` に乱数 8 桁（16 進）を追加した 20 文字（MSH-10 は 20 文字まで）."""
     return now.strftime("%y%m%d%H%M%S") + secrets.token_hex(4)
 
 

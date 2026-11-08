@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 画面の htmx を、版を固定して取り、sha256 を確かめて置く。置いた物は commit する。
-# 利用者はこれを流さなくてよい（版を上げるときだけ使う）。
+# 画面の htmx を、版を固定して取り、sha256 を確認して置く。置いた物は commit する。
+# 利用者はこれを実行しなくてよい（版を上げるときだけ使う）。
 #
 # 使い方: bash scripts/fetch_web_assets.sh
 set -euo pipefail

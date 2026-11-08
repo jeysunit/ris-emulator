@@ -65,7 +65,7 @@ def test_page_has_the_table_and_the_listening_section(config: AppConfig, service
     assert f'<span class="main-c">{config.hl7.receiving_application}</span>' in row
     assert "<td>HL7</td>" in row and '<span class="mono">—</span>' in row
     assert f'<span class="mono">{config.hl7.host}:{config.hl7.port}</span>' in row
-    # まだ確かめていない確かめられる相手は札「未確認」
+    # まだ確認していない確認できる相手は札「未確認」
     assert '<td class="res"><span class="st" data-k="plan">未確認</span></td>' in row
     assert 'hx-post="/connections/check?target=hl7"' in row and ">接続確認</button>" in row
     # 区画の見出しの右に「すべて接続確認」（副）。見出しの横に説明の文は置かない
@@ -90,7 +90,7 @@ def test_page_and_popover_show_the_same_partners_and_marks(
     for kind, label in (("listen", "待ち受け中"), ("ng", "失敗")):
         assert f'<span class="st" data-k="{kind}">{label}</span>' in pop
         assert f'<span class="st" data-k="{kind}">{label}</span>' in body
-    # 同じ時刻（確かめた時刻）が両方に出る
+    # 同じ時刻（確認した時刻）が両方に出る
     assert set(re.findall(r"\d{4}/\d{2}/\d{2} \d{2}:\d{2}", pop)) == set(re.findall(r"\d{4}/\d{2}/\d{2} \d{2}:\d{2}", body))
 
 
@@ -103,17 +103,17 @@ def test_check_all_updates_the_table_the_notice_and_the_top_bar(
         after = client.get("/connections").text
     body = response.text
     assert response.status_code == 200
-    # 表の行：成功の札と確かめた時刻
+    # 表の行：成功の札と確認した時刻
     assert re.search(r'<td class="res"><span class="st" data-k="ok">成功</span> <span class="when">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span></td>', body)
     assert "<span class=\"why\">" not in body
-    # 待ち受け（MWL）も確かめる
+    # 待ち受け（MWL）も確認する
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
     # 上の知らせ（読み上げの欄の中身）・上の帯の札・popover を同じ応答で差し替える
     target = f"{config.hl7.receiving_application}（{config.hl7.host}:{config.hl7.port}）"
     assert f'<div hx-swap-oob="innerHTML:#conn-notice"><div class="notice" data-k="ok"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-check"/></svg><div>{target}に接続できました。</div></div></div>' in body
     assert 'hx-swap-oob="innerHTML:#conn-pop"' in body
     assert '<span class="st" id="conn-state" data-k="ok" hx-swap-oob="true">接続中</span>' in body
-    # 結果は覚えていて、読み直した画面にも残る
+    # 結果は覚えていて、再読み込みした画面にも残る
     assert 'data-k="ok">成功</span>' in after
 
 

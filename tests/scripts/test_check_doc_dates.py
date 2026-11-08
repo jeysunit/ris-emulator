@@ -1,4 +1,4 @@
-"""ADR の最終更新日の確かめ（scripts/check_doc_dates.py、docs/development.md 3 章）の試験."""
+"""ADR の最終更新日の確認（scripts/check_doc_dates.py、docs/development.md 3 章）の試験."""
 
 from __future__ import annotations
 

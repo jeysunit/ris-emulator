@@ -67,7 +67,7 @@ def test_topbar_structure_follows_the_ui_kit(config: AppConfig, service: OrderSe
     parts = re.findall(r'<span class="cl">接続の状態</span>|<span class="st"|<svg class="ic chev"', button.group(1))
     assert parts == ['<span class="cl">接続の状態</span>', '<span class="st"', '<svg class="ic chev"']
     assert "icons.svg#i-chevd" in button.group(1)
-    # HL7 の送信先は確かめられる相手（MLLP の接続を開けるか）。まだ確かめていないので、札「未確認」
+    # HL7 の送信先は確認できる相手（MLLP の接続を開けるか）。まだ確認していないので、札「未確認」
     pop = header.split('<div id="conn-pop" popover class="pop"')[1]
     assert re.search(
         rf'<b>{re.escape(config.hl7.receiving_application)}</b> <span class="st" data-k="plan">未確認</span>', pop
@@ -123,14 +123,14 @@ def test_check_succeeds_when_both_answer(config: AppConfig, service: OrderServic
         after = client.get("/orders").text.split("</header>")[0]
     assert response.status_code == 200
     body = response.text
-    # 中身は結果の 1 文（確かめた 2 件）を持ち、MWL の行は「待ち受け中」に確かめた時刻が付く
+    # 中身は結果の 1 文（確認した 2 件）を持ち、MWL の行は「待ち受け中」に確認した時刻が付く
     assert 'data-result="2 件すべてに接続できました。"' in body
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
     # 帯の全体の札も同じ応答で差し替える
     assert '<span class="st" id="conn-state" data-k="ok" hx-swap-oob="true">接続中</span>' in body
-    # 結果は覚えていて、読み直した画面にも時刻が残る
+    # 結果は覚えていて、再読み込みした画面にも時刻が残る
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', after)
-    # HL7 の送信先は札「成功」と確かめた時刻
+    # HL7 の送信先は札「成功」と確認した時刻
     assert re.search(
         rf'<b>{re.escape(config.hl7.receiving_application)}</b> <span class="st" data-k="ok">成功</span>.*<span class="xs label">\d{{4}}/\d{{2}}/\d{{2}} \d{{2}}:\d{{2}}</span>',
         body,
@@ -173,7 +173,7 @@ def test_check_needs_the_csrf_token(config: AppConfig, service: OrderService) ->
 def test_check_does_not_overlap(config: AppConfig, service: OrderService) -> None:
     app = create_app(config, password=None, service=service, start_mwl=True)
     with TestClient(app, base_url=ORIGIN) as client:
-        # 確かめている最中に届いた要求は、重ねて送らず 204 で何も差し替えない
+        # 確認している最中に届いた要求は、重ねて送らず 204 で何も差し替えない
         entered = threading.Event()
         release = threading.Event()
 

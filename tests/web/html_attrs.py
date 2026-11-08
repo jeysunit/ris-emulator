@@ -1,4 +1,4 @@
-"""画面の HTML の確かめ用：タグの属性を、書かれた順に依らず調べる."""
+"""画面の HTML の確認用：タグの属性を、書かれた順に依らず調べる."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ class _Collector(HTMLParser):
 def has_tag(page: str, tag: str, **attrs: str | None) -> bool:
     """`<tag>` で、指定の属性が全部ある（値が None なら、値の無い属性）ものが1つでもあるか.
 
-    class は空白で区切った語の集まりとして見る（`class="a b"` は `a` と `b` のどちらでも当たる）。
+    class は空白で区切った語の集まりとして見る（`class="a b"` は `a` と `b` のどちらでも一致する）。
     属性の順と、ほかの属性があるかどうかは問わない。
     """
     collector = _Collector()

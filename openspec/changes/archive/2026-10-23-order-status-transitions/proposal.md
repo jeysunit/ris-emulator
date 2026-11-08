@@ -37,8 +37,8 @@
   （遷移の検証を、読み出しと同じトランザクションで行う）、`app/services/order_service.py`、
   `app/cli/main.py` の `status`、`app/web/app.py` と `_order_row.html`・`order_detail.html`
 - テスト：`tests/services/test_order_service.py`・`tests/web/test_web.py`・
-  `tests/cli/test_cli.py` に遷移の試験を足す。今の試験は、予定から完了・取消・実施中への
+  `tests/cli/test_cli.py` に遷移の試験を追加する。今の試験は、予定から完了・取消・実施中への
   変更だけを使うので、そのまま通る
 - ドキュメント：`docs/spec/01_orders.md` の 5 章、`docs/spec/03_web_cli.md` の CLI の表
 - 利用者：完了・取消にした予約を戻す操作ができなくなる。やり直すときは新しい予約を作る
-- 後に続く change：`mpps-scp` は、この change の遷移の表に「中止」を足す
+- 後に続く change：`mpps-scp` は、この change の遷移の表に「中止」を追加する

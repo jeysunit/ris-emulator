@@ -1,4 +1,4 @@
-"""ui-kit の写し（app/web/static/ui-kit/）が指紋（SHA256SUMS）と合い、製品の側で直されていないことの試験."""
+"""ui-kit のコピー（app/web/static/ui-kit/）が指紋（SHA256SUMS）と合い、製品の側で直されていないことの試験."""
 
 from __future__ import annotations
 

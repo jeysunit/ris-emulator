@@ -185,7 +185,7 @@ def test_server_refuses_unreadable_birth_dates_with_the_same_message(
 
 
 def test_script_clears_the_previous_reading_on_every_input() -> None:
-    """入力のたびに前の誤り（data-unreadable・data-message）を外してから確かめる."""
+    """入力のたびに前の誤り（data-unreadable・data-message）を外してから確認する."""
     script = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
     start = script.index('document.addEventListener("input"')
     block = script[start : script.index('document.addEventListener("change"', start)]
@@ -195,7 +195,7 @@ def test_script_clears_the_previous_reading_on_every_input() -> None:
 
 
 def test_script_takes_the_reading_from_the_server() -> None:
-    """画面のスクリプトは元号の表を持たず、サーバーの読み取り結果（data-error）で欄を確かめる."""
+    """画面のスクリプトは元号の表を持たず、サーバーの読み取り結果（data-error）で欄を確認する."""
     script = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
     for marker in ("htmx:afterSettle", "data-unreadable", "data-error", 'described(input, "msg")'):
         assert marker in script, marker

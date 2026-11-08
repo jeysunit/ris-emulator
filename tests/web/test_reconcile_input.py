@@ -1,4 +1,4 @@
-"""手で入れた患者の入力の確かめ：照合の画面（docs/spec/01_orders.md 3.4）."""
+"""手で入れた患者の入力の確認：照合の画面（docs/spec/01_orders.md 3.4）."""
 
 from __future__ import annotations
 
@@ -159,9 +159,9 @@ def test_test_mode_passes_kana_values_through(config: AppConfig, store: OrderSto
 def test_test_mode_halfwidth_kana_with_jis_is_refused_by_the_encoding_check(
     config: AppConfig, store: OrderStore
 ) -> None:
-    """試験の形でも、予約の文字コードが jis なら半角カナのかなは、保存の前の符号化の確かめで断る.
+    """試験の形でも、予約の文字コードが jis なら半角カナのかなは、保存の前の符号化の確認で断る.
 
-    かなの確かめは通る（試験の形）が、jis は半角カナを符号化できない。jis_kana なら通る。
+    かなの確認は通る（試験の形）が、jis は半角カナを符号化できない。jis_kana なら通る。
     """
     sop_uid, _ = add_unscheduled_mpps(store)
     mode = _with_orders(
@@ -232,7 +232,7 @@ def test_unknown_sex_is_accepted_and_kept_as_u(config: AppConfig, store: OrderSt
 
 
 def test_reconcile_form_marks_each_field_for_the_script(config: AppConfig, store: OrderStore) -> None:
-    """入力した時に分かるよう、欄に確かめの種類・文・誤りの置き場を持たせる."""
+    """入力した時に分かるよう、欄に確認の種類・文・誤りの表示欄を持たせる."""
     sop_uid, _ = add_unscheduled_mpps(store)
     with _client(config, store) as (client, _):
         page = html_lib.unescape(client.get(f"/reconciliation/{sop_uid}").text)
@@ -253,7 +253,7 @@ def test_reconcile_form_marks_each_field_for_the_script(config: AppConfig, store
         assert "aria-describedby=" in label and " hidden>" in label, name
         # 欄の下の誤りは読み上げない（画面の上の知らせだけが role="alert"）
         assert 'role="alert"' not in label, name
-    # 既定は UTF-8 なので漢字の欄は JIS の確かめを付けず、かなの欄は通常の形
+    # 既定は UTF-8 なので漢字の欄は JIS の確認を付けず、かなの欄は通常の形
     assert "data-charset-jis" not in page and "data-test-mode" not in page
     assert "かなの確かめ：全角カタカナ" in page
 
@@ -277,7 +277,7 @@ def _node() -> str:
 
 
 def test_script_range_covers_every_jis_x_0208_character() -> None:
-    """画面の漢字の確かめは、サーバーが許す字（JIS X 0208）を 1 字も止めない（含みすぎはよい）."""
+    """画面の漢字の確認は、サーバーが許す字（JIS X 0208）を 1 字も止めない（含みすぎはよい）."""
     node = _node()
     jis = [
         chr(code)
@@ -305,7 +305,7 @@ def test_script_range_covers_every_jis_x_0208_character() -> None:
 
 
 def test_script_phonetic_range_matches_the_server(tmp_path: Path) -> None:
-    """画面のかなの確かめは、サーバーと同じ字を通し、同じ字を止める."""
+    """画面のかなの確認は、サーバーと同じ字を通し、同じ字を止める."""
     node = _node()
     from app.core.patient_input import check_phonetic_group
 
@@ -357,5 +357,5 @@ def test_script_accepts_hiragana_while_typing_and_converts_before_submit() -> No
     program += "console.log(JSON.stringify([toKatakana('さとうジロー'), isPhonetic(toKatakana('さとう')), isPhonetic(toKatakana('ｻﾄｳ'))]));"
     result = subprocess.run([node, "-e", program], capture_output=True, text=True, check=True)
     assert json.loads(result.stdout) == ["サトウジロー", True, False]
-    # 送る前（submit）にも、ひらがなを直して確かめ直す（欄にいるまま Enter で送る場合）
+    # 送る前（submit）にも、ひらがなを直して再確認する（欄にいるまま Enter で送る場合）
     assert re.search(r'addEventListener\(\s*"submit",.*?convertPhonetic\(inputs\[i\]\);\s*checkField', source, re.S)

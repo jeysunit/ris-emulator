@@ -9,7 +9,7 @@
     }
   }
 
-  // ナビの開閉：theme.js が読んだ覚え（html の data-nav）を外枠に写す
+  // ナビの開閉：theme.js が読んだ覚え（html の data-nav）を外枠にコピーする
   var shell = document.querySelector(".shell");
   var navButton = document.querySelector("[data-act=nav]");
   function setNav(closed) {
@@ -45,7 +45,7 @@
 
   // htmx の要求が失敗したとき、画面の上にエラーを出す。選んだ予約の状態の変更なら、選択を保存済みの
   // 状態に戻す（失敗した応答は区画を置き換えない（base.html の responseHandling）ので、戻さないと
-  // 未保存の値が残る）。エラーは画面を読み直すまで残す（別の予約の変更が成功しても消さない）
+  // 未保存の値が残る）。エラーは画面を再読み込みするまで残す（別の予約の変更が成功しても消さない）
   function fail(event, detail) {
     var element = event.detail.elt;
     var select = element && element.querySelector && element.querySelector("select[data-current]");
@@ -68,7 +68,7 @@
   document.addEventListener("htmx:responseError", function (event) {
     var status = event.detail.xhr ? event.detail.xhr.status : 0;
     if (status === 401) {
-      // Basic 認証が通らなくなった。読み直してブラウザに認証を求めさせる
+      // Basic 認証が通らなくなった。再読み込みしてブラウザに認証を求めさせる
       window.location.reload();
       return;
     }
@@ -96,7 +96,7 @@
 
   // 上の帯の「接続確認」の結果の読み上げ（部品集の 3 つの型）。結果の 1 文は読み上げの欄
   // （#conn-result。popover の中）の data-result で届く。欄は中身ごと差し替わるので、差し替えた後に、
-  // 先に空にしてから入れる（同じ文が続いても読み直される）。ボタンも差し替わるので、焦点を戻す
+  // 先に空にしてから入れる（同じ文が続いても再読み込みされる）。ボタンも差し替わるので、焦点を戻す
   function announceConn(text) {
     var result = document.getElementById("conn-result");
     if (!result || !text) {
@@ -147,7 +147,7 @@
       checking[j].textContent = "未確認";
     }
   }
-  // 「確認中」にした欄の元の中身。確かめている最中の重なりで 204（何も差し替わらない）が返ったときに戻す
+  // 「確認中」にした欄の元の中身。確認している最中の重なりで 204（何も差し替わらない）が返ったときに戻す
   var checkingCells = [];
   document.addEventListener("htmx:beforeRequest", function (event) {
     var button = event.detail.elt;
@@ -265,7 +265,7 @@
     showModal(opened[d]);
   }
   // 状態を終わりの状態（完了・取消・中止）へ変えるときは、送る前にその状態の確認の窓を開く。
-  // htmx より先に受けて止める（捕捉の段で止めないと、htmx が先に送る）
+  // htmx より先に受けて止める（捕捉のフェーズで止めないと、htmx が先に送る）
   document.addEventListener(
     "submit",
     function (event) {
@@ -323,9 +323,9 @@
     }
   });
 
-  // 患者の入力欄：入力のたびに確かめ、誤りの文を欄の下に出す（読み上げない。画面の上の知らせ
+  // 患者の入力欄：入力のたびに確認し、誤りの文を欄の下に出す（読み上げない。画面の上の知らせ
   // だけが読み上げる）。文は data-message（サーバーと同じ文。app/core/patient_input.py）。
-  // 漢字の氏名は、文字コードが JIS のときだけ JIS X 0208 の字かどうかを近似で確かめる（半角カナ・
+  // 漢字の氏名は、文字コードが JIS のときだけ JIS X 0208 の字かどうかを近似で確認する（半角カナ・
   // 拡張の字を断る）。最後の判定はサーバーが行う。誤りがあるうちは setCustomValidity で送信を止める
   var PATIENT_ID_CHARS = /^[\x20-\x7E]*$/;
   var PATIENT_ID_DELIMITERS = /[\\^~&|]/;
@@ -363,7 +363,7 @@
       return ALPHABETIC_CHARS.test(value);
     }
     if (kind === "ideographic") {
-      // 文字コードが UTF-8 なら制限しない。JIS のときだけ JIS X 0208 の範囲で確かめる
+      // 文字コードが UTF-8 なら制限しない。JIS のときだけ JIS X 0208 の範囲で確認する
       return !input.hasAttribute("data-charset-jis") || isIdeographic(value);
     }
     if (kind === "phonetic") {
@@ -415,7 +415,7 @@
       checkField(event.target);
     }
   });
-  // 欄にいるまま Enter で送ったとき（focusout が起きない）も、送る前に直して確かめ直す
+  // 欄にいるまま Enter で送ったとき（focusout が起きない）も、送る前に直して再確認する
   document.addEventListener(
     "submit",
     function (event) {
@@ -451,7 +451,7 @@
   // 入力フォーム（form[data-validate]。novalidate でブラウザの吹き出しを出さない）：送るとき、
   // 誤りのある欄の下に文を出して aria-invalid を付け、画面の上（#form-errors）に件数を出し、
   // 最初の誤りの欄へ焦点を移す。誤りがあれば送らない（ほかの送信の処理にも渡さない）。
-  // 文は欄の data-error（必須・形の誤り）か、確かめの文（setCustomValidity）。最後の判定はサーバーが行い、
+  // 文は欄の data-error（必須・形の誤り）か、確認の文（setCustomValidity）。最後の判定はサーバーが行い、
   // サーバーが返した誤りも同じ欄の下に出る（件数の文は app/web/app.py の FORM_ERRORS_MESSAGE と同じ）
   var FORM_ERRORS_TEXT = "入力に誤りが {count} 件あります。";
   function showFieldError(control, message) {
@@ -551,7 +551,7 @@
     },
     true
   );
-  // 直した欄は誤りを外し、画面の上の件数を出し直す。確かめの文を持つ欄（data-check）は checkField が扱う
+  // 直した欄は誤りを外し、画面の上の件数を出し直す。確認の文を持つ欄（data-check）は checkField が扱う
   function revalidate(control) {
     var form = control.form;
     if (!form || !form.hasAttribute("data-validate")) {
@@ -604,7 +604,7 @@
     }
   });
   // 生年月日：サーバーが返した読み取り結果（.hint）を差し替えた後に、誤りの文（data-error）を欄の
-  // 文にして確かめ直す。読めないときは .hint が空で、.msg に誤りの文が出る
+  // 文にして再確認する。読めないときは .hint が空で、.msg に誤りの文が出る
   document.addEventListener("htmx:afterSettle", function (event) {
     var config = event.detail && event.detail.requestConfig;
     var input = config && config.elt;

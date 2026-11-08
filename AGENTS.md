@@ -10,11 +10,11 @@ ris-emulator は、開発・テスト用の RIS エミュレーターです（�
 - **ui-kit の部品と絵で組む。** CSS は `app/web/static/ui-kit/` の
   `tokens.css`・`components.css`、絵は `icons.svg`
   （`<use href="/static/ui-kit/icons.svg#i-…">`）。
-- **ui-kit の写しは直さない。** 版は `VERSION`、指紋は `SHA256SUMS`。版が上がった
-  ら 5 つのファイルを丸ごと写し直す。写しが指紋と合うことは
-  `tests/web/test_ui_kit_copy.py` が確かめる。
+- **ui-kit のコピーは直さない。** 版は `VERSION`、指紋は `SHA256SUMS`。版が上がった
+  ら 5 つのファイルを丸ごとコピーし直す。コピーが指紋と合うことは
+  `tests/web/test_ui_kit_copy.py` が確認する。
 - **無い部品・無い絵は作らない。** 製品の中で作り直さず、先に ui-kit を直して
-  もらい、写し直してから使う。`app/web/static/app.css` には、この製品にしか無い
+  もらい、コピーし直してから使う。`app/web/static/app.css` には、この製品にしか無い
   部品の差分だけを書き、ui-kit と同じ名前の部品を定義し直さない。
 - 色の値は `tokens.css` だけが持つ。`app.css` に 16 進の色を書かない（試験が
   ある）。
@@ -29,7 +29,7 @@ ris-emulator は、開発・テスト用の RIS エミュレーターです（�
 （[docs/development.md](docs/development.md) の 4）。
 
 1. spec（`docs/spec/`。画面の要件は `openspec/specs/` も）を直す
-2. 設計判断を伴うなら ADR（`docs/decisions/`）を足す
+2. 設計判断を伴うなら ADR（`docs/decisions/`）を追加する
 3. コードとテストを直す
 4. 使い方が変わるなら `docs/usage.md` を直す
 
@@ -59,6 +59,6 @@ python scripts/check_doc_dates.py origin/main..HEAD
   題は日本語）。
 - 公開のリポジトリなので、commit に `Claude-Session` の行を入れない
   （`Co-Authored-By` だけ）。非公開の場所の名前・URL も書かない。
-- PR の本文は日本語。変えたこと・確かめたこと（試験の結果）・残る点を書く。
+- PR の本文は日本語。変えたこと・確認したこと（試験の結果）・残る点を書く。
 - 版の正は git のタグ（`vX.Y.Z`）。コードの中に版の定数を持たない
   （[docs/development.md](docs/development.md) の 6）。

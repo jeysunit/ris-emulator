@@ -74,6 +74,6 @@ bash scripts/fetch_web_assets.sh
   - タグが 1 つも無い：`0.0.0+37.g60970f9`（commit の数と短い commit）。
   - git の情報が無い（`.git` の無い場所での build）：`0.0.0+unknown`。何から作ったか分からない印。
 - 作った値は `APP_VERSION` の build-arg でイメージに渡す。`.git` はイメージの文脈に入らないので、イメージの中では作れない。image.yml は `fetch-depth: 0` でタグまで取ってから作る。履歴の浅い checkout ではタグが取れず、「タグが 1 つも無い」の形になる。
-- 手元で `python -m app.web` や `python -m app.cli` を起こすときは、`APP_VERSION` が無ければ作業ツリーの git から同じ値を作る。
+- 手元で `python -m app.web` や `python -m app.cli` を起動するときは、`APP_VERSION` が無ければ作業ツリーの git から同じ値を作る。
 - 本番へは、タグの版（`0.2.0` の形）のイメージだけを置く。`+` の付いた版は、タグより後の作りで、試す環境のためのもの。
 - 版を出すとき：`main` の取り込み済みの commit に `git tag vX.Y.Z` を付けて push する（image.yml が `vX.Y.Z` のイメージを作る）。付けたタグは動かさない・消さない。

@@ -1,4 +1,4 @@
-"""手で入れた患者の入力の確かめ：CLI（docs/spec/01_orders.md 3.4）."""
+"""手で入れた患者の入力の確認：CLI（docs/spec/01_orders.md 3.4）."""
 
 from __future__ import annotations
 
