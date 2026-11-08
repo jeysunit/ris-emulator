@@ -2,7 +2,7 @@
 
 ## Context
 
-- 予約は `OrderStore.add_numbered_orders` で、連番の取得・組み立て・保存を1つのトランザクションで
+- 予約は `OrderStore.add_numbered_orders` で、連番の取得・作成・保存を1つのトランザクションで
   作る。番号の規則は `docs/spec/04_identifiers.md` と ADR-0003・ADR-0004
 - `order-status-transitions` と `mpps-scp` の後は、状態は予定・実施中・完了・取消・中止の5つで、
   完了・取消・中止は終わりの状態。終わりの状態の予約に MPPS が来たら、MPPS を記録するだけで

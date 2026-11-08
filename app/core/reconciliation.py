@@ -1,4 +1,4 @@
-"""未照合の MPPS の読み取りと、照合の組み立て（docs/spec/07_reconciliation.md）.
+"""未照合の MPPS の読み取りと、照合の判断（docs/spec/07_reconciliation.md）.
 
 ファイル・通信・ログを使わない。MPPS の記録（pydicom の JSON の形）から、仮の患者と
 Study Instance UID などを取り出し、正式な患者と予約を結ぶときに送る HL7 の種類を決める。

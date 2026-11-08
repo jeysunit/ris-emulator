@@ -183,7 +183,7 @@ python -m app.cli pir send --kind orm --accession RE202610210001 --patient-class
   <https://www.ihe.net/uploadedFiles/Documents/Radiology/IHE_RAD_TF_Vol2.pdf>
 - IHE Radiology Technical Framework Volume 1 Rev. 23.0：4.1（PIR のアクターとトランザクション）
 - HL7 v2.3.1 の原典（セグメントの欄の定義、エスケープ、データ型）は読んでいない。
-  上の IHE の表と、その中の記述から組み立てた。次の点は HL7 の原典で確認していない
+  上の IHE の表と、その中の記述から構成した。次の点は HL7 の原典で確認していない
   - XPN の 8 つめ（表記の種類 `A`・`I`・`P`）が v2.3.1 にあるか。受け手が読み取れない
     ときは、順番（英字、漢字、かな）で判断する
   - CX の 5 つめ（`PI`・`VN`・`AN`）が HL7 Table 0203 の値として v2.3.1 にあるか

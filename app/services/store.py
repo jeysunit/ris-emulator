@@ -133,7 +133,7 @@ class Reconciliation:
     updated_at: str
 
 
-# 予約と送る HL7 の組み立て：(連番, MPPS の記録) → (予約, 送る HL7, 仮の患者の値)。
+# 予約の作成と、送る HL7 の組み立て：(連番, MPPS の記録) → (予約, 送る HL7, 仮の患者の値)。
 # 同じトランザクションで読んだ MPPS から作る。予約の状態は store が MPPS に合わせて決める
 ReconcileBuilder = Callable[[int, MppsRecord], tuple[Order, list[Delivery], dict[str, str]]]
 
@@ -157,7 +157,7 @@ class OrderStore:
     def add_numbered_orders(self, counter: str, count: int, build: OrderBuilder) -> list[Order]:
         """連番を `count` 個取り、`build` で作った予約をまとめて追加する.
 
-        連番の取得・予約の組み立て・保存を1つのトランザクションで行う。`build` が
+        連番の取得・予約の作成・保存を1つのトランザクションで行う。`build` が
         例外を出せば何も残さない（連番に欠番を作らない）。`build` には連番と、
         同じトランザクションで患者ID の有無を引く関数を渡す。
         """

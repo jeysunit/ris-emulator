@@ -156,7 +156,7 @@ class ReconciliationService:
     def reconcile(self, request: ReconcileRequest) -> Reconciliation:
         """正式な患者と新しい予約を結び、HL7 を送る.
 
-        予約・結び付け・送る HL7 の組み立てを1つのトランザクションで行い（誤りがあれば何も
+        予約の作成・結び付け・送る HL7 の組み立てを1つのトランザクションで行い（誤りがあれば何も
         残さない）、その後で HL7 を順に送る。送信が失敗・拒否でも照合は取り消さない。
         """
         unreconciled = self._unlinked(request.sop_instance_uid)
