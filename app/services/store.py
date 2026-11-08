@@ -201,7 +201,7 @@ class OrderStore:
         build: RetakeBuilder,
         retake_from: frozenset[OrderStatus],
     ) -> tuple[Order, Order]:
-        """元の予約から撮り直しの予約を作って追加、元の予約の状態を合わせる.
+        """元の予約から撮り直しの予約を作って追加し、元の予約の状態を合わせる.
 
         元の予約の状態の確認・連番の取得・撮り直しの予約の保存・元の予約の状態の変更を
         1つのトランザクションで行う（docs/spec/01_orders.md 7 章）。元の予約の状態が

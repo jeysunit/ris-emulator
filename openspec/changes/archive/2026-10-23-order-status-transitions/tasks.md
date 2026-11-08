@@ -2,8 +2,8 @@
 
 ## 1. 遷移の表とストア
 
-- [x] 1.1 `app/core/models.py` に `ALLOWED_TRANSITIONS` と `can_transition` を追加、16 通りの組み合わせ（同じ状態を含む）を `tests/core/` の試験で確認する
-- [x] 1.2 `app/core/exceptions.py` に `InvalidTransitionError`（`ValidationError` の子）を追加、`OrderStore.set_status` が `BEGIN IMMEDIATE` の中で今の状態を確認、許さない遷移では `ROLLBACK` して投げ、同じ状態では更新日時を変えずに返すことを `tests/services/test_order_service.py` の試験で確認する
+- [x] 1.1 `app/core/models.py` に `ALLOWED_TRANSITIONS` と `can_transition` を追加し、16 通りの組み合わせ（同じ状態を含む）を `tests/core/` の試験で確認する
+- [x] 1.2 `app/core/exceptions.py` に `InvalidTransitionError`（`ValidationError` の子）を追加し、`OrderStore.set_status` が `BEGIN IMMEDIATE` の中で今の状態を確認し、許さない遷移では `ROLLBACK` して投げ、同じ状態では更新日時を変えずに返すことを `tests/services/test_order_service.py` の試験で確認する
 
 ## 2. CLI と画面
 

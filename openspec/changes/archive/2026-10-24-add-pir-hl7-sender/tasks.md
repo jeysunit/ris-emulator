@@ -15,7 +15,7 @@
 
 ## 3. 設定と CLI
 
-- [x] 3.1 `hl7` の節を `app/services/config.py` と `config/app_config.yaml` に追加、範囲外の値と節が無い設定を `tests/services/test_hl7_config.py` で確認する
+- [x] 3.1 `hl7` の節を `app/services/config.py` と `config/app_config.yaml` に追加し、範囲外の値と節が無い設定を `tests/services/test_hl7_config.py` で確認する
 - [x] 3.2 `pir send` を書き、`--dry-run`・受理・拒否（5）・通信の失敗（6）・入力の誤り（2）・予約が無い（3）を `tests/cli/test_cli_pir.py` で確認する
 
 ## 4. ドキュメント

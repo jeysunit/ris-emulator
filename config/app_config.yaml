@@ -69,7 +69,7 @@ orders:
 web:
   bind_address: "127.0.0.1"       # Docker では "0.0.0.0"（パスワードのファイルが要る）
   port: 8081
-  start_mwl: true                 # 画面のプロセスで MWL の SCP も立てる
+  start_mwl: true                 # 画面のプロセスで MWL の SCP も起動する
 
 # HL7 v2.3.1 の送信（pir send）。送り先は MLLP で待ち受ける PACS の受け口
 hl7:

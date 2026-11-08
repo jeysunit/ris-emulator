@@ -1,4 +1,4 @@
-"""MPPS の SCP を立て、pynetdicom の SCU から N-CREATE・N-SET を送る試験（docs/spec/05_mpps_scp.md）."""
+"""MPPS の SCP を起動し、pynetdicom の SCU から N-CREATE・N-SET を送る試験（docs/spec/05_mpps_scp.md）."""
 
 from __future__ import annotations
 

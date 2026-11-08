@@ -6,8 +6,8 @@
 
 ## 2. 期間・本日・前日と翌日・頁送り
 
-- [x] 2.1 `OrderStore.list_orders` に `limit`・`offset` を、`OrderStore` に同じ条件の件数を数えるメソッドを追加、範囲・件数・並びを `tests/services/` で確認する
-- [x] 2.2 `/orders` に `date_from`・`date_to`・`page` を追加、`date` を `date_from` として受け、`date=all`・逆順・31日を超える期間を 400 にすることを `tests/web/` で確認する
+- [x] 2.1 `OrderStore.list_orders` に `limit`・`offset` を、`OrderStore` に同じ条件の件数を数えるメソッドを追加し、範囲・件数・並びを `tests/services/` で確認する
+- [x] 2.2 `/orders` に `date_from`・`date_to`・`page` を追加し、`date` を `date_from` として受け、`date=all`・逆順・31日を超える期間を 400 にすることを `tests/web/` で確認する
 - [x] 2.3 「本日」「前日」「翌日」のリンクと、頁の範囲の表示・前後の頁のリンクを `orders.html` に置き、絞り込みが保たれることと「全日付」が無いことを `tests/web/` で確認する
 
 ## 3. 状態の列と画面の枠

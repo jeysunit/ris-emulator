@@ -22,7 +22,7 @@ ORM（ORC-1 が CA・DC・XO）で知らせるとしている。PACS の RAD-13 
 - `build_orm_o01` の ORC-1 を引数にし、CLI の `pir send` に `--order-control`
   （NW・CA・DC・XO）を追加する
 - CLI の `status` は、ORM を送ったときに HL7 の結果で終了コードを返す
-- ADR-0012 を追加、spec の 03・05・06・07、usage、憲章を直す
+- ADR-0012 を追加し、spec の 03・05・06・07、usage、憲章を直す
 
 ## Capabilities
 

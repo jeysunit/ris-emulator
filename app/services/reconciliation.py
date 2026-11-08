@@ -49,7 +49,7 @@ from .store import Delivery, MppsRecord, Reconciliation
 PATIENT_CLASS_EMERGENCY = "E"
 PRIORITY_EMERGENCY = "STAT"
 DEFAULT_DEPARTMENT = "救急科"
-# 送信の権利（claim_delivery）の有効な時間は、送信の時間切れの 2 倍にこの秒数を追加したもの
+# 送信の権利（claim_delivery）の有効な時間は、送信の時間切れの 2 倍にこの秒数を加えたもの
 CLAIM_MARGIN_SECONDS = 5.0
 # 予約の状態 → 照合で作った予約をその状態に変えたときに送る通の種類とメッセージ型（画面の確認の窓）
 STATUS_MESSAGES: dict[OrderStatus, tuple[DeliveryKind, str]] = {
@@ -67,7 +67,7 @@ class ReconcileRequest:
     patient: Patient
     procedure_code: str | None = None
     department: str | None = None
-    # 確認の窓で見せた内容の鍵（ReconcilePreview.key）。与えると、確定のときに再読み込みした撮影で
+    # 確認の窓で見せた内容の鍵（ReconcilePreview.key）。与えると、確定のときに再取得した撮影で
     # 作った鍵と違えば断る（確認した後に仮の患者や送る通が変わっていたら、再確認させる）
     confirmed_key: str | None = None
 
@@ -168,7 +168,7 @@ class ReconciliationService:
         def build(
             sequence: int, record: MppsRecord
         ) -> tuple[Order, list[Delivery], dict[str, str]]:
-            # 結び付ける MPPS をトランザクションの中で再読み込みした値から、予約・送る HL7・仮の患者を
+            # 結び付ける MPPS をトランザクションの中で再取得した値から、予約・送る HL7・仮の患者を
             # 作る（N-SET が間に入っても、旧い患者ID と送る種類が予約と食い違わない）
             current = read_unreconciled(**_fields(record))
             self._check(current, request.patient)

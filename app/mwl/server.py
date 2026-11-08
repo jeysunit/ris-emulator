@@ -2,7 +2,7 @@
 
 C-FIND（Modality Worklist Information Model - FIND、1.2.840.10008.5.1.4.31）、
 N-CREATE・N-SET（Modality Performed Procedure Step、1.2.840.10008.3.1.2.3.3）と
-C-ECHO（Verification）を受ける。予約は要求のたびに保存先から再読み込みする。
+C-ECHO（Verification）を受ける。予約は要求のたびに保存先から再取得する。
 """
 
 from __future__ import annotations

@@ -20,7 +20,7 @@
 
 1. 要求に Affected SOP Instance UID が無ければ、SCP が `2.25.` と UUID の整数で発番し、
    応答の Affected SOP Instance UID で返す（PS3.7 10.1.5.1.4）。あれば PS3.5 9.1 の
-   UID の形かを確認、違えば `0106`（Invalid Attribute Value）
+   UID の形かを確認し、違えば `0106`（Invalid Attribute Value）
 2. Performed Procedure Step Status (0040,0252) が無ければ `0120`（Missing Attribute）、
    `IN PROGRESS` でなければ `0106`（PS3.4 F.7.2.1.3）
 3. Scheduled Step Attributes Sequence (0040,0270) が無ければ `0120`

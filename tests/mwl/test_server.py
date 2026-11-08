@@ -1,4 +1,4 @@
-"""MWL の SCP を立て、pynetdicom の SCU で C-FIND を引く試験."""
+"""MWL の SCP を起動し、pynetdicom の SCU で C-FIND を引く試験."""
 
 from __future__ import annotations
 

@@ -163,7 +163,7 @@ def _receive_frame(connection: socket.socket, timeout: float) -> bytes:
     deadline = time.monotonic() + timeout
     buffer = b""
     while END_BLOCK not in buffer:
-        # 本文の上限に、開始と終端の分を追加する（終端が 2 回の受信に分かれても、上限ちょうどは通す）
+        # 本文の上限に、開始と終端の分を加える（終端が 2 回の受信に分かれても、上限ちょうどは通す）
         if len(buffer) > MAX_ACK_BYTES + len(START_BLOCK) + len(END_BLOCK):
             raise _FrameError("ACK が大きすぎます")
         remaining = deadline - time.monotonic()

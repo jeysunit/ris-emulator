@@ -112,7 +112,7 @@ Table K.6-1（2026d）の Return Key Type 2 の属性はすべて保持する。
   ソースと、画像を送る試験で確認した）。Orthanc は Specific Character Set の
   空でない最初の値（`jis_kana` では `ISO 2022 IR 13`、Shift_JIS として読む）で値の全体を読み、
   ESC の列を取り除くので、JIS X 0208 の 2 バイトが ASCII の字のまま残る。この予約の
-  MWL の応答をコピーして撮影した画像を Orthanc に送ると、漢字・かなが崩れ、検索の索引にも崩れた値が
+  MWL の応答の値を使って撮影した画像を Orthanc に送ると、漢字・かなが崩れ、検索の索引にも崩れた値が
   入る。値は規格どおり（PS3.5 H.3.2 と同じ。pydicom と DCMTK は正しく読む）なので、
   `jis_kana` は残す（規格どおりの装置の振る舞いを試すため）。Orthanc に画像を送る試験には
   `jis`（値 1 が空）か `utf8` を選ぶ。この 2 つは Orthanc で崩れない（確認した）

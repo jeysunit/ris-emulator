@@ -162,7 +162,7 @@ def create_app(
 ) -> FastAPI:
     """画面のアプリを作る。`password` があれば HTTP Basic を付ける.
 
-    `start_mwl`（既定は設定の web.start_mwl）なら、起動のときに MWL の SCP も立てる。
+    `start_mwl`（既定は設定の web.start_mwl）なら、起動のときに MWL の SCP も起動する。
     """
     order_service = service or OrderService(config)
     reconciliation_service = ReconciliationService(order_service)
@@ -587,7 +587,7 @@ def create_app(
 
     @app.post("/connection/check", response_class=HTMLResponse)
     def connection_check(request: Request) -> Response:
-        """上の帯の「接続確認」：MWL の待ち受けと HL7 の送信先を確認、popover の中身と全体の札を結果で差し替える.
+        """上の帯の「接続確認」：MWL の待ち受けと HL7 の送信先を確認し、popover の中身と全体の札を結果で差し替える.
 
         確認している最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
         """

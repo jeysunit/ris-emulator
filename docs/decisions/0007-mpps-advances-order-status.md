@@ -19,7 +19,7 @@ ADR-0001 は MPPS を最初の版では作らず、次に作るときの設計�
 
 1. **MPPS の SCP を、MWL と同じ AE タイトル・ポートで受ける。** 理由：モダリティの設定では
    MWL と MPPS の送り先を同じにすることが多い。AE を分けると試験の環境の設定が増える
-2. **予約の状態に「中止」（`discontinued`）を追加、MPPS の DISCONTINUED は中止にする。**
+2. **予約の状態に「中止」（`discontinued`）を追加し、MPPS の DISCONTINUED は中止にする。**
    ADR-0001 の「取消にする」を置き換える。中止は終わりの状態で、実施中からだけ変更できる。
    HL7 v2 の Table 0038 Order Status でも、DC（中止）は CA（取消）と別の値である
 3. 予約は Scheduled Step Attributes Sequence の Accession Number と Scheduled Procedure

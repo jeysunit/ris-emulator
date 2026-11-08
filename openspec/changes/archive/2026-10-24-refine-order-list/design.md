@@ -42,7 +42,7 @@ URL は `/orders?date_from=2026-10-24&date_to=2026-10-30&status=&modality=&page=
 
 ### 頁は保存の側の LIMIT と OFFSET で切る
 
-`OrderStore.list_orders` に `limit`・`offset` を追加、件数は同じ条件の `COUNT(*)` で数える。
+`OrderStore.list_orders` に `limit`・`offset` を追加し、件数は同じ条件の `COUNT(*)` で数える。
 全件を読んでから画面で切ると、たまったときの重さが変わらない。並びは今と同じ
 （予定日・予定時刻・登録の順）で、頁をまたいでも順が揺れない。
 

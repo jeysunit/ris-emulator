@@ -20,7 +20,7 @@ PACS に HL7 v2 で知らせる必要がある（IHE の PIR）。HL7 の組み�
   受理されていない通は、同じ本文で再送信できる
 - 画面に「未照合」の一覧と照合の画面を追加する。CLI に `reconcile list`・`run`・`resend` を追加する
 - 照合で作った予約の詳細に、照合前の患者と HL7 送信の表を出す
-- `docs/spec/07_reconciliation.md`・ADR-0011 を追加、憲章の対象に照合を追加する
+- `docs/spec/07_reconciliation.md`・ADR-0011 を追加し、憲章の対象に照合を追加する
 
 ## Capabilities
 

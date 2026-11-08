@@ -12,8 +12,8 @@
 
 ## 3. 画面と CLI
 
-- [x] 3.1 「未照合」の一覧、照合の画面、予約の詳細の「HL7 送信」の表と再送信を追加、`tests/web/test_reconciliation.py` で確認する
-- [x] 3.2 `reconcile list`・`run`・`resend` を追加、`tests/cli/test_cli_reconcile.py` で終了コードを確認する
+- [x] 3.1 「未照合」の一覧、照合の画面、予約の詳細の「HL7 送信」の表と再送信を追加し、`tests/web/test_reconciliation.py` で確認する
+- [x] 3.2 `reconcile list`・`run`・`resend` を追加し、`tests/cli/test_cli_reconcile.py` で終了コードを確認する
 
 ## 4. ドキュメント
 

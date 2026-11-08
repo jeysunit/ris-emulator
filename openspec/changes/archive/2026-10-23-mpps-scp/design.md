@@ -2,7 +2,7 @@
 
 ## Context
 
-- MWL の SCP（`app/mwl/server.py` の `MwlServer`）は pynetdicom の `AE` を1つ立て、C-FIND と
+- MWL の SCP（`app/mwl/server.py` の `MwlServer`）は pynetdicom の `AE` を1つ起動し、C-FIND と
   C-ECHO を受ける。画面のプロセスの中で別のスレッドとして動く
 - 予約は SQLite（`OrderStore`）にあり、状態の変更は `BEGIN IMMEDIATE` のトランザクションで行う。
   `order-status-transitions` で、遷移の表（`ALLOWED_TRANSITIONS`）と検証がストアに入る
@@ -42,7 +42,7 @@
 ### MWL と同じ AE で受ける
 
 ADR-0001 の要点のとおり、`MwlServer.make_ae` に `ModalityPerformedProcedureStep` の
-Presentation Context を追加、`evt.EVT_N_CREATE`・`evt.EVT_N_SET` の handler を追加する。
+Presentation Context を追加し、`evt.EVT_N_CREATE`・`evt.EVT_N_SET` の handler を追加する。
 モダリティの設定では MWL と MPPS の送り先を同じにすることが多く、AE を分けると試験の
 環境の設定が増える。
 
@@ -99,4 +99,4 @@ Performed Procedure Step Status が Enumerated Values に無い、といった�
 2. 今のデータベースの予約はそのまま使える。中止の予約はまだ無い
 3. 戻すときは、この change の commit を revert する。`mpps` の表は古い版では使われずに残る。
    中止にした予約は古い版では読めない（`OrderStatus` に無い）ので、戻す前に CLI で
-   中止の予約が無いことを確認するか、データベースを作り直す
+   中止の予約が無いことを確認するか、データベースを再作成する

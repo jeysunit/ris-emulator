@@ -77,7 +77,7 @@ def run_check(mwl: MwlServer) -> Probe:
 
 
 def run_hl7_check(config: Hl7Config) -> Probe:
-    """HL7 の送信先の MLLP の接続を開けるかを確認、結果を時刻つきで返す（何も送らない）."""
+    """HL7 の送信先の MLLP の接続を開けるかを確認し、結果を時刻つきで返す（何も送らない）."""
     timeout = min(config.timeout_seconds, HL7_CHECK_TIMEOUT_SECONDS)
     result = check_connection(config.host, config.port, timeout)
     if not result.ok:

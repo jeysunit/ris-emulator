@@ -187,7 +187,7 @@ class WebConfig(BaseModel):
 
     bind_address: str = "127.0.0.1"
     port: int = Field(8081, ge=PORT_MIN, le=PORT_MAX)
-    start_mwl: bool = True  # 画面のプロセスで MWL の SCP も立てる
+    start_mwl: bool = True  # 画面のプロセスで MWL の SCP も起動する
 
 
 class Hl7Config(BaseModel):

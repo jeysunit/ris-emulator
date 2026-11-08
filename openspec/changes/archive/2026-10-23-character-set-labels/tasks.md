@@ -2,7 +2,7 @@
 
 ## 1. 表示の名前
 
-- [x] 1.1 `app/core/models.py` に `CHARACTER_SET_LABELS` を追加、3つの選択肢すべてに名前があり、どの名前にも `\` と `¥` が無いことを `tests/core/` の試験で確認する
+- [x] 1.1 `app/core/models.py` に `CHARACTER_SET_LABELS` を追加し、3つの選択肢すべてに名前があり、どの名前にも `\` と `¥` が無いことを `tests/core/` の試験で確認する
 - [x] 1.2 Specific Character Set の値の規則（`ISO_IR 192` は値1つ、`ISO 2022` で始まる語を含めば値2つ以上、重なりなし）を3つの選択肢で確認する試験を `tests/core/test_mwl_dataset.py` に追加する
 - [x] 1.3 `jis` の予約の Patient's Name を符号化したバイト列が PS3.5 Example H.3-1 と同じになることを `tests/core/test_mwl_dataset.py` で確認する
 

@@ -176,7 +176,7 @@ class OrderService:
     ) -> tuple[Order, Order]:
         """撮り直しの予約を作る（`orders.retake_mode` が `new_order` のときだけ）.
 
-        元の予約の内容をコピー、受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
+        元の予約の内容をコピーし、受付番号・Requested Procedure ID・Scheduled Procedure Step ID・
         Study Instance UID を新しく発番する。予定日時の既定は作った時点（分まで）。
         戻り値は (撮り直しの予約, 元の予約)。docs/spec/01_orders.md 7 章。
         """

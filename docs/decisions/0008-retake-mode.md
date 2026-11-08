@@ -14,7 +14,7 @@
 
 ## 決定
 
-1. **設定 `orders.retake_mode` を追加、値は `append` と `new_order` にする。** 値の名前は
+1. **設定 `orders.retake_mode` を追加し、値は `append` と `new_order` にする。** 値の名前は
    撮り直しの結果を表す。`ihe`・`local` のような由来の名前は、施設のルールが IHE と同じ
    場合に読み違える
 2. **既定は `append` にする。** IHE RAD TF-2 4.6.4.1.2.3.3 Append Case は、SPS と PPS が
