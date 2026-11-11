@@ -41,7 +41,7 @@ class Probe:
 
 @dataclass(frozen=True)
 class ConnView:
-    """上の帯のボタンと popover、接続先の画面に出す札."""
+    """上の帯のボタンと popover、接続先の画面に出す状態バッジ."""
 
     overall_kind: str
     overall_label: str
@@ -95,10 +95,10 @@ def hl7_notice(config: Hl7Config, probe: Probe) -> tuple[str, str]:
 
 
 def conn_view(mwl: MwlServer, probe: Probe | None, hl7_probe: Probe | None = None) -> ConnView:
-    """全体の札と、MWL・HL7 の行の札.
+    """全体の状態バッジと、MWL・HL7 の行の状態バッジ.
 
     待ち受けが止まっているか、どちらかの直近の確認が失敗なら「一部が接続不可」。まだ確認していない
-    HL7 の送信先は札「未確認」で、全体の札を下げない（MWL の待ち受けも、確認する前は動いているかで決める）。
+    HL7 の送信先は状態バッジ「未確認」で、全体の状態バッジを下げない（MWL の待ち受けも、確認する前は動いているかで決める）。
     """
     ok = mwl.running and (probe is None or probe.ok) and (hl7_probe is None or hl7_probe.ok)
     if not mwl.running:
