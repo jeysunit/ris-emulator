@@ -39,14 +39,14 @@ def test_topbar_order_and_connection_popover(config: AppConfig, service: OrderSe
     assert order == sorted(order)
     assert 'class="ver"' not in header and TEST_VERSION not in header
     assert 'aria-expanded="true" aria-controls="sidenav"' in header
-    # 閉じているときは全体の状態の札 1 つ。中身は標準の popover で、MWL の待ち受けと HL7 の送信先
+    # 閉じているときは全体の状態バッジ 1 つ。中身は標準の popover で、MWL の待ち受けと HL7 の送信先
     button = header.split('popovertarget="conn-pop"')[1].split("</button>")[0]
     assert '<span class="st" id="conn-state" data-k="ok">接続中</span>' in button
     pop = header.split('<div id="conn-pop" popover class="pop"')[1].split("</div>")[0]
     assert re.findall(r"<dt>([^<]+)</dt>", pop) == ["待ち受け MWL", "送信先 HL7"]
     assert f"<b>{config.mwl.ae_title}</b>" in pop and '<span class="st" data-k="listen">待ち受け中</span>' in pop
     assert f"{config.hl7.host}:{config.hl7.port}" in pop
-    # 帯に住所や塗りの札を出さない（住所は popover の中だけ）
+    # 帯に住所や塗りの状態バッジを出さない（住所は popover の中だけ）
     outside = header.replace(pop, "")
     assert "badge" not in header and f":{config.mwl.port}" not in outside
 
@@ -60,14 +60,14 @@ def test_topbar_structure_follows_the_ui_kit(config: AppConfig, service: OrderSe
     assert 'class="iconbtn"' in attrs and 'aria-controls="sidenav"' in attrs
     assert 'aria-label="ナビを開閉する"' in attrs and 'title="ナビを閉じる"' in attrs
     assert "icons.svg#i-menu" in inner
-    # 接続の状態：枠つきボタンの中に 「接続の状態」→ 札 → シェブロン の順。見える文字が名前になる
+    # 接続の状態：枠つきボタンの中に 「接続の状態」→ 状態バッジ → シェブロン の順。見える文字が名前になる
     button = re.search(r'<button [^>]*popovertarget="conn-pop"[^>]*>(.*?)</button>', header, re.S)
     assert button is not None
     assert "aria-label" not in button.group(0) and 'class="connbtn"' in button.group(0)
     parts = re.findall(r'<span class="cl">接続の状態</span>|<span class="st"|<svg class="ic chev"', button.group(1))
     assert parts == ['<span class="cl">接続の状態</span>', '<span class="st"', '<svg class="ic chev"']
     assert "icons.svg#i-chevd" in button.group(1)
-    # HL7 の送信先は確認できる相手（MLLP の接続を開けるか）。まだ確認していないので、札「未確認」
+    # HL7 の送信先は確認できる相手（MLLP の接続を開けるか）。まだ確認していないので、状態バッジ「未確認」
     pop = header.split('<div id="conn-pop" popover class="pop"')[1]
     assert re.search(
         rf'<b>{re.escape(config.hl7.receiving_application)}</b> <span class="st" data-k="plan">未確認</span>', pop
@@ -126,11 +126,11 @@ def test_check_succeeds_when_both_answer(config: AppConfig, service: OrderServic
     # 中身は結果の 1 文（確認した 2 件）を持ち、MWL の行は「待ち受け中」に確認した時刻が付く
     assert 'data-result="2 件すべてに接続できました。"' in body
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
-    # 帯の全体の札も同じ応答で差し替える
+    # 帯の全体の状態バッジも同じ応答で差し替える
     assert '<span class="st" id="conn-state" data-k="ok" hx-swap-oob="true">接続中</span>' in body
     # 結果は覚えていて、再読み込みした画面にも時刻が残る
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', after)
-    # HL7 の送信先は札「成功」と確認した時刻
+    # HL7 の送信先は状態バッジ「成功」と確認した時刻
     assert re.search(
         rf'<b>{re.escape(config.hl7.receiving_application)}</b> <span class="st" data-k="ok">成功</span>.*<span class="xs label">\d{{4}}/\d{{2}}/\d{{2}} \d{{2}}:\d{{2}}</span>',
         body,
@@ -156,7 +156,7 @@ def test_check_fails_when_a_listening_mwl_does_not_answer(
     with TestClient(app, base_url=ORIGIN) as client:
         body = _check(client).text
         after = client.get("/orders").text.split("</header>")[0]
-    # 待ち受けているのに応答が無いときは、札「失敗」。全体の札も「一部が接続不可」
+    # 待ち受けているのに応答が無いときは、状態バッジ「失敗」。全体の状態バッジも「一部が接続不可」
     assert 'data-result="2 件のうち 1 件に接続できませんでした。"' in body
     assert 'data-k="ng">失敗</span>' in body
     assert 'id="conn-state" data-k="ng">一部が接続不可</span>' in after

@@ -65,12 +65,12 @@ def test_page_has_the_table_and_the_listening_section(config: AppConfig, service
     assert f'<span class="main-c">{config.hl7.receiving_application}</span>' in row
     assert "<td>HL7</td>" in row and '<span class="mono">—</span>' in row
     assert f'<span class="mono">{config.hl7.host}:{config.hl7.port}</span>' in row
-    # まだ確認していない確認できる相手は札「未確認」
+    # まだ確認していない確認できる相手は状態バッジ「未確認」
     assert '<td class="res"><span class="st" data-k="plan">未確認</span></td>' in row
     assert 'hx-post="/connections/check?target=hl7"' in row and ">接続確認</button>" in row
     # 区画の見出しの右に「すべて接続確認」（副）。見出しの横に説明の文は置かない
     assert re.search(r'<h2 class="hd">HL7 の送信先<span class="acts"><button type="button" class="btn" [^>]*>.*すべて接続確認</button>', page, re.S)
-    # 待ち受けの区画：MWL の名前・札・住所（表には入れない）
+    # 待ち受けの区画：MWL の名前・状態バッジ・住所（表には入れない）
     listening = page.split('<h2 class="hd">待ち受け</h2>')[1]
     assert f"<b>{config.mwl.ae_title}</b>" in listening and 'data-k="listen">待ち受け中</span>' in listening
     assert config.mwl.ae_title not in table
@@ -103,12 +103,12 @@ def test_check_all_updates_the_table_the_notice_and_the_top_bar(
         after = client.get("/connections").text
     body = response.text
     assert response.status_code == 200
-    # 表の行：成功の札と確認した時刻
+    # 表の行：成功の状態バッジと確認した時刻
     assert re.search(r'<td class="res"><span class="st" data-k="ok">成功</span> <span class="when">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span></td>', body)
     assert "<span class=\"why\">" not in body
     # 待ち受け（MWL）も確認する
     assert re.search(r'data-k="listen">待ち受け中</span>.*<span class="xs label">\d{4}/\d{2}/\d{2} \d{2}:\d{2}</span>', body)
-    # 上の知らせ（読み上げの欄の中身）・上の帯の札・popover を同じ応答で差し替える
+    # 上の知らせ（読み上げの欄の中身）・上の帯の状態バッジ・popover を同じ応答で差し替える
     target = f"{config.hl7.receiving_application}（{config.hl7.host}:{config.hl7.port}）"
     assert f'<div hx-swap-oob="innerHTML:#conn-notice"><div class="notice" data-k="ok"><svg class="ic" aria-hidden="true"><use href="/static/ui-kit/icons.svg#i-check"/></svg><div>{target}に接続できました。</div></div></div>' in body
     assert 'hx-swap-oob="innerHTML:#conn-pop"' in body
@@ -139,7 +139,7 @@ def test_check_failure_shows_reason_and_next_step(
     # 知らせは 何が起きたか・なぜか・次にすること
     target = f"{config.hl7.receiving_application}（{config.hl7.host}:{config.hl7.port}）"
     assert f"<div>{target}に接続できません。{reason}。{next_step}</div>" in body
-    # 全体の札も下がる
+    # 全体の状態バッジも下がる
     assert 'data-k="ng" hx-swap-oob="true">一部が接続不可</span>' in body
 
 

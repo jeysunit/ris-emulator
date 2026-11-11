@@ -116,7 +116,7 @@
     var result = document.getElementById("conn-result");
     announceConn(result ? result.getAttribute("data-unreadable") : null);
   }
-  // 接続先の画面（/connections）の「接続確認」。押した行の結果の欄を、応答が返るまで札「確認中」にする
+  // 接続先の画面（/connections）の「接続確認」。押した行の結果の欄を、応答が返るまで状態バッジ「確認中」にする
   // （押したボタンは hx-disabled-elt で押せなくなる）。結果と知らせは応答が差し替える。
   // 応答で区画ごと差し替わるので、差し替えた後に、押したボタンと同じ種類のボタンへ焦点を戻す
   function isPageCheck(event) {
