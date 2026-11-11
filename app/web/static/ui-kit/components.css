@@ -1,7 +1,7 @@
-/* ui-kit 1.2.5（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
+/* ui-kit 1.2.8（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
 /* 部品の CSS。tokens.css の後に読む。クラスの名前と構造は system/parts.md */
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
 body{margin:0;background:var(--color-background);color:var(--color-foreground);font-family:var(--font-sans);font-size:14px;line-height:1.5}
 h1,h2,h3,h4,p,ul,ol,dl,dd,figure{margin:0}
 ul,ol{padding:0;list-style:none}
@@ -328,7 +328,7 @@ dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
 .fb.r2 .f.dt{grid-row:2;grid-column:3}
 .fb.r2 .f.md{grid-row:2;grid-column:4}
 .fb.r1 .f.end{display:flex;align-items:flex-start;gap:8px}
-/* 狭い区画（入れ物の内側が 400px 未満。一覧＋右に区画の右の区画 360px）：.fb.r2.narrow。氏名の行（右端に札）の下に、項目名と値を 1 行ずつ縦に並べる。値は切らない。患者ID・受付番号も標準の .keep と同じで、収まるときは折れず、収まらないときだけ折る */
+/* 狭い区画（入れ物の内側が 400px 未満。一覧＋右に区画の右の区画 360px）：.fb.r2.narrow。氏名の行（右端に状態バッジ）の下に、項目名と値を 1 行ずつ縦に並べる。値は切らない。患者ID・受付番号も標準の .keep と同じで、収まるときは折れず、収まらないときだけ折る */
 .fb.r2.narrow{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:none;gap:2px 8px}
 .fb.r2.narrow .nm{grid-row:1;grid-column:1}
 .fb.r2.narrow .nm .n,.fb.r2.narrow .nm .k{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
@@ -425,7 +425,7 @@ dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
 .cr-foot{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;font-size:12px;line-height:18px;color:var(--color-label);padding-top:4px}
 .cr-foot .fold{flex:1 1 100%;border-top:0}
 .cr-foot .fold>summary{font-weight:400;color:var(--color-label)}
-/* 上の帯の接続の状態（ui-kit 1.2.0）：枠つき 32px のボタンの中に 「接続の状態」（本文の色）・状態の札・シェブロン。640px 未満は文字だけ隠す（読み上げの名前は残す） */
+/* 上の帯の接続の状態（ui-kit 1.2.0）：枠つき 32px のボタンの中に 「接続の状態」（本文の色）・状態バッジ・シェブロン。640px 未満は文字だけ隠す（読み上げの名前は残す） */
 .connbtn .cl{color:var(--color-foreground);font-size:14px}
 .connbtn .chev{width:16px;height:16px;flex:none;color:var(--color-label);transition:transform .15s}
 .connbtn[aria-expanded=true] .chev,.connwrap:has(.pop:popover-open) .chev{transform:rotate(180deg)}
@@ -434,5 +434,41 @@ dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
 .connbtn:focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}
 @media (max-width:639px){.connbtn .cl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 @media (prefers-reduced-motion:reduce){.connbtn .chev{transition:none}}
-/* 状態ではない小さな印（「標準」など）。印の形を持たず、状態の札 .st とは別 */
+/* 状態ではない小さな印（「標準」など）。印の形を持たず、状態バッジ .st とは別 */
 .badge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border:1px solid var(--color-border);border-radius:3px;font-size:12px;line-height:18px;color:var(--color-label);background:var(--color-background);white-space:nowrap}
+
+/* ファイルを選ぶ部品（ui-kit 1.2.6）：ドロップの枠・選んだ一覧・進み・操作の行。色・間は tokens.css の値だけ */
+.picker .in{display:flex;flex-direction:column;gap:12px}
+.picker .pk-drop{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 16px;border:2px dashed var(--color-border-input);border-radius:6px;background:var(--color-surface);color:var(--color-label);text-align:center}
+.picker .pk-drop .t{font-weight:700;color:var(--color-value)}
+.picker .pk-drop.compact{flex-direction:row;flex-wrap:wrap;justify-content:space-between;padding:8px 12px}
+.picker[data-over=true] .pk-drop{border-style:solid;border-color:var(--color-primary);background:var(--color-selected)}
+.picker .pk-list{max-height:320px}
+/* 長い値（名前・フォルダ・患者ID・氏名・状態の理由）は省略せずに折り返す（省略すると別のファイル・別の患者と見分けられなくなる） */
+.picker .pk-list .tbl td.nm{white-space:normal;overflow-wrap:anywhere;min-width:0}
+.picker .pk-list .tbl td.sz{width:96px}
+.picker .pk-list .tbl td.stt{width:200px;white-space:normal;overflow-wrap:anywhere}
+.picker .pk-list .tbl td.op{width:72px;text-align:right}
+.picker .pk-list .tbl td.pid{width:96px;white-space:normal;overflow-wrap:anywhere;font-family:var(--font-mono);font-size:13px}
+.picker .pk-list .tbl td.pid .label{font-family:var(--font-sans);font-size:14px}
+.picker .pk-list .tbl td.pn{width:128px;white-space:normal;overflow-wrap:anywhere}
+/* 検査日は 8 桁の DA だけを出すので折り返さない（列の幅より字が広く、折り返すと「2026/10/3」と「1」に割れて読み違える）。
+   モダリティとシリーズ／画像は、ふつうの値（CT・S2 / I15）が列の幅に収まり、列の幅より長い値だけが升の中で折り返す */
+.picker .pk-list .tbl td.dt{width:88px;font-variant-numeric:tabular-nums}
+.picker .pk-list .tbl td.md{width:72px;white-space:normal;overflow-wrap:anywhere}
+.picker .pk-list .tbl td.md .mod{max-width:100%}
+.picker .pk-list .tbl td.si{width:80px;white-space:normal;overflow-wrap:anywhere;font-family:var(--font-mono);font-size:13px}
+.picker .pk-list .tbl td.si .label{font-family:var(--font-sans);font-size:14px}
+.picker .pk-sum .acts{display:flex;align-items:center;gap:8px}
+/* 送らない状態バッジ（対象外・除外）：印「—」・色 warning。語で分ける（既にある印と色だけを使う。失敗 ✕・中止 ■ は danger） */
+.st[data-k=skip]{--g:"—";--k:var(--color-warning)}
+/* 送らない行の状態バッジは、囲み線に加えて状態バッジの字も同じ色にする（失敗・中止は danger、対象外・除外は warning）。行の字は通常の色のまま。
+   状態バッジの地は background（白）で、白との対比は warning 4.87:1・danger 5.24:1（12px の字に要る 4.5:1 以上） */
+.picker .st:is([data-k=skip],[data-k=ng],[data-k=stop]){color:var(--k)}
+.picker .pk-prog{display:flex;align-items:center;gap:12px}
+.picker .pk-prog .pk-hg{flex:none;color:var(--color-primary-active)}
+.picker .btn[aria-busy=true]::before{content:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .picker .pk-prog .pk-hg{color:var(--color-link)}}
+:root[data-theme=dark] .picker .pk-prog .pk-hg{color:var(--color-link)}
+@media (forced-colors:active){.picker .pk-prog .pk-hg{color:CanvasText}}
+.picker .pk-prog .n{font-variant-numeric:tabular-nums;white-space:nowrap}
