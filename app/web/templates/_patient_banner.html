@@ -1,6 +1,6 @@
 {# 患者バナー（決まった形。値の無い項目も「—」で場所を残す）。使う側が渡す値：
    banner_patient（患者）・banner_kind（r1＝1 行、r2＝右の区画の 2 行）・banner_label（aria-label）・
-   banner_acc（受付番号）・banner_dt_label と banner_dt（日時）・banner_modality と banner_procedure・banner_end（右端の札）・
+   banner_acc（受付番号）・banner_dt_label と banner_dt（日時）・banner_modality と banner_procedure・banner_end（右端の状態バッジ）・
    banner_on（年齢を数える検査日。YYYYMMDD。読めなければ開いた日） #}
 {% set p = banner_patient %}
 {% set main_name = p.name.ideographic | pn or p.name.alphabetic | pn %}

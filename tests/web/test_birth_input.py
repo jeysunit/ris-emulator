@@ -143,7 +143,7 @@ def test_wareki_birth_date_is_saved_in_the_western_calendar(
 def test_legacy_birth_date_forms_are_still_accepted(
     config: AppConfig, store: OrderStore, value: str
 ) -> None:
-    """画面の外から送る呼び出しのため、照合の受け口は旧い形（ハイフン・8 桁）も受ける."""
+    """画面の外から送る呼び出しのため、照合のエンドポイントは旧い形（ハイフン・8 桁）も受ける."""
     sop_uid, _ = add_unscheduled_mpps(store)
     path = f"/reconciliation/{sop_uid}"
     with _client(config, store) as (client, service):

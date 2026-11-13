@@ -335,7 +335,7 @@ def test_cancel_reconciled_order_shows_ca(config, store):
 
 
 def test_reconcile_screen_follows_screen_type_c(config: AppConfig, store: OrderStore) -> None:
-    """パンくず → 見出し → 患者バナー（仮の患者）→ 区画 → 操作の行。MPPS の状態は札で出す."""
+    """パンくず → 見出し → 患者バナー（仮の患者）→ 区画 → 操作の行。MPPS の状態は状態バッジで出す."""
     sop_uid, _ = add_unscheduled_mpps(store)
     with _client(config, store) as (client, _):
         page = client.get(f"/reconciliation/{sop_uid}").text

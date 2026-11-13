@@ -107,7 +107,7 @@ LIST_PAGE_SIZE = 100
 MAX_LIST_DAYS = 31
 # 一括作成の間隔の既定（分）
 DEFAULT_INTERVAL = 15
-# MPPS の状態（PS3.4 F.7）→ 状態の札の種類と文字（予約の状態の札と同じ印と語）
+# MPPS の状態（PS3.4 F.7）→ 状態バッジの種類と文字（予約の状態バッジと同じ印と語）
 MPPS_MARKS = {
     "IN PROGRESS": ("run", "実施中"),
     "COMPLETED": ("done", "完了"),
@@ -115,7 +115,7 @@ MPPS_MARKS = {
 }
 # 性別の DICOM・HL7 の値は画面に出さない（空と知らない値は「不明」と出す）
 SEX_LABELS = {"M": "男", "F": "女", "O": "その他", "U": "不明"}
-# HL7 の送信の状態の札（ACK で断られたときも送信失敗。理由は詳細の列に出す）
+# HL7 の送信の状態バッジ（ACK で断られたときも送信失敗。理由は詳細の列に出す）
 DELIVERY_MARKS = {
     "pending": ("plan", "送信待ち"),
     "accepted": ("ok", "送信完了"),
@@ -587,7 +587,7 @@ def create_app(
 
     @app.post("/connection/check", response_class=HTMLResponse)
     def connection_check(request: Request) -> Response:
-        """上の帯の「接続確認」：MWL の待ち受けと HL7 の送信先を確認し、popover の中身と全体の札を結果で差し替える.
+        """上の帯の「接続確認」：MWL の待ち受けと HL7 の送信先を確認し、popover の中身と全体の状態バッジを結果で差し替える.
 
         確認している最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
         """
@@ -614,7 +614,7 @@ def create_app(
     def connections_check(request: Request, target: str = "all") -> Response:
         """接続先の画面の「接続確認」。`target=hl7` は送信先の行だけ、`all` は待ち受けも確認する.
 
-        表の区画・待ち受けの区画・上の知らせ・上の帯の札と popover を、同じ応答で差し替える。
+        表の区画・待ち受けの区画・上の知らせ・上の帯の状態バッジと popover を、同じ応答で差し替える。
         確認している最中にもう一度届いたら、重ねて送らず 204 で何も差し替えない。
         """
         if target not in ("hl7", "all"):
@@ -778,7 +778,7 @@ _LEGACY_DIGITS = re.compile(r"([0-9]{4})([0-9]{2})([0-9]{2})")
 
 
 def legacy_birth_input(value: str) -> str:
-    """照合の受け口が受ける旧い生年月日の形（`1975-05-14`・`19750514`）を `1975/05/14` の形にする.
+    """照合のエンドポイントが受ける旧い生年月日の形（`1975-05-14`・`19750514`）を `1975/05/14` の形にする.
 
     画面の外から送る呼び出しのための後方互換。ほかの値はそのまま返す（読み取りは parse_birth_input）.
     """

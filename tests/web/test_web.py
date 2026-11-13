@@ -287,7 +287,7 @@ def test_list_offers_only_allowed_statuses(config: AppConfig, service: OrderServ
     with _client(config, service) as client:
         done_panel = client.get(f"/orders?selected={done.accession_number}").text.split('<aside')[1]
     assert '<select' not in done_panel and '完了' in done_panel
-    # 完了の行は選択肢を出さず、状態の札だけ
+    # 完了の行は選択肢を出さず、状態バッジだけ
     done_row = _row(html, done.accession_number)
     assert "<select" not in done_row and "完了" in done_row
 
@@ -390,7 +390,7 @@ def test_detail_shows_mpps(config: AppConfig, service: OrderService) -> None:
     service.store.update_mpps("1.2.392.1", "COMPLETED", {})
     with _client(config, service) as client:
         detail = client.get(f"/orders/{order.accession_number}").text
-    # MPPS の状態は札で出し、英語の値を出さない
+    # MPPS の状態は状態バッジで出し、英語の値を出さない
     mpps = detail.split("<h2>MPPS</h2>")[1].split("</section>")[0]
     assert "1.2.392.1" in mpps and '<span class="st" data-k="done">完了</span>' in mpps
     assert "COMPLETED" not in mpps
@@ -445,7 +445,7 @@ def test_lifespan_starts_and_stops_mwl(config: AppConfig, service: OrderService)
 
 
 def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: OrderService) -> None:
-    """パンくず → 見出し → 患者バナー（状態の札つき）→ 区画の順。操作は区画「操作」に置く."""
+    """パンくず → 見出し → 患者バナー（状態バッジつき）→ 区画の順。操作は区画「操作」に置く."""
     order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
     with _client(config, service) as client:
         page = client.get(f"/orders/{order.accession_number}").text
@@ -462,7 +462,7 @@ def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: 
     banner = page.split('<section class="fb r1"', 1)[1].split("</section>", 1)[0]
     assert '<span class="st" data-k="plan">予定</span>' in banner
     assert order.patient.patient_id in banner and order.accession_number in banner
-    # 患者バナーの升は決まった形（氏名・患者ID・生年月日と性別・受付番号・予定日時・モダリティと検査名・札）
+    # 患者バナーの升は決まった形（氏名・患者ID・生年月日と性別・受付番号・予定日時・モダリティと検査名・状態バッジ）
     cells = re.findall(r'<div class="(nm|f [a-z]+)">', banner)
     assert cells == ["nm", "f pid", "f birth", "f acc", "f dt", "f md", "f end"]
     born = order.patient.birth_date
