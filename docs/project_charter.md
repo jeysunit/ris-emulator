@@ -31,7 +31,7 @@ MWL（Modality Worklist、C-FIND の SCP）で返す。モダリティがワー�
   （ADT^A08・ADT^A40）、Procedure Scheduled（ORM^O01 の NW）、Procedure Update
   （ORM^O01 の CA・DC・XO）を組み立て、MLLP で設定した宛先へ
   送り、ACK を受け取る。PACS の PIR への対応を試す相手にするためで、宛先は
-  開発・試験の環境の受け口に限る
+  開発・試験の環境のエンドポイントに限る
 - 照合。予約の無い撮影（MPPS だけが記録された撮影）に、正式な患者と新しい予約を結び、
   結果を HL7 v2 で送る。送信の結果の記録と、再送信を含む。照合の後に同じ Study で
   届く撮影をその予約に結ぶことと、照合で作った予約の取消・中止を知らせることを含む

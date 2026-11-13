@@ -43,7 +43,7 @@ _WILDCARD_TO_LOOPBACK = {"0.0.0.0": "127.0.0.1", "::": "::1"}
 
 
 def _loopback_of(bind_address: str) -> str:
-    """待ち受けのアドレスへつなぐ住所（全部のアドレスで待ち受けているときはループバック）."""
+    """待ち受けのアドレスへ接続するときのアドレス（全部のアドレスで待ち受けているときはループバック）."""
     return _WILDCARD_TO_LOOPBACK.get(bind_address, bind_address)
 
 
