@@ -270,7 +270,7 @@ def test_query_and_status_survive_links(config: AppConfig, service: OrderService
 
 
 def test_summary_buttons_filter_without_javascript(config: AppConfig, service: OrderService) -> None:
-    """状態の件数は form＋button の送信で絞り込み、JavaScript で移動先を組み立てない（CodeQL の指摘）."""
+    """状態の件数は form＋button の送信で絞り込み、JavaScript で移動先を生成しない（CodeQL の指摘）."""
     static = Path(__file__).resolve().parents[2] / "app" / "web" / "static"
     script = (static / "app.js").read_text(encoding="utf-8")
     assert "location.assign" not in script and "data-href" not in script
