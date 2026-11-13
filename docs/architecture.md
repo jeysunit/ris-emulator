@@ -14,7 +14,7 @@ flowchart LR
   CLI["python -m app.cli"]
   DB[("SQLite<br/>state/ris.sqlite3")]
   MOD["モダリティ"]
-  PACS["PACS の HL7 受け口"]
+  PACS["PACS の HL7 エンドポイント"]
   WEB -->|"HL7 v2 のメッセージ（照合・再送信）"| PACS
   CLI -->|"HL7 v2 のメッセージ（pir send・照合・再送信）"| PACS
   WEB <-->|"予約（読み書き）"| DB

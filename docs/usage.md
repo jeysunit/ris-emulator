@@ -201,7 +201,7 @@ docker exec ris-emulator python -m app.cli pir send --kind orm --accession RE202
 
 PACS が受理すると終了コード 0、AE・AR で断ると 5、通信できないと 6 になります。
 メッセージの中身と例は [spec/06_hl7_pir.md](spec/06_hl7_pir.md) にあります。
-Docker から同じマシンの受け口へ送るときは、`hl7.host` にそのマシンのホスト名か
+Docker から同じマシンのエンドポイントへ送るときは、`hl7.host` にそのマシンのホスト名か
 IP アドレスを書きます（`127.0.0.1` はコンテナ自身です）。
 
 ## 8. 予約の無い撮影を照合する

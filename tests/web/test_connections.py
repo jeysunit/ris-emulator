@@ -70,7 +70,7 @@ def test_page_has_the_table_and_the_listening_section(config: AppConfig, service
     assert 'hx-post="/connections/check?target=hl7"' in row and ">接続確認</button>" in row
     # 区画の見出しの右に「すべて接続確認」（副）。見出しの横に説明の文は置かない
     assert re.search(r'<h2 class="hd">HL7 の送信先<span class="acts"><button type="button" class="btn" [^>]*>.*すべて接続確認</button>', page, re.S)
-    # 待ち受けの区画：MWL の名前・状態バッジ・住所（表には入れない）
+    # 待ち受けの区画：MWL の名前・状態バッジ・アドレス（表には入れない）
     listening = page.split('<h2 class="hd">待ち受け</h2>')[1]
     assert f"<b>{config.mwl.ae_title}</b>" in listening and 'data-k="listen">待ち受け中</span>' in listening
     assert config.mwl.ae_title not in table

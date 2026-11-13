@@ -71,7 +71,7 @@ web:
   port: 8081
   start_mwl: true                 # 画面のプロセスで MWL の SCP も起動する
 
-# HL7 v2.3.1 の送信（pir send）。送り先は MLLP で待ち受ける PACS の受け口
+# HL7 v2.3.1 の送信（pir send）。送り先は MLLP で待ち受ける PACS のエンドポイント
 hl7:
   host: "127.0.0.1"               # Docker から同じマシンの相手へは、その相手のホスト名か IP アドレス
   port: 2575

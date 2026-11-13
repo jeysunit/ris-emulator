@@ -46,7 +46,7 @@ def test_topbar_order_and_connection_popover(config: AppConfig, service: OrderSe
     assert re.findall(r"<dt>([^<]+)</dt>", pop) == ["待ち受け MWL", "送信先 HL7"]
     assert f"<b>{config.mwl.ae_title}</b>" in pop and '<span class="st" data-k="listen">待ち受け中</span>' in pop
     assert f"{config.hl7.host}:{config.hl7.port}" in pop
-    # 帯に住所や塗りの状態バッジを出さない（住所は popover の中だけ）
+    # 帯にアドレスや塗りの状態バッジを出さない（アドレスは popover の中だけ）
     outside = header.replace(pop, "")
     assert "badge" not in header and f":{config.mwl.port}" not in outside
 
