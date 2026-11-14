@@ -21,6 +21,7 @@ ADR（Architecture Decision Record）の一覧と、ADR に固有の書き方で
 | [0012](0012-case6-and-procedure-update.md) | 照合の後の撮影は Study Instance UID と患者ID で照合済みの予約に結び、取消・中止は手の操作のときだけ ORM で知らせる | 採用 |
 | [0013](0013-confirm-before-irreversible-web-operations.md) | 画面の照合と終わりの状態への変更は、確認の窓を通したときだけサーバーが行う | 採用 |
 | [0014](0014-sex-has-four-values.md) | 性別は M・F・O・U の 4 値で持ち、DICOM に書くときだけ U を空にする | 採用 |
+| [0015](0015-browser-support-baseline-widely-available.md) | 画面の対応ブラウザーは Baseline Widely available で決める | 採用 |
 
 ## 書き方
 
