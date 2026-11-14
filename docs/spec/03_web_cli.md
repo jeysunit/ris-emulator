@@ -210,6 +210,49 @@ Scheduled Procedure Step ID・Study Instance UID など）は英語の属性名�
   起動のたびに生成する CSRF トークンが送られたときだけ受け付ける
 - 応答に CSP（`default-src 'self'`、インラインスクリプトなし）などのヘッダーを付ける
 
+### 3.4 対応ブラウザー
+
+理由は [ADR-0015](../decisions/0015-browser-support-baseline-widely-available.md) にある。
+
+- **対応の線は「Baseline Widely available」にする**（2026-11-14 に決めた）。
+  Baseline は、主なブラウザー（Chrome・Edge・Firefox・Safari の、パソコンと
+  スマートフォン）がそろって対応した時点でウェブの機能を区切る基準で、
+  Widely available は、そろってから 30 か月たった機能。この区切りの機能だけで
+  作れば、画面は追加の対応なしで、主なブラウザーのどれでも動く
+- 理由：病院の端末はブラウザーの更新が遅れがちで、最新の版を前提にできない。
+  30 か月たった機能だけなら、更新が 2 年あまり遅れた端末でも動く
+- **Widely available に入らない機能を使うときの決まり：** 使えないブラウザーで
+  画面が壊れない退避を、同じ PR で必ず付ける（その機能が無くても業務の操作が
+  全部でき、見た目の差だけが残る形。付けられない機能は使わない）。退避の中身と、
+  その機能が Widely available になる日（Baseline の日付）を、コードのコメントか
+  PR の本文に書く
+- 画面の HTML・CSS・JS は、ビルド工程を持たない（`package.json` も無い）。
+  機械が読む線の設定（`browserslist`）は無いので、線は、この節と PR のレビューで
+  守る。依存を足さずに確認するときは、
+  [web-features](https://github.com/web-platform-dx/web-features) のデータで、
+  使っている機能の Baseline の日付を引く
+- ui-kit のコピー（`app/web/static/ui-kit/`）にある、線に入らない機能は
+  次の 1 件（2026-11-14 時点。web-features 3.46.0）。製品の側で直さず、ui-kit で
+  扱う
+  - `html { scrollbar-gutter: stable }`：Baseline low（2024-12-11）。
+    Widely available になるのは 2027-06-11 の見込み。使えないブラウザーでは、
+    スクロールバーが出入りするときに幅が動くだけで、操作は変わらない（退避あり）
+- popover（接続の状態の浮く窓）は線の内。使っているのは `popover` 属性・
+  `popovertarget`・`:popover-open` で、web-features 3.46.0 では全部 2026-10-16
+  から Widely available（機能全体の表示が Baseline low なのは、使っていない
+  `HTMLElement.popover` のプロパティが未達のため）
+- **版の線は日々動く。** 機能が線に入る日は過ぎるほど進むので、半年に 1 回、
+  使っている機能を確認し直す
+- **導入先が決まったら、端末の実際のブラウザーの版で確認する。** 線より古い端末が
+  あれば、その版まで対応を下げるか、端末を更新してもらうかを、導入先と決める
+  （下げるときはこの節に理由を書く）
+- **見直しの時期：** 導入先が決まったとき、ブラウザーの更新が遅い端末が
+  見つかったとき、そして半年に 1 回
+
+出典：
+
+- Baseline の定義：<https://web.dev/baseline>
+
 ## 4. 設定（`config/app_config.yaml`）
 
 | キー | 既定値 | 内容 |

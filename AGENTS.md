@@ -20,6 +20,8 @@ ris-emulator は、開発・テスト用の RIS エミュレーターです（�
   ある）。
 - CSP でインラインのスクリプトと `style` 属性は使えない。小さな動きは
   `app/web/static/app.js` に置く。
+- 対応ブラウザーは Baseline Widely available（[docs/spec/03_web_cli.md](docs/spec/03_web_cli.md)
+  の 3.4）。入らない機能は、退避を付けたときだけ使う。
 - 画面の文言は RIS・PACS で一般的な用語にし、説明文は置かない
   （[docs/spec/03_web_cli.md](docs/spec/03_web_cli.md) の 3.2）。
 
