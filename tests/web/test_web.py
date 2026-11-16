@@ -475,6 +475,9 @@ def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: 
         r'<span class="unit">（[明大昭平令]\d+・\d+歳）(男|女|その他|不明)</span></div>',
         banner,
     )
+    # 区画「予約の内容」は、項目名と値を 2 列の格子（.kv）で並べる
+    content = page.split("<h2>予約の内容</h2>")[1].split("</section>")[0]
+    assert '<div class="grid2">' in content and content.count('<dl class="kv">') == 2
     # 状態の変更は区画「状態」の中にあり、主の操作にして、項目名を欄の上に小さく出す
     ops = page.split("<h2>状態</h2>")[1].split("</section>")[0]
     assert '<button type="submit" class="btn btn-primary">状態を変える</button>' in ops
