@@ -53,9 +53,9 @@ def test_page_has_the_table_and_the_listening_section(config: AppConfig, service
     with _client(config, service) as client:
         page = client.get("/connections").text
     assert "<title>接続先 - ris-emulator</title>" in page and "<h1>接続先</h1>" in page
-    # 左のナビの群「接続」の項目で、いまの頁に印が付く
+    # 左のナビの群「送受信」の項目で、いまの頁に印が付く
     nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
-    assert re.findall(r'<p class="nav-g">([^<]+)</p>', nav) == ["業務", "接続", "管理"]
+    assert re.findall(r'<p class="nav-g">([^<]+)</p>', nav) == ["業務", "送受信", "管理"]
     assert re.findall(r'<a href="([^"]+)" class="nav-i" aria-current="page"', nav) == ["/connections"]
     # HL7 の送信先の表：列は部品集の接続先の表のとおり。HL7 の AEタイトルは「—」
     table = page.split('<table class="tbl conn">')[1].split("</table>")[0]
