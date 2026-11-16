@@ -394,6 +394,8 @@ def test_detail_shows_mpps(config: AppConfig, service: OrderService) -> None:
     # MPPS の状態は状態バッジで出し、英語の値を出さない
     mpps = detail.split("<h2>MPPS</h2>")[1].split("</section>")[0]
     assert "1.2.392.1" in mpps and '<span class="st" data-k="done">完了</span>' in mpps
+    # 表だけの区画は表の枠をやめて端から端まで（デザインシステム ui-kit 1.2.9）
+    assert mpps.lstrip().startswith('<div class="in flush">')
     assert "COMPLETED" not in mpps
     # MPPS で完了になったので、終わりの状態の表示になる
     assert "状態を変える" not in detail

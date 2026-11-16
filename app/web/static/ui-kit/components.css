@@ -1,4 +1,4 @@
-/* ui-kit 1.2.8（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
+/* ui-kit 1.2.9（3 製品で同じ写し。製品の側で直さない。直すときは元を直して写し直す） */
 /* 部品の CSS。tokens.css の後に読む。クラスの名前と構造は system/parts.md */
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
@@ -273,6 +273,13 @@ dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
 .sec>h2.hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .sec>h2.hd .acts{gap:8px}
 .sec>.in.flush{padding:0}
+.sec>.in.flush>.tbl-wrap{border:0;border-radius:0}
+.sec>.in.flush>.tbl-wrap .tbl th:first-child,.sec>.in.flush>.tbl-wrap .tbl td:first-child{padding-left:12px}
+.sec>.in.flush>.tbl-wrap .tbl th:last-child,.sec>.in.flush>.tbl-wrap .tbl td:last-child{padding-right:12px}
+.sec>.in.flush>.tbl-wrap:last-child{border-radius:0 0 5px 5px}
+.sec>.in.flush>.tbl-wrap:last-child .tbl tbody tr:last-child td{border-bottom:0}
+.sec>.in.flush>.listhead,.sec>.in.flush>.sec-foot{padding:8px 12px}
+.sec>.in.flush>.listhead+.tbl-wrap{border-top:1px solid var(--color-border)}
 .sec .inner-sec{border-top:1px solid var(--color-border)}
 
 /* 比べ案 */

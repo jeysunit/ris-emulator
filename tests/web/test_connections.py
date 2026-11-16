@@ -57,6 +57,8 @@ def test_page_has_the_table_and_the_listening_section(config: AppConfig, service
     nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
     assert re.findall(r'<p class="nav-g">([^<]+)</p>', nav) == ["業務", "送受信", "管理"]
     assert re.findall(r'<a href="([^"]+)" class="nav-i" aria-current="page"', nav) == ["/connections"]
+    # 表を主にする区画は表の枠をやめて端から端まで（デザインシステム ui-kit 1.2.9 の .in.flush）
+    assert re.search(r'<h2 class="hd">HL7 の送信先.*?</h2>\s*<div class="in flush">\s*<div class="tbl-wrap"', page, re.S)
     # HL7 の送信先の表：列は部品集の接続先の表のとおり。HL7 の AEタイトルは「—」
     table = page.split('<table class="tbl conn">')[1].split("</table>")[0]
     assert re.findall(r"<th>([^<]+)</th>", table) == ["名称", "種類", "AEタイトル", "ホスト名:ポート番号", "最後の接続確認"]
