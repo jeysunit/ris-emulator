@@ -359,6 +359,7 @@ def test_retake_from_detail(config: AppConfig, store: OrderStore) -> None:
         assert "撮り直しの予約を作る" not in client.get(f"/orders/{scheduled.accession_number}").text
         detail = client.get(f"/orders/{done.accession_number}").text
         assert "撮り直しの予約を作る" in detail
+        assert "<h2>撮り直し</h2>" in detail and "<h2>状態</h2>" not in detail
         listing = client.get(f"/orders?selected={done.accession_number}").text
         panel = listing.split('<aside')[1]
         assert f'action="/orders/{done.accession_number}/retake"' in panel
@@ -445,24 +446,26 @@ def test_lifespan_starts_and_stops_mwl(config: AppConfig, service: OrderService)
 
 
 def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: OrderService) -> None:
-    """パンくず → 見出し → 患者バナー（状態バッジつき）→ 区画の順。操作は区画「操作」に置く."""
+    """パンくず → 見出しの行（状態バッジつき）→ 患者バナー → 区画の順。状態の変更は区画「状態」に置く."""
     order = service.create_orders(OrderRequest(counts={"CT": 1}, scheduled_date=TODAY, seed=1))[0]
     with _client(config, service) as client:
         page = client.get(f"/orders/{order.accession_number}").text
     positions = [
         page.index('<ol class="crumbs">'),
-        page.index(f"<h1>予約 {order.accession_number}</h1>"),
+        page.index(f"<h1>予約 {order.accession_number} "),
         page.index('<section class="fb r1" aria-label="患者">'),
-        page.index("<h2>予約の情報</h2>"),
-        page.index("<h2>操作</h2>"),
+        page.index("<h2>予約の内容</h2>"),
+        page.index("<h2>状態</h2>"),
         page.index("<h2>MPPS</h2>"),
         page.index("<h2>MWL の属性</h2>"),
     ]
     assert positions == sorted(positions)
     banner = page.split('<section class="fb r1"', 1)[1].split("</section>", 1)[0]
-    assert '<span class="st" data-k="plan">予定</span>' in banner
+    heading = page.split("<h1>", 1)[1].split("</h1>", 1)[0]
+    assert '<span class="st" data-k="plan">予定</span>' in heading
+    assert "data-k=" not in banner  # 状態バッジは見出しの行にあり、バナーには置かない
     assert order.patient.patient_id in banner and order.accession_number in banner
-    # 患者バナーの升は決まった形（氏名・患者ID・生年月日と性別・受付番号・予定日時・モダリティと検査名・状態バッジ）
+    # 患者バナーの升は決まった形（氏名・患者ID・生年月日と性別・受付番号・予定日時・モダリティと検査名。右端は空）
     cells = re.findall(r'<div class="(nm|f [a-z]+)">', banner)
     assert cells == ["nm", "f pid", "f birth", "f acc", "f dt", "f md", "f end"]
     born = order.patient.birth_date
@@ -472,6 +475,7 @@ def test_detail_follows_patient_banner_and_sections(config: AppConfig, service: 
         r'<span class="unit">（[明大昭平令]\d+・\d+歳）(男|女|その他|不明)</span></div>',
         banner,
     )
-    # 状態の変更は区画「操作」の中にあり、項目名を欄の上に小さく出す
-    ops = page.split("<h2>操作</h2>")[1].split("</section>")[0]
-    assert "状態を変える" in ops and '<span class="l">状態</span>' in ops
+    # 状態の変更は区画「状態」の中にあり、主の操作にして、項目名を欄の上に小さく出す
+    ops = page.split("<h2>状態</h2>")[1].split("</section>")[0]
+    assert '<button type="submit" class="btn btn-primary">状態を変える</button>' in ops
+    assert '<span class="l">新しい状態</span>' in ops

@@ -8,7 +8,7 @@
     <li aria-current="page">{{ order.accession_number }}</li>
   </ol>
 </nav>
-<div class="pagehead"><h1>予約 {{ order.accession_number }}</h1></div>
+<div class="pagehead"><h1>予約 {{ order.accession_number }} {% include "_status_badge.html" %}</h1></div>
 {% if error %}
 {{ err(error, alert=true) }}
 {% endif %}
@@ -17,12 +17,13 @@
 {% set banner_dt = (order.scheduled_date | ymd) ~ ' ' ~ (order.scheduled_time | hhmm) %}
 {% set banner_on = order.scheduled_date %}
 {% set banner_modality, banner_procedure = order.modality, order.procedure.name %}
-{% set banner_end %}{% include "_status_badge.html" %}{% endset %}
+{% set banner_end = '' %}
 {% include "_patient_banner.html" %}
 <section class="sec">
-  <h2>予約の情報</h2>
+  <h2>予約の内容</h2>
   <div class="in">
-<dl class="detail">
+<div class="grid2">
+<dl class="kv">
   <dt>予定日時</dt><dd>{{ order.scheduled_date | ymd }} {{ order.scheduled_time | hhmm }}</dd>
   <dt>モダリティ</dt><dd>{{ order.modality }}</dd>
   {% if order.scheduled_station_label %}
@@ -32,12 +33,14 @@
   <dt>予定の装置名</dt><dd class="mono">{{ order.scheduled_station_name }}</dd>
   <dt>検査名</dt><dd>{{ order.procedure.name }}（{{ order.procedure.code }}）</dd>
   <dt>依頼科</dt><dd>{{ order.requesting_service }}</dd>
+  <dt>文字コード</dt><dd>{{ character_set_labels[order.character_set] }}</dd>
+</dl>
+<dl class="kv">
   <dt>患者ID</dt><dd class="mono">{{ order.patient.patient_id }}</dd>
   <dt>氏名</dt><dd class="mono">{{ order.patient.name.to_dicom() }}</dd>
   <dt>Requested Procedure ID</dt><dd class="mono">{{ order.requested_procedure_id }}</dd>
   <dt>Scheduled Procedure Step ID</dt><dd class="mono">{{ order.scheduled_procedure_step_id }}</dd>
   <dt>Study Instance UID</dt><dd class="mono">{{ order.study_instance_uid }}</dd>
-  <dt>文字コード</dt><dd>{{ character_set_labels[order.character_set] }}</dd>
   {% if order.retake_of %}
   <dt>撮り直しの元</dt><dd class="mono"><a href="/orders/{{ order.retake_of }}">{{ order.retake_of }}</a></dd>
   {% endif %}
@@ -49,33 +52,37 @@
   <dt>照合前の氏名</dt><dd class="mono">{{ temporary_name }}</dd>
   {% endif %}
 </dl>
+</div>
   </div>
 </section>
-{% if not is_final(order.status) or can_retake %}
-<section class="sec">
-  <h2>操作</h2>
-  <div class="in ops">
 {% if not is_final(order.status) %}
+<section class="sec">
+  <h2>状態</h2>
+  <div class="in">
 <form method="post" action="/orders/{{ order.accession_number }}/status" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
-  <label class="field"><span class="l">状態</span>
+  <label class="field"><span class="l">新しい状態</span>
     <select name="status" class="select">
       {% for s in selectable_statuses(order.status) %}
       <option value="{{ s.value }}"{% if s == order.status %} selected{% endif %}>{{ status_labels[s] }}</option>
       {% endfor %}
     </select>
   </label>
-  <button type="submit" class="btn">状態を変える</button>
+  <button type="submit" class="btn btn-primary">状態を変える</button>
 </form>
+  </div>
+</section>
 {% endif %}
 {% if can_retake %}
+<section class="sec">
+  <h2>撮り直し</h2>
+  <div class="in">
 <form method="post" action="/orders/{{ order.accession_number }}/retake" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   <label class="field"><span class="l">予定日</span><input type="date" name="date" value="{{ today.isoformat() }}" class="input"></label>
   <label class="field"><span class="l">予定時刻</span><input type="time" name="start" placeholder="空なら今の時刻" class="input"></label>
   <button type="submit" class="btn">撮り直しの予約を作る</button>
 </form>
-{% endif %}
   </div>
 </section>
 {% endif %}
