@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 from fastapi.testclient import TestClient
@@ -232,7 +233,7 @@ def test_version_page_is_in_the_admin_group_and_shows_name_and_version(
         version = client.get("/version")
     # 左のナビの群「管理」の最後の項目。項目の名前と頁の題は同じ語
     nav = page.split('<nav class="sidenav"')[1].split("</nav>")[0]
-    assert re.findall(r'<p class="nav-g">([^<]+)</p>', nav) == ["業務", "接続", "管理"]
+    assert re.findall(r'<p class="nav-g">([^<]+)</p>', nav) == ["業務", "送受信", "管理"]
     assert nav.rstrip().endswith('<span class="t">バージョン情報</span></a>')
     assert version.status_code == 200
     assert "<title>バージョン情報 - ris-emulator</title>" in version.text
@@ -264,3 +265,20 @@ def test_version_page_needs_the_password_when_one_is_required(
     app = create_app(config, password="s3cret-for-test", service=service, start_mwl=False)
     with TestClient(app, base_url=ORIGIN) as client:
         assert client.get("/version").status_code == 401
+
+
+def test_tab_icon_is_linked_and_uses_the_design_values(config: AppConfig, service: OrderService) -> None:
+    app = create_app(config, password=None, service=service, start_mwl=False)
+    with TestClient(app, base_url=ORIGIN) as client:
+        page = client.get("/orders").text
+        icon = client.get("/static/icon.svg")
+    assert '<link rel="icon" href="/static/icon.svg" type="image/svg+xml">' in page
+    assert icon.status_code == 200 and icon.headers["content-type"].startswith("image/svg+xml")
+    svg = icon.text
+    # 16x16・角 3px・線の幅 1.6px・3 本の横線。四角は primary、暗い地は link の暗い地の値
+    assert 'viewBox="0 0 16 16"' in svg and 'rx="3"' in svg and "stroke-width: 1.6" in svg
+    assert 'd="M4.5 5h7M4.5 8h7M4.5 11h4.5"' in svg
+    assert "#4b4fbf" in svg and "#a5a8ff" in svg and "prefers-color-scheme: dark" in svg
+    # 絵の線は白（暗い地は #1b1b1b）。SVG として読める
+    assert "stroke: #ffffff" in svg and "stroke: #1b1b1b" in svg
+    ElementTree.fromstring(svg)
