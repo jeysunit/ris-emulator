@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 from fastapi.testclient import TestClient
@@ -278,3 +279,6 @@ def test_tab_icon_is_linked_and_uses_the_design_values(config: AppConfig, servic
     assert 'viewBox="0 0 16 16"' in svg and 'rx="3"' in svg and "stroke-width: 1.6" in svg
     assert 'd="M4.5 5h7M4.5 8h7M4.5 11h4.5"' in svg
     assert "#4b4fbf" in svg and "#a5a8ff" in svg and "prefers-color-scheme: dark" in svg
+    # 絵の線は白（暗い地は #1b1b1b）。SVG として読める
+    assert "stroke: #ffffff" in svg and "stroke: #1b1b1b" in svg
+    ElementTree.fromstring(svg)
