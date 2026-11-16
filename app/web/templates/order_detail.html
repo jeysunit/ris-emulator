@@ -88,7 +88,7 @@
 {% endif %}
 <section class="sec">
   <h2>MPPS</h2>
-  <div class="in">
+  <div class="in{% if mpps_records %} flush{% endif %}">
 {% if mpps_records %}
 <div class="tbl-wrap">
 <table class="tbl">
@@ -110,7 +110,7 @@
 {% if reconciliation %}
 <section class="sec">
   <h2>HL7 送信</h2>
-  <div class="in">
+  <div class="in flush">
 <div class="tbl-wrap">
 <table class="tbl">
   <thead>
@@ -132,10 +132,12 @@
 </table>
 </div>
 {% if reconciliation.deliveries | rejectattr('outcome', 'equalto', 'accepted') | list %}
+<div class="sec-foot">
 <form method="post" action="/orders/{{ order.accession_number }}/hl7/resend" class="filters">
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
   <button type="submit" class="btn">再送信</button>
 </form>
+</div>
 {% endif %}
   </div>
 </section>

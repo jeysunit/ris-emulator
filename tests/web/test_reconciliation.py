@@ -270,6 +270,8 @@ def test_rejected_message_is_shown_and_can_be_sent_again(config: AppConfig, stor
     assert re.findall(r'<td><span class="st" data-k="(?:ok|plan|ng)">(送信完了|送信待ち|拒否|送信失敗)</span></td>',before) == ["送信失敗", "送信待ち"]
     assert "unknown patient" in before and "<td class=\"mono\">AE</td>" in before
     assert 'action="' + location + '/hl7/resend"' in before and "再送信</button>" in before
+    # 表の枠をやめて端から端まで広げ、再送信の行は区画の内側の余白を持つ（デザインシステム ui-kit 1.2.9）
+    assert '<h2>HL7 送信</h2>\n  <div class="in flush">' in before and '<div class="sec-foot">\n<form' in before
     assert resend.status_code == 303 and resend.headers["location"] == location
     assert re.findall(r'<td><span class="st" data-k="(?:ok|plan|ng)">(送信完了|送信待ち|拒否|送信失敗)</span></td>',after) == ["送信完了", "送信完了"]
     assert "再送信" not in after
