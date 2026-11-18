@@ -240,8 +240,10 @@ Scheduled Procedure Step ID・Study Instance UID など）は英語の属性名�
   次の 1 件（2026-11-14 時点。web-features 3.46.0）。製品の側で直さず、ui-kit で
   扱う
   - `html { scrollbar-gutter: stable }`：Baseline low（2024-12-11）。
-    Widely available になるのは 2027-06-11 の見込み。退避は不要（使えないブラウザーでも、
-    スクロールバーが出入りするときに幅が動くだけで、操作は変わらない）
+    Widely available になるのは 2027-06-11 の見込み。この機能が無いこと自体が
+    退避の形で、別の退避は付けない（使えないブラウザーでも、スクロールバーが出入りする
+    ときに幅が動くだけで、操作は変わらない）。幅が動くことが導入先の画面で許せる差かは、
+    導入先の端末では未確認
 - popover（接続の状態の浮く窓）は線の内。使っているのは `popover` 属性・
   `popovertarget`・`:popover-open` で、web-features 3.46.0 では全部 2026-10-16
   から Widely available（機能全体の表示が Baseline low なのは、使っていない
